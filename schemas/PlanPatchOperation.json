@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "operation": {
+      "enum": [
+        "add",
+        "remove",
+        "replace"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "target": {
+      "pattern": "^(actions|constraints|entities|completion_criteria)\\.[a-z][a-z0-9_]*$",
+      "title": "Target",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {},
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    }
+  },
+  "required": [
+    "operation",
+    "target"
+  ],
+  "title": "PlanPatchOperation",
+  "type": "object"
+}

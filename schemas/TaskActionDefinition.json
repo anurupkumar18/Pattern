@@ -1,0 +1,47 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "risk": {
+      "enum": [
+        "read",
+        "reversible_write",
+        "consequential",
+        "destructive"
+      ],
+      "title": "Risk",
+      "type": "string"
+    },
+    "requires_confirmation": {
+      "title": "Requires Confirmation",
+      "type": "boolean"
+    },
+    "status": {
+      "default": "pending",
+      "enum": [
+        "pending",
+        "completed",
+        "cancelled"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "description",
+    "risk",
+    "requires_confirmation"
+  ],
+  "title": "TaskActionDefinition",
+  "type": "object"
+}

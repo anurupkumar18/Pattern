@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "PlanPatchOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "enum": [
+            "add",
+            "remove",
+            "replace"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "target": {
+          "pattern": "^(actions|constraints|entities|completion_criteria)\\.[a-z][a-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "operation",
+        "target"
+      ],
+      "title": "PlanPatchOperation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "base_version": {
+      "minimum": 1,
+      "title": "Base Version",
+      "type": "integer"
+    },
+    "new_version": {
+      "minimum": 2,
+      "title": "New Version",
+      "type": "integer"
+    },
+    "transcript": {
+      "minLength": 1,
+      "title": "Transcript",
+      "type": "string"
+    },
+    "operations": {
+      "items": {
+        "$ref": "#/$defs/PlanPatchOperation"
+      },
+      "minItems": 1,
+      "title": "Operations",
+      "type": "array"
+    },
+    "added": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Added",
+      "type": "array"
+    },
+    "removed": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Removed",
+      "type": "array"
+    },
+    "replaced": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Replaced",
+      "type": "array"
+    },
+    "preserved": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Preserved",
+      "type": "array"
+    }
+  },
+  "required": [
+    "base_version",
+    "new_version",
+    "transcript",
+    "operations"
+  ],
+  "title": "AppliedPlanPatch",
+  "type": "object"
+}

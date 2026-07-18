@@ -45,6 +45,7 @@ class EventType(StrEnum):
 Risk = Literal["read", "reversible_write", "consequential", "destructive"]
 CandidateSource = Literal["accessibility", "ocr", "vision", "dom"]
 TaskState = Literal["succeeded", "partial", "failed", "needs_user"]
+PatchOperationKind = Literal["add", "remove", "replace"]
 
 
 class FailureCode(StrEnum):
@@ -186,6 +187,94 @@ class TaskPlan(VoiceOpsModel):
         ]
         if len(predicate_ids) != len(set(predicate_ids)):
             raise ValueError("postcondition predicate IDs must be unique across the plan")
+        return self
+
+
+# --- Persistent, versioned intent ledger ---
+
+
+class TaskActionDefinition(VoiceOpsModel):
+    id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    description: str = Field(min_length=1)
+    risk: Risk
+    requires_confirmation: bool
+    status: Literal["pending", "completed", "cancelled"] = "pending"
+
+    @model_validator(mode="after")
+    def _consequential_needs_confirmation(self) -> "TaskActionDefinition":
+        if self.risk in ("consequential", "destructive") and not self.requires_confirmation:
+            raise ValueError(
+                f"actions with risk={self.risk!r} must set requires_confirmation=true"
+            )
+        return self
+
+
+class PlanPatchOperation(VoiceOpsModel):
+    operation: PatchOperationKind
+    target: str = Field(
+        pattern=(
+            r"^(actions|constraints|entities|completion_criteria)\."
+            r"[a-z][a-z0-9_]*$"
+        )
+    )
+    value: Any | None = None
+
+    @model_validator(mode="after")
+    def _value_matches_operation(self) -> "PlanPatchOperation":
+        if self.operation in ("add", "replace") and self.value is None:
+            raise ValueError(f"{self.operation} operations require a value")
+        if self.operation == "remove" and self.value is not None:
+            raise ValueError("remove operations must not include a value")
+        return self
+
+
+class PlanPatch(VoiceOpsModel):
+    base_version: int = Field(ge=1)
+    transcript: str = Field(min_length=1)
+    operations: list[PlanPatchOperation] = Field(min_length=1)
+
+
+class AppliedPlanPatch(VoiceOpsModel):
+    base_version: int = Field(ge=1)
+    new_version: int = Field(ge=2)
+    transcript: str = Field(min_length=1)
+    operations: list[PlanPatchOperation] = Field(min_length=1)
+    added: list[str] = Field(default_factory=list)
+    removed: list[str] = Field(default_factory=list)
+    replaced: list[str] = Field(default_factory=list)
+    preserved: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _version_increments_once(self) -> "AppliedPlanPatch":
+        if self.new_version != self.base_version + 1:
+            raise ValueError("an applied patch must increment the version exactly once")
+        return self
+
+
+class VersionedTaskSpec(VoiceOpsModel):
+    task_id: UUID
+    version: int = Field(ge=1)
+    raw_request: str = Field(min_length=1)
+    objective: str = Field(min_length=1)
+    entities: dict[str, str] = Field(min_length=1)
+    evidence_to_collect: list[str] = Field(min_length=1)
+    actions: dict[str, TaskActionDefinition] = Field(min_length=1)
+    constraints: dict[str, str] = Field(min_length=1)
+    completion_criteria: dict[str, str] = Field(min_length=1)
+    provenance: dict[str, list[str]] = Field(default_factory=dict)
+    patch_history: list[AppliedPlanPatch] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _ledger_is_internally_consistent(self) -> "VersionedTaskSpec":
+        if any(key != action.id for key, action in self.actions.items()):
+            raise ValueError("each action dictionary key must equal its action ID")
+        if len(self.patch_history) != self.version - 1:
+            raise ValueError("patch history must contain one entry per version increment")
+        expected_base = 1
+        for patch in self.patch_history:
+            if patch.base_version != expected_base or patch.new_version != expected_base + 1:
+                raise ValueError("patch history versions must form an unbroken chain")
+            expected_base += 1
         return self
 
 
@@ -343,6 +432,11 @@ _EXPORTED_MODELS: tuple[type[VoiceOpsModel], ...] = (
     GroundingResult,
     TaskPlan,
     TaskStep,
+    VersionedTaskSpec,
+    TaskActionDefinition,
+    PlanPatch,
+    PlanPatchOperation,
+    AppliedPlanPatch,
     Predicate,
     VerifierSpec,
     ApprovalRequest,

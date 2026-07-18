@@ -1,0 +1,43 @@
+{
+  "store": "Northstar Kids",
+  "order_id": "#1842",
+  "order_total_usd": 286.0,
+  "customer_deadline": "2026-07-24",
+  "shipping_address": "418 Cedar Avenue, Denver, CO 80206",
+  "customer": {
+    "id": "cus_maya_chen",
+    "name": "Maya Chen",
+    "email": "maya@example.com",
+    "lifetime_value_usd": 1840.0,
+    "order_count": 12
+  },
+  "tracking": {
+    "carrier": "UPS",
+    "tracking_number": "1Z999AA10123456784",
+    "promised_delivery": "2026-07-17",
+    "last_scan_at": "2026-07-14T20:42:00-06:00",
+    "stationary_hours": 91,
+    "status": "In transit — delayed"
+  },
+  "inventory": {
+    "sku": "BIRTHDAY-KIT-BLUE",
+    "available_units": 7,
+    "expedited_arrival": "2026-07-23"
+  },
+  "policy": {
+    "id": "delayed-shipment",
+    "version": "2026.07",
+    "delayed_after_hours": 72,
+    "vip_lifetime_value_usd": 1000.0
+  },
+  "initial_state": {
+    "shopify_tags": [],
+    "shopify_notes": [],
+    "store_credit_usd": 0,
+    "customer_messages": [],
+    "operations_messages": [],
+    "reminders": [],
+    "refund_issued": false,
+    "replacement_order_id": null
+  }
+}

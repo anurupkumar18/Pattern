@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "AppliedPlanPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "base_version": {
+          "minimum": 1,
+          "title": "Base Version",
+          "type": "integer"
+        },
+        "new_version": {
+          "minimum": 2,
+          "title": "New Version",
+          "type": "integer"
+        },
+        "transcript": {
+          "minLength": 1,
+          "title": "Transcript",
+          "type": "string"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/PlanPatchOperation"
+          },
+          "minItems": 1,
+          "title": "Operations",
+          "type": "array"
+        },
+        "added": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Added",
+          "type": "array"
+        },
+        "removed": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Removed",
+          "type": "array"
+        },
+        "replaced": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Replaced",
+          "type": "array"
+        },
+        "preserved": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Preserved",
+          "type": "array"
+        }
+      },
+      "required": [
+        "base_version",
+        "new_version",
+        "transcript",
+        "operations"
+      ],
+      "title": "AppliedPlanPatch",
+      "type": "object"
+    },
+    "PlanPatchOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "enum": [
+            "add",
+            "remove",
+            "replace"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "target": {
+          "pattern": "^(actions|constraints|entities|completion_criteria)\\.[a-z][a-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "operation",
+        "target"
+      ],
+      "title": "PlanPatchOperation",
+      "type": "object"
+    },
+    "TaskActionDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "read",
+            "reversible_write",
+            "consequential",
+            "destructive"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "requires_confirmation": {
+          "title": "Requires Confirmation",
+          "type": "boolean"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "completed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "risk",
+        "requires_confirmation"
+      ],
+      "title": "TaskActionDefinition",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "format": "uuid",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "raw_request": {
+      "minLength": 1,
+      "title": "Raw Request",
+      "type": "string"
+    },
+    "objective": {
+      "minLength": 1,
+      "title": "Objective",
+      "type": "string"
+    },
+    "entities": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "minProperties": 1,
+      "title": "Entities",
+      "type": "object"
+    },
+    "evidence_to_collect": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence To Collect",
+      "type": "array"
+    },
+    "actions": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TaskActionDefinition"
+      },
+      "minProperties": 1,
+      "title": "Actions",
+      "type": "object"
+    },
+    "constraints": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "minProperties": 1,
+      "title": "Constraints",
+      "type": "object"
+    },
+    "completion_criteria": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "minProperties": 1,
+      "title": "Completion Criteria",
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "patch_history": {
+      "items": {
+        "$ref": "#/$defs/AppliedPlanPatch"
+      },
+      "title": "Patch History",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task_id",
+    "version",
+    "raw_request",
+    "objective",
+    "entities",
+    "evidence_to_collect",
+    "actions",
+    "constraints",
+    "completion_criteria"
+  ],
+  "title": "VersionedTaskSpec",
+  "type": "object"
+}
