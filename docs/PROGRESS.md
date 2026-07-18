@@ -284,3 +284,65 @@ blockers for `cursor/voice-command-center`.
   `npm run build` passes. Generated reports:
   `commandcenter/eval-report.json` and `commandcenter/eval-report.md`
   (`2026-07-18T11:47:53.806Z`).
+
+## 2026-07-18 (mandatory stack closure) - Gemma 4 running on Cactus
+
+- Installed Cactus 2.0.1 with
+  `brew install cactus-compute/cactus/cactus`.
+- Downloaded the public 3.8 GB CQ4 bundle with
+  `cactus download google/gemma-4-E2B-it --bits 4`; Cactus resolved it to
+  `~/.cache/cactus/weights/gemma-4-e2b-it-cq4`. No interactive approval,
+  Cactus key, Hugging Face token, or cloud model was required.
+- Retained interface: the persistent OpenAI-compatible local server,
+  `cactus serve google/gemma-4-E2B-it --bits 4 --backend metal
+  --no-cloud-handoff --no-cloud-tele`. The new
+  `commandcenter/scripts/cactus-complete.py` bridge reads a prompt on stdin,
+  POSTs it to `/v1/chat/completions`, and prints only the completion on stdout.
+  Existing `ExecGemmaTransport` is unchanged.
+- Hackathon-compliant eval command:
+  `GEMMA_COMMAND=python3 GEMMA_ARGS='["scripts/cactus-complete.py"]'
+  CACTUS_MODEL=google/gemma-4-E2B-it npm run eval`.
+- Initial unchanged-prompt Cactus baseline: Gemma-only 20/28; clear 10/15,
+  fuzzy 3/5, noise 6/6, destructive 1/2; route p50 8.42s, p95 20.05s.
+  Cascade stayed 28/28; deterministic tier p50 0.36ms/p95 4.05ms and
+  Cactus/Gemma tier p50 5.54s/p95 6.42s.
+- Used the permitted single tuning round to add a Cactus system instruction
+  reinforcing exact message extraction, spawn fields, and interrupt versus
+  listen-control semantics. Final Cactus result: Gemma-only 23/28; clear
+  13/15, fuzzy 3/5, noise 6/6, destructive 1/2; 0% noise false-fire; route
+  p50 11.88s, p95 20.89s. Cascade remained 28/28 across clear 15/15, fuzzy
+  5/5, noise 6/6, destructive 2/2; cascade route p50 0.19ms/p95 4.96s,
+  deterministic tier p50 0.17ms/p95 2.60ms, and Cactus/Gemma tier p50
+  4.81s/p95 5.45s. No Cactus call failed or timed out.
+- Honest comparison: Ollama-hosted full `gemma4` remains more accurate and
+  more consistent in the pure-model lane at 27/28, p50 10.03s, p95 12.99s.
+  Cactus E2B closes the mandatory hackathon stack gap and preserves cascade
+  28/28, but pure-model accuracy is four cases lower and tail latency is
+  materially worse. Tuning stopped after the one allowed round.
+- Final artifacts: `commandcenter/eval-report.json` and
+  `commandcenter/eval-report.md` generated `2026-07-18T14:50:23.285Z`.
+
+## 2026-07-18 — Console redesigned verbatim to Herdr
+
+Cole feedback: console should look exactly like Herdr, with a voice-control
+on/off button below the sidebar agent list.
+
+- Extracted Herdr's real design tokens from its source (not approximated):
+  - Palette: `Palette::catppuccin()` in `src/app/state.rs` (Catppuccin Mocha,
+    panel_bg #181825, surface_dim #1e1e2e, text #cdd6f4, accent/blue #89b4fa,
+    green #a6e3a1, yellow #f9e2af, red #f38ba8, teal #94e2d5).
+  - State glyphs + colors: `agent_icon`/`state_label_color` in
+    `src/ui/status.rs` (blocked ◉ red, working braille spinner yellow,
+    done ● teal, idle ✓ green, unknown ○ overlay0). Spinner frames from
+    `src/ui.rs` at ~8fps, replicated in React.
+  - Sidebar layout: `render_agent_detail` in `src/ui/sidebar.rs` + herdr.dev
+    sidebar screenshots (saved to `console/reference/`): "agents" header with
+    "all" toggle, row 1 = icon + bold name, row 2 = colored state · agent,
+    " · " separators, active row bg surface_dim.
+- Rewrote `console/src/App.tsx` and `styles.css`: monospace terminal layout,
+  Herdr sidebar left, pane with tab bar + shell-style ❯ prompt right.
+- Added voice toggle pinned below the agent list: ○ voice off (overlay0) /
+  ● voice on (green dot), herdr-style bordered row. Wired to the existing
+  Web Speech recognition start/stop.
+- Verified: console tsc clean, WS snapshot live against real Herdr
+  (smoke-shell agent renders), headless Chrome screenshot matches reference.
