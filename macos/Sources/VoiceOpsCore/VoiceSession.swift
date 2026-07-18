@@ -194,3 +194,158 @@ public final class VoiceSessionController {
             segments: final.segments)
     }
 }
+
+/// Keeps one VoiceSessionController alive across a provider outage. The
+/// primary transcript prefix is retained when capture switches providers, so
+/// a network hiccup never silently restarts the spoken command.
+public final class FailoverTranscriber: Transcriber, @unchecked Sendable {
+    private let lock = NSLock()
+    private let primary: any Transcriber
+    private let fallback: any Transcriber
+    private let onFailover: @Sendable (Error) -> Void
+    private var active: (any Transcriber)?
+    private var bridgeTask: Task<Void, Never>?
+    private var cancelled = false
+    private var finishRequested = false
+    private var primaryPrefix = ""
+
+    public init(
+        primary: any Transcriber,
+        fallback: any Transcriber,
+        onFailover: @escaping @Sendable (Error) -> Void = { _ in }
+    ) {
+        self.primary = primary
+        self.fallback = fallback
+        self.onFailover = onFailover
+    }
+
+    public enum FailoverError: Error, LocalizedError {
+        case primaryStreamEnded
+
+        public var errorDescription: String? {
+            "The primary voice stream ended before final transcription."
+        }
+    }
+
+    public func start() async throws -> AsyncThrowingStream<TranscriptUpdate, Error> {
+        lock.withLock {
+            cancelled = false
+            finishRequested = false
+            primaryPrefix = ""
+            active = nil
+        }
+        let (output, continuation) = AsyncThrowingStream<TranscriptUpdate, Error>.makeStream()
+        do {
+            let stream = try await primary.start()
+            let shouldFinish = lock.withLock {
+                active = primary
+                return finishRequested
+            }
+            if shouldFinish { await primary.finish() }
+            bridgeTask = Task { [weak self] in
+                await self?.consumePrimary(stream, output: continuation)
+            }
+        } catch {
+            onFailover(error)
+            let stream = try await fallback.start()
+            let shouldFinish = lock.withLock {
+                active = fallback
+                return finishRequested
+            }
+            if shouldFinish { await fallback.finish() }
+            bridgeTask = Task { [weak self] in
+                await self?.consumeFallback(stream, output: continuation, prefix: "")
+            }
+        }
+        return output
+    }
+
+    public func finish() async {
+        let transcriber = lock.withLock {
+            finishRequested = true
+            return active
+        }
+        await transcriber?.finish()
+    }
+
+    public func cancel() async {
+        let transcriber = lock.withLock {
+            cancelled = true
+            return active
+        }
+        bridgeTask?.cancel()
+        await transcriber?.cancel()
+    }
+
+    private func consumePrimary(
+        _ stream: AsyncThrowingStream<TranscriptUpdate, Error>,
+        output: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation
+    ) async {
+        var sawFinal = false
+        do {
+            for try await update in stream {
+                if Task.isCancelled { return }
+                lock.withLock { primaryPrefix = update.text }
+                output.yield(update)
+                sawFinal = update.isFinal
+            }
+            if sawFinal || lock.withLock({ finishRequested || cancelled }) {
+                output.finish()
+                return
+            }
+            try await switchToFallback(
+                because: FailoverError.primaryStreamEnded, output: output)
+        } catch {
+            if lock.withLock({ finishRequested || cancelled }) {
+                output.finish(throwing: error)
+                return
+            }
+            do {
+                try await switchToFallback(because: error, output: output)
+            } catch {
+                output.finish(throwing: error)
+            }
+        }
+    }
+
+    private func switchToFallback(
+        because error: Error,
+        output: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation
+    ) async throws {
+        await primary.cancel()
+        onFailover(error)
+        let prefix = lock.withLock { primaryPrefix }
+        let stream = try await fallback.start()
+        let shouldFinish = lock.withLock {
+            active = fallback
+            return finishRequested
+        }
+        if shouldFinish { await fallback.finish() }
+        await consumeFallback(stream, output: output, prefix: prefix)
+    }
+
+    private func consumeFallback(
+        _ stream: AsyncThrowingStream<TranscriptUpdate, Error>,
+        output: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation,
+        prefix: String
+    ) async {
+        do {
+            for try await update in stream {
+                if Task.isCancelled { return }
+                let combined = [prefix, update.text]
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+                output.yield(TranscriptUpdate(
+                    text: combined,
+                    isFinal: update.isFinal,
+                    confidence: update.confidence,
+                    // Segment timings restart with the fallback microphone;
+                    // do not publish misleading offsets across the handoff.
+                    segments: prefix.isEmpty ? update.segments : []))
+            }
+            output.finish()
+        } catch {
+            output.finish(throwing: error)
+        }
+    }
+}

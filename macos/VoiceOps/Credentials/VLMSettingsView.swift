@@ -30,7 +30,7 @@ final class VLMSettingsModel: ObservableObject {
             UserDefaults.standard.set(model, forKey: VLMConfiguration.modelDefaultsKey)
             isConfigured = true
             statusIsError = false
-            statusMessage = "Saved securely. The next screen-grounding task will use OpenAI vision."
+            statusMessage = "Saved securely. OpenAI Realtime voice and flagship vision are enabled."
         } catch {
             statusIsError = true
             statusMessage = error.localizedDescription
@@ -44,7 +44,7 @@ final class VLMSettingsModel: ObservableObject {
             pendingAPIKey = ""
             isConfigured = false
             statusIsError = false
-            statusMessage = "Credential removed. VoiceOps will use deterministic grounding."
+            statusMessage = "Credential removed. VoiceOps will use Apple Speech and deterministic grounding."
         } catch {
             statusIsError = true
             statusMessage = error.localizedDescription
@@ -73,11 +73,12 @@ struct VLMSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Vision grounding") {
-                LabeledContent("Provider", value: "OpenAI Responses API")
+            Section("OpenAI voice and intelligence") {
+                LabeledContent("Voice", value: "gpt-realtime-whisper · Apple Speech failover")
+                LabeledContent("Vision", value: "OpenAI Responses API")
                 LabeledContent("Status") {
                     Label(
-                        model.isConfigured ? "Configured" : "Deterministic fallback",
+                        model.isConfigured ? "Realtime + flagship enabled" : "Local fallbacks active",
                         systemImage: model.isConfigured ? "checkmark.circle.fill" : "exclamationmark.circle")
                 }
                 SecureField(
@@ -86,16 +87,16 @@ struct VLMSettingsView: View {
                         : "OpenAI API key",
                     text: $model.pendingAPIKey)
                     .textContentType(.password)
-                TextField("Model", text: $model.model)
+                TextField("Vision model", text: $model.model)
                 Text("Default: \(VLMConfiguration.defaultModel). The model name is not secret and is stored in UserDefaults.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section("Privacy") {
-                Text("The API key is stored in your macOS login Keychain. It is passed only to the per-task local sidecar and is never saved in the repository, app bundle, screenshots, or logs.")
+                Text("The API key is stored in your macOS login Keychain. It is used only by the live Realtime voice socket and per-task local sidecar; it is never saved in the repository, app bundle, screenshots, or logs.")
                     .font(.callout)
-                Text("When configured, the active-window screenshot and pruned accessibility candidates are sent to OpenAI for the task. Captures remain task-scoped and are deleted at the terminal state.")
+                Text("When configured, microphone PCM is streamed only during an active hotkey capture. The active-window screenshot and pruned accessibility candidates are sent only during task grounding. Captures remain task-scoped and are deleted at the terminal state.")
                     .font(.callout)
             }
 

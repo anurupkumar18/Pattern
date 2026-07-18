@@ -49,8 +49,8 @@ Alternative: implement orchestration entirely in Swift if the team has strong Sw
 
 Use provider adapters, not model-specific business logic.
 
-- Streaming speech-to-text: system speech framework, Whisper-compatible API, or other low-latency STT.
-- Planner/reasoner: a strong tool-use multimodal model.
+- Streaming speech-to-text: `gpt-realtime-whisper` over a transcription-only Realtime WebSocket, with 24 kHz mono PCM, manual hotkey commit, and Apple Speech start/midstream failover. `gpt-realtime-2.1` remains the full-duplex voice-agent option, not the transcription-only command path.
+- Planner/reasoner: `gpt-5.6-sol` through a provider adapter for flagship live intelligence; deterministic typed compilers remain the demo-safe fallback.
 - Screen understanding: the same multimodal model for MVP; optional separate OCR for speed.
 - Research/synthesis: text model with web-search tool.
 - Text-to-speech: macOS `AVSpeechSynthesizer` for zero setup; cloud voice is optional.
@@ -428,9 +428,13 @@ Required events:
 
 - `voice.partial`
 - `voice.final`
+- `voice.correction`
 - `observation.ready`
 - `grounding.ready`
 - `plan.ready`
+- `task.spec_ready`
+- `plan.patch_applied`
+- `ledger.event`
 - `approval.requested`
 - `action.started`
 - `action.finished`

@@ -596,7 +596,7 @@ def build_grounding_adapter() -> MultimodalGroundingAdapter:
     api_key = os.environ.get("VOICEOPS_OPENAI_API_KEY", "").strip()
     if not api_key:
         return fallback
-    model = os.environ.get("VOICEOPS_VLM_MODEL", "").strip() or "gpt-5.6-terra"
+    model = os.environ.get("VOICEOPS_VLM_MODEL", "").strip() or "gpt-5.6-sol"
     return FallbackGroundingAdapter(
         primary=OpenAIMultimodalGroundingAdapter(api_key=api_key, model=model),
         fallback=fallback,

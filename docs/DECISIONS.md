@@ -230,3 +230,27 @@ be inferred from fixture success.
 success invariant auditable, but fabricated live metrics would weaken the
 evidence. Separating reproducible correctness from permissioned Mac trials gives
 judges and engineers a useful report with an honest boundary.
+
+## ADR-019: Persistent Order Rescue tasks and minimal voice patches
+
+**Date:** 2026-07-18 · **Demo hardening**
+
+**Decision:** The Order Rescue hero compiles the initial spoken request and trusted order fixture into an immutable `VersionedTaskSpec`. A correction arrives as `voice.correction` under the original task ID and produces a validated `PlanPatch` against the exact base version. Applying the patch increments the version once, records added/removed/replaced/preserved fields, rejects stale bases, and cannot remove completed work. The app renders raw request, objective, actions, constraints, patch, and the current version.
+
+**Reason:** Mid-flight speech must revise the user's active intent rather than restart a task or regenerate a plan that forgets constraints. Versioned, typed patches make constraint retention and correction accuracy deterministic and visible.
+
+## ADR-020: Fixture semantic adapters with verifier-owned Order Rescue success
+
+**Date:** 2026-07-18 · **Demo hardening**
+
+**Decision:** The demo uses typed, idempotent fixture adapters for carrier tracking, Shopify note/tag/credit state, customer messaging, Slack escalation, and reminders. Every confirmation-gated action is preflighted before the first write. The executor emits structured Observed, Interpreted, Decided, and Acted records but cannot declare completion. A separate verifier refetches five required states and proves two prohibited states—no refund and no replacement—before emitting `succeeded`. The full safety rehearsal runs 20 deterministic cases and exits nonzero on any false success, unapproved action, post-stop effect, stale patch acceptance, duplicate effect, or constraint loss.
+
+**Reason:** A credential-free semantic demo is repeatable and honest, while the same adapter boundary can accept live Shopify, messaging, and Slack implementations later. Positive and negative verification prevents an executor response from being confused with real completion.
+
+## ADR-021: Transcription-specific Realtime voice with transcript-preserving failover
+
+**Date:** 2026-07-18 · **Voice reliability**
+
+**Decision:** When a Keychain credential exists, the macOS shell opens a transcription-only Realtime WebSocket using `gpt-realtime-whisper`, streams 24 kHz mono PCM16, requests balanced delay, disables server turn detection, and commits only when the operator ends capture. Session readiness is required before the microphone starts. Apple Speech remains the zero-setup provider and automatically takes over on a primary start or midstream failure. A midstream handoff preserves the already-displayed transcript prefix, labels the fallback in the UI, and keeps the same `VoiceSessionController`. Narration never runs while capture is open. The live vision default moves to flagship `gpt-5.6-sol`.
+
+**Reason:** The specialized streaming transcription model is a better fit than a speech-to-speech agent model for command capture. Manual commit preserves hotkey semantics; dual providers remove a single network dependency; retaining the partial transcript prevents a provider outage from silently changing the user's request. A distributed production client should use ephemeral Realtime credentials rather than a long-lived API key.

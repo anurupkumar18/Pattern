@@ -14,7 +14,7 @@ struct VoiceOpsApp: App {
             }
             Divider()
             SettingsLink {
-                Label("Vision Settings…", systemImage: "eye.circle")
+                Label("Voice & Intelligence Settings…", systemImage: "waveform.and.magnifyingglass")
             }
             Divider()
             Button("Quit VoiceOps") { NSApplication.shared.terminate(nil) }

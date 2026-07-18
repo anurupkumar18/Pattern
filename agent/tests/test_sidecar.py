@@ -106,7 +106,7 @@ class TestHandleLine:
         adapter = build_grounding_adapter()
 
         assert isinstance(adapter, FallbackGroundingAdapter)
-        assert adapter._primary._model == "gpt-5.6-terra"
+        assert adapter._primary._model == "gpt-5.6-sol"
 
     def test_voice_final_yields_plan_then_completion(self):
         events = handle_line(fixture_line())

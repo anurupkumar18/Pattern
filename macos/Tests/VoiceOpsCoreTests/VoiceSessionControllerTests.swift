@@ -4,11 +4,22 @@ import XCTest
 /// Scriptable transcriber so session logic is tested without a microphone.
 /// The real SFSpeechRecognizer adapter stays thin behind the same protocol.
 actor FakeTranscriber: Transcriber {
+    private let startError: Error?
+    private let startDelay: Duration?
     private var continuation: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation?
+    private(set) var startCalled = false
     private(set) var finishCalled = false
     private(set) var cancelCalled = false
 
+    init(startError: Error? = nil, startDelay: Duration? = nil) {
+        self.startError = startError
+        self.startDelay = startDelay
+    }
+
     func start() async throws -> AsyncThrowingStream<TranscriptUpdate, Error> {
+        startCalled = true
+        if let startDelay { try await Task.sleep(for: startDelay) }
+        if let startError { throw startError }
         let (stream, continuation) = AsyncThrowingStream<TranscriptUpdate, Error>.makeStream()
         self.continuation = continuation
         return stream
@@ -215,5 +226,74 @@ final class VoiceSessionControllerTests: XCTestCase {
         } catch {
             XCTFail("expected .alreadyActive, got \(error)")
         }
+    }
+
+    func testFailoverUsesFallbackWhenPrimaryCannotStart() async throws {
+        struct PrimaryUnavailable: Error {}
+        let primary = FakeTranscriber(startError: PrimaryUnavailable())
+        let fallback = FakeTranscriber()
+        let transcriber = FailoverTranscriber(primary: primary, fallback: fallback)
+
+        let stream = try await transcriber.start()
+        var iterator = stream.makeAsyncIterator()
+        await fallback.emit(makeFinal("use order 1842"))
+        let final = try await iterator.next()
+
+        XCTAssertEqual(final?.text, "use order 1842")
+        XCTAssertEqual(final?.isFinal, true)
+        let fallbackStarted = await fallback.startCalled
+        XCTAssertTrue(fallbackStarted)
+    }
+
+    func testMidstreamFailoverPreservesPrimaryTranscriptPrefix() async throws {
+        struct SocketDropped: Error {}
+        let primary = FakeTranscriber()
+        let fallback = FakeTranscriber()
+        let transcriber = FailoverTranscriber(primary: primary, fallback: fallback)
+        let stream = try await transcriber.start()
+        var iterator = stream.makeAsyncIterator()
+
+        await primary.emit(TranscriptUpdate(
+            text: "Actually don't create", isFinal: false,
+            confidence: nil, segments: []))
+        let primaryPartial = try await iterator.next()
+        XCTAssertEqual(primaryPartial?.text, "Actually don't create")
+        await primary.failStream(SocketDropped())
+
+        for _ in 0..<50 {
+            if await fallback.startCalled { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let fallbackStarted = await fallback.startCalled
+        XCTAssertTrue(fallbackStarted)
+        await fallback.emit(TranscriptUpdate(
+            text: "the replacement yet", isFinal: false,
+            confidence: nil, segments: []))
+        let fallbackPartial = try await iterator.next()
+        XCTAssertEqual(
+            fallbackPartial?.text, "Actually don't create the replacement yet")
+        await fallback.emit(makeFinal("the replacement yet, ask Maya instead"))
+        let final = try await iterator.next()
+        XCTAssertEqual(
+            final?.text,
+            "Actually don't create the replacement yet, ask Maya instead")
+        XCTAssertEqual(final?.isFinal, true)
+    }
+
+    func testFinishDuringFallbackStartupReachesNewProvider() async throws {
+        struct PrimaryUnavailable: Error {}
+        let primary = FakeTranscriber(startError: PrimaryUnavailable())
+        let fallback = FakeTranscriber(startDelay: .milliseconds(80))
+        let transcriber = FailoverTranscriber(primary: primary, fallback: fallback)
+
+        async let pendingStream = transcriber.start()
+        try await Task.sleep(for: .milliseconds(20))
+        await transcriber.finish()
+        _ = try await pendingStream
+
+        let fallbackFinished = await fallback.finishCalled
+        XCTAssertTrue(
+            fallbackFinished,
+            "a hotkey finish racing with provider failover must stop the fallback microphone")
     }
 }

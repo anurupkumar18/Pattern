@@ -17,6 +17,9 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var activeTaskSpec: VersionedTaskSpec?
     @Published private(set) var appliedPlanPatch: AppliedPlanPatch?
     @Published private(set) var executionLedger: [ExecutionLedgerEvent] = []
+    @Published private(set) var voiceProvider = "Apple Speech"
+    @Published private(set) var voiceModel = "On-device/system fallback"
+    @Published private(set) var voiceFallbackActive = false
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
@@ -35,7 +38,7 @@ final class AppCoordinator: ObservableObject {
     private var attemptLedger = ActionAttemptLedger()
     private var cachedActions: [String: ActionResult] = [:]
     private var activeTaskID: UUID?
-    private var permissionsGranted = false
+    private var microphonePermissionGranted = false
 
     /// Dev builds run the sidecar straight from the repo checkout; packaged
     /// builds set VOICEOPS_AGENT_DIR (packaging arrives in a later phase).
@@ -188,32 +191,104 @@ final class AppCoordinator: ObservableObject {
     private func startCapture() {
         Task { [weak self] in
             guard let self else { return }
-            if !permissionsGranted {
-                permissionsGranted = await SpeechTranscriber.requestPermissions()
+            if !microphonePermissionGranted {
+                microphonePermissionGranted = await SpeechTranscriber
+                    .requestMicrophonePermission()
             }
-            guard permissionsGranted else {
+            guard microphonePermissionGranted else {
                 dispatch(.taskFailed(reason:
-                    "Microphone or Speech Recognition permission is missing. "
-                    + "Enable both for VoiceOps in System Settings → Privacy & Security."))
+                    "Microphone permission is missing. Enable VoiceOps in "
+                    + "System Settings → Privacy & Security → Microphone."))
                 return
             }
             // The user may have cancelled while the permission dialog was up.
             guard isVoiceCaptureState(state) else { return }
 
-            let controller = VoiceSessionController(
-                transcriber: SpeechTranscriber(),
-                locale: Locale.current.identifier(.bcp47))
-            controller.onPartial = { [weak self] in self?.dispatch(.partialTranscript($0)) }
-            controller.onAutoFinal = { [weak self] in self?.dispatch(.finalTranscript($0)) }
-            controller.onError = { [weak self] in
-                self?.dispatch(.taskFailed(reason: "Speech capture failed: \($0.localizedDescription)"))
+            let locale = Locale.current.identifier(.bcp47)
+            let speechFallbackAuthorized = await SpeechTranscriber
+                .requestSpeechPermission()
+            guard isVoiceCaptureState(state) else { return }
+            if let apiKey = loadOpenAIApiKey() {
+                let realtime = OpenAIRealtimeTranscriber(
+                    apiKey: apiKey,
+                    configuration: .init(
+                        model: "gpt-realtime-whisper",
+                        language: Locale.current.language.languageCode?.identifier ?? "en",
+                        delay: .medium))
+                let transcriber: any Transcriber
+                if speechFallbackAuthorized {
+                    transcriber = FailoverTranscriber(
+                        primary: realtime,
+                        fallback: SpeechTranscriber()
+                    ) { [weak self] error in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            voiceProvider = "Apple Speech"
+                            voiceModel = "System recognizer · automatic fallback"
+                            voiceFallbackActive = true
+                            recordTrace(
+                                .recovery,
+                                "Voice provider failed over without restarting the task: "
+                                    + error.localizedDescription)
+                        }
+                    }
+                } else {
+                    transcriber = realtime
+                }
+                let controller = VoiceSessionController(
+                    transcriber: transcriber,
+                    locale: locale,
+                    finalizationTimeout: .seconds(8))
+                configureVoiceCallbacks(controller)
+                voiceSession = controller
+                voiceProvider = "OpenAI Realtime"
+                voiceModel = "gpt-realtime-whisper · medium delay"
+                voiceFallbackActive = false
+                do {
+                    try await controller.begin()
+                    recordTrace(.listening, "OpenAI Realtime transcription connected")
+                    return
+                } catch {
+                    dispatch(.taskFailed(reason:
+                        "Neither configured voice provider could start: "
+                            + error.localizedDescription))
+                    return
+                }
             }
+
+            guard speechFallbackAuthorized else {
+                dispatch(.taskFailed(reason:
+                    "Speech Recognition permission is disabled. Enable it in "
+                    + "System Settings → Privacy & Security."))
+                return
+            }
+            guard isVoiceCaptureState(state) else { return }
+            let controller = VoiceSessionController(
+                transcriber: SpeechTranscriber(), locale: locale)
+            configureVoiceCallbacks(controller)
             voiceSession = controller
+            voiceProvider = "Apple Speech"
+            voiceModel = "System recognizer · automatic fallback"
+            voiceFallbackActive = loadOpenAIApiKey() != nil
             do {
                 try await controller.begin()
+                recordTrace(
+                    .listening,
+                    voiceFallbackActive
+                        ? "Apple Speech fallback is active"
+                        : "Apple Speech transcription started")
             } catch {
-                dispatch(.taskFailed(reason: "Could not start audio capture: \(error.localizedDescription)"))
+                dispatch(.taskFailed(reason:
+                    "Could not start audio capture: \(error.localizedDescription)"))
             }
+        }
+    }
+
+    private func configureVoiceCallbacks(_ controller: VoiceSessionController) {
+        controller.onPartial = { [weak self] in self?.dispatch(.partialTranscript($0)) }
+        controller.onAutoFinal = { [weak self] in self?.dispatch(.finalTranscript($0)) }
+        controller.onError = { [weak self] in
+            self?.dispatch(.taskFailed(reason: "Speech capture failed: \($0.localizedDescription)"))
         }
     }
 
@@ -616,5 +691,9 @@ final class AppCoordinator: ObservableObject {
             "VOICEOPS_OPENAI_API_KEY": apiKey,
             "VOICEOPS_VLM_MODEL": model,
         ]
+    }
+
+    private func loadOpenAIApiKey() -> String? {
+        try? VLMCredentialStore().load()
     }
 }

@@ -13,6 +13,7 @@ struct CompanionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
+            if coordinator.state != .idle { voiceMethod }
             content
             if coordinator.activeTaskSpec != nil { versionedPlan }
             if !coordinator.executionLedger.isEmpty { executionLedger }
@@ -23,6 +24,26 @@ struct CompanionView: View {
         .frame(width: 520, alignment: .leading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .animation(.easeInOut(duration: 0.15), value: coordinator.state)
+    }
+
+    private var voiceMethod: some View {
+        HStack(spacing: 6) {
+            Image(systemName: coordinator.voiceFallbackActive
+                ? "arrow.triangle.2.circlepath" : "waveform.badge.mic")
+            Text(coordinator.voiceProvider).font(.caption.weight(.semibold))
+            Text(coordinator.voiceModel)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(coordinator.voiceFallbackActive ? "FALLBACK" : "LIVE")
+                .font(.caption2.monospaced().weight(.bold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(.quaternary.opacity(0.45), in: Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "Voice provider \(coordinator.voiceProvider), model \(coordinator.voiceModel)")
     }
 
     private var taskTimeline: some View {

@@ -5,7 +5,7 @@ enum VLMConfiguration {
     static let keychainService = "com.voiceops.vlm"
     static let keychainAccount = "openai-api-key"
     static let modelDefaultsKey = "voiceops.vlm.openai.model"
-    static let defaultModel = "gpt-5.6-terra"
+    static let defaultModel = "gpt-5.6-sol"
 }
 
 enum VLMCredentialError: Error, LocalizedError {
