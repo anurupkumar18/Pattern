@@ -119,12 +119,15 @@ final class VoiceSessionControllerTests: XCTestCase {
         let fake = FakeTranscriber()
         let controller = VoiceSessionController(
             transcriber: fake, locale: "en-US", finalizationTimeout: .milliseconds(100))
+        var timedOut = false
+        controller.onFinalizationTimeout = { timedOut = true }
         try await controller.begin()
         await fake.emit(TranscriptUpdate(text: "remind me tomorrow", isFinal: false, confidence: nil, segments: []))
 
         let request = try await controller.end()  // no final ever emitted
         XCTAssertEqual(request.transcript, "remind me tomorrow")
         XCTAssertEqual(request.confidence, 0)
+        XCTAssertTrue(timedOut)
         let cancelCalled = await fake.cancelCalled
         XCTAssertTrue(cancelCalled, "timeout must tear down the silent provider")
     }

@@ -224,12 +224,18 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
 /// OpenAI's transcription-only Realtime WebSocket. It streams 24 kHz mono
 /// PCM16 and manually commits on the same hotkey that ends capture, keeping
 /// VoiceOps—not server VAD—in control of task boundaries.
+public enum OpenAIFinalizationOutcome: Equatable, Sendable {
+    case refined(model: String)
+    case realtimeFallback(model: String)
+}
+
 public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
     private let lock = NSLock()
     private let audioEngine = AVAudioEngine()
     private let apiKey: String
     private let configuration: RealtimeTranscriptionConfiguration
     private let session: URLSession
+    private let onFinalization: @Sendable (OpenAIFinalizationOutcome) -> Void
 
     private var socket: URLSessionWebSocketTask?
     private var outputContinuation: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation?
@@ -252,11 +258,13 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
     public init(
         apiKey: String,
         configuration: RealtimeTranscriptionConfiguration = .init(),
-        session: URLSession = URLSession(configuration: .ephemeral)
+        session: URLSession = URLSession(configuration: .ephemeral),
+        onFinalization: @escaping @Sendable (OpenAIFinalizationOutcome) -> Void = { _ in }
     ) {
         self.apiKey = apiKey
         self.configuration = configuration
         self.session = session
+        self.onFinalization = onFinalization
     }
 
     public enum RealtimeError: Error, LocalizedError {
@@ -539,10 +547,13 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
         eligible: Bool
     ) async {
         var final = realtimeTranscript
+        var outcome = OpenAIFinalizationOutcome.realtimeFallback(
+            model: configuration.model)
         if eligible, !pcm16.isEmpty, let model = configuration.finalModel {
             do {
                 final = try await requestHighAccuracyTranscript(
                     pcm16: pcm16, model: model)
+                outcome = .refined(model: model)
                 log.info("high-accuracy final transcription completed")
             } catch {
                 log.info(
@@ -556,9 +567,11 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
             outputContinuation = nil
             return value
         }
-        continuation?.yield(TranscriptUpdate(
+        guard let continuation else { return }
+        onFinalization(outcome)
+        continuation.yield(TranscriptUpdate(
             text: final, isFinal: true, confidence: nil, segments: []))
-        continuation?.finish()
+        continuation.finish()
     }
 
     private func requestHighAccuracyTranscript(

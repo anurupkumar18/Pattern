@@ -46,6 +46,9 @@ public final class VoiceSessionController {
     /// Fired when capture fails while no end() call is waiting — without this
     /// the app would sit in listening state with a dead microphone.
     public var onError: ((Error) -> Void)?
+    /// Fired when no provider final arrives inside the bounded finalization
+    /// window and the controller must use the last live partial (or no speech).
+    public var onFinalizationTimeout: (() -> Void)?
 
     private let finalizationTimeout: Duration
     private var consumeTask: Task<Void, Never>?
@@ -149,6 +152,7 @@ public final class VoiceSessionController {
         // teardown a silent Realtime socket can outlive the completed request.
         isActive = false
         consumeTask?.cancel()
+        onFinalizationTimeout?()
         await transcriber.cancel()
         if lastPartial.isEmpty {
             pendingEnd.resume(throwing: VoiceSessionError.noSpeech)

@@ -267,7 +267,12 @@ final class AppCoordinator: ObservableObject {
                     configuration: .init(
                         model: "gpt-realtime-whisper",
                         language: Locale.current.language.languageCode?.identifier ?? "en",
-                        delay: .medium))
+                        delay: .medium)
+                ) { [weak self] outcome in
+                    Task { @MainActor [weak self] in
+                        self?.voiceFinalizationCompleted(outcome)
+                    }
+                }
                 let transcriber: any Transcriber
                 if speechFallbackAuthorized {
                     transcriber = FailoverTranscriber(
@@ -346,12 +351,49 @@ final class AppCoordinator: ObservableObject {
         controller.onError = { [weak self] in
             self?.dispatch(.taskFailed(reason: "Speech capture failed: \($0.localizedDescription)"))
         }
+        controller.onFinalizationTimeout = { [weak self] in
+            guard let self else { return }
+            if self.voiceProvider == "OpenAI Realtime" {
+                self.voiceModel = "gpt-realtime-whisper · retained live partial"
+            }
+            self.voiceStatus = "RECOVERED"
+            self.recordTrace(
+                .recovery,
+                "Voice finalization timed out; retained the last visible live transcript")
+        }
+    }
+
+    private func markVoiceFinalizing() {
+        guard voiceProvider == "OpenAI Realtime" else { return }
+        voiceStatus = "FINALIZING"
+        recordTrace(
+            .listening,
+            "Realtime capture committed; refining the complete utterance within a five-second budget")
+    }
+
+    private func voiceFinalizationCompleted(_ outcome: OpenAIFinalizationOutcome) {
+        guard voiceProvider == "OpenAI Realtime" else { return }
+        switch outcome {
+        case .refined(let model):
+            voiceModel = "\(model) · complete utterance"
+            voiceStatus = "REFINED"
+            recordTrace(
+                .listening,
+                "Voice final refined by \(model); the completed Realtime result remained the fail-safe")
+        case .realtimeFallback(let model):
+            voiceModel = "\(model) · retained final"
+            voiceStatus = "RECOVERED"
+            recordTrace(
+                .recovery,
+                "Final refinement was unavailable; retained the completed \(model) transcript")
+        }
     }
 
     private func finishCaptureAndCollectContext() {
         contextTask = Task { [weak self] in
             guard let self, let voiceSession else { return }
             do {
+                markVoiceFinalizing()
                 let request = try await voiceSession.end()
                 dispatch(.finalTranscript(request.transcript))
                 let context = try await screenContextCollector.collect()
@@ -390,6 +432,7 @@ final class AppCoordinator: ObservableObject {
                   let taskID = activeTaskID
             else { return }
             do {
+                markVoiceFinalizing()
                 let correction = try await voiceSession.end()
                 guard !Task.isCancelled else { return }
                 recordTrace(
