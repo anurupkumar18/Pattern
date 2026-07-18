@@ -50,6 +50,10 @@ class ShopifyAdminAdapter:
         self._order_id = order_id
         self._transport = transport or _urlopen_transport
 
+    def probe(self) -> None:
+        """Cheap credential/reachability check; raises on any failure."""
+        self._get("/shop.json")
+
     # -- writes --------------------------------------------------------------
 
     def add_note_and_tag(self, note: str, tag: str) -> None:

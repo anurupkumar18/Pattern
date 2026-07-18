@@ -47,6 +47,10 @@ class SlackAdapter:
         self._marker = f"[voiceops:{order_id}]"
         self._transport = transport or _urlopen_transport
 
+    def probe(self) -> None:
+        """Cheap credential check; raises on any failure."""
+        self._call("POST", "/api/auth.test", {})
+
     def post_operations_message(self, message: str) -> None:
         marked = f"{message} {self._marker}"
         for existing in self._history():

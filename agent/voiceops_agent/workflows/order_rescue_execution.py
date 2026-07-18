@@ -68,6 +68,7 @@ class FixtureOrderRescueExecutor:
         approved_action_ids: set[str],
         stop_before_action: str | None = None,
         adapters: OrderRescueChannelAdapters | None = None,
+        channel_reason: str | None = None,
     ) -> OrderRescueExecutionResult:
         adapters = adapters if adapters is not None else FixtureOrderRescueAdapters(fixture)
         _require_corrected_task(task)
@@ -86,6 +87,19 @@ class FixtureOrderRescueExecutor:
         actions: dict[str, OrderRescueActionRecord] = {}
         ledger: list[ExecutionLedgerEvent] = []
         clock = _LedgerClock()
+        ledger.append(clock.event(
+            "decided",
+            where="VoiceOps channel selector",
+            what="Selected the execution channel for all writes.",
+            found=(
+                f"channel={adapters.channel}"
+                + (f" — {channel_reason}" if channel_reason else "")
+            ),
+            source="sidecar.configuration",
+            why="Evidence must state whether writes touched live systems or fixtures.",
+            confidence=1,
+            next="Execute only approved actions through this channel.",
+        ))
         if required:
             ledger.append(clock.event(
                 "decided",

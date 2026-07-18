@@ -122,9 +122,11 @@ class ConversationToolRouter:
         self,
         fixture: OrderRescueFixture,
         compiler: Any | None = None,
+        adapters_factory: Any | None = None,
     ) -> None:
         self._fixture = fixture
         self._compiler = compiler  # live/fallback compiler injected later
+        self._adapters_factory = adapters_factory
         self._tasks: dict[UUID, _ConversationTaskState] = {}
 
     def handle(self, task_id: UUID, call: ConversationToolCall) -> list[Envelope]:
@@ -294,12 +296,17 @@ class ConversationToolRouter:
             raise ConversationError(
                 "execution requires a confirmed, current approval"
             )
+        selection = self._select_adapters()
         execution = FixtureOrderRescueExecutor().execute(
             state.spec,
             self._fixture,
             approved_action_ids=set(state.binding.action_ids),
+            adapters=selection.adapters,
+            channel_reason=selection.reason,
         )
-        report = verify_order_rescue(state.spec, self._fixture, execution)
+        report = verify_order_rescue(
+            state.spec, self._fixture, execution, adapters=selection.adapters
+        )
         state.ledger = report.ledger
         state.completed = True
         events = [
@@ -318,6 +325,8 @@ class ConversationToolRouter:
         events.append(self._result(task_id, call, "ok", result={
             "headline": report.headline,
             "state": report.state,
+            "channel": selection.adapters.channel,
+            "channel_reason": selection.reason,
             "checks_passed": sum(check.passed for check in report.core_checks),
             "checks_total": len(report.core_checks),
             "confirmed_not_performed": [
@@ -329,6 +338,13 @@ class ConversationToolRouter:
         return events
 
     # -- helpers -------------------------------------------------------------
+
+    def _select_adapters(self):
+        if self._adapters_factory is not None:
+            return self._adapters_factory()
+        from .adapters.live import build_order_rescue_adapters
+
+        return build_order_rescue_adapters(self._fixture)
 
     def _compile(self, task_id: UUID, transcript: str) -> VersionedTaskSpec:
         if self._compiler is not None:
