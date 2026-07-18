@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 import VoiceOpsCore
 
 /// Owns the session: hotkey → capture → sidecar exchange → companion state.
@@ -43,6 +44,7 @@ final class AppCoordinator: ObservableObject {
     private var microphonePermissionGranted = false
     private var isReplayingOrderRescue = false
     private var replayReportURL: URL?
+    private var replayScreenshotURL: URL?
 
     /// Dev builds run the sidecar straight from the repo checkout; packaged
     /// builds set VOICEOPS_AGENT_DIR (packaging arrives in a later phase).
@@ -62,6 +64,9 @@ final class AppCoordinator: ObservableObject {
         replayReportURL = ProcessInfo.processInfo.arguments
             .first(where: { $0.hasPrefix("--replay-report=") })
             .map { URL(fileURLWithPath: String($0.dropFirst("--replay-report=".count))) }
+        replayScreenshotURL = ProcessInfo.processInfo.arguments
+            .first(where: { $0.hasPrefix("--replay-screenshot=") })
+            .map { URL(fileURLWithPath: String($0.dropFirst("--replay-screenshot=".count))) }
         hotKey = HotKeyManager { [weak self] in self?.dispatch(.hotkeyTapped) }
         panicStop = PanicStopMonitor { [weak self] in self?.stop() }
         panel = CompanionPanelController(coordinator: self)
@@ -228,6 +233,7 @@ final class AppCoordinator: ObservableObject {
             contextTask?.cancel()
             contextTask = nil
             writeOrderRescueReplayReport(result)
+            writeOrderRescueReplayScreenshot()
             cancelSidecar()
             cleanupScreenContext()
             if shouldExitAfterReplay {
@@ -848,6 +854,23 @@ final class AppCoordinator: ObservableObject {
             // The UI result remains authoritative; a CLI-only receipt failure
             // must not mutate the already verified task outcome.
         }
+    }
+
+    private func writeOrderRescueReplayScreenshot() {
+        guard isReplayingOrderRescue, let replayScreenshotURL else { return }
+        let hosting = NSHostingView(rootView: CompanionView(coordinator: self))
+        hosting.wantsLayer = true
+        hosting.layoutSubtreeIfNeeded()
+        let fittingSize = hosting.fittingSize
+        guard fittingSize.width >= 500, fittingSize.height >= 600 else { return }
+        hosting.frame = NSRect(origin: .zero, size: fittingSize)
+        hosting.layoutSubtreeIfNeeded()
+        guard let bitmap = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds)
+        else { return }
+        hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+        guard let png = bitmap.representation(using: .png, properties: [:])
+        else { return }
+        try? png.write(to: replayScreenshotURL, options: .atomic)
     }
 
     private func isTaskActive(_ state: SessionState) -> Bool {

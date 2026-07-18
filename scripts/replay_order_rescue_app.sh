@@ -6,10 +6,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED="$ROOT/macos/build"
 APP="$DERIVED/Build/Products/Debug/VoiceOps.app"
-REPORT="$(mktemp -t voiceops-order-rescue-replay).json"
+TEMP_DIR="$(mktemp -d -t voiceops-order-rescue-replay)"
+REPORT="$TEMP_DIR/report.json"
+SCREENSHOT="${VOICEOPS_REPLAY_SCREENSHOT_OUT:-$TEMP_DIR/companion.png}"
 
 cleanup() {
-  rm -f "$REPORT"
+  rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
 
@@ -41,7 +43,9 @@ done
 test "$SIGNED" = true
 
 "$APP/Contents/MacOS/VoiceOps" \
-  --replay-order-rescue --replay-report="$REPORT" &
+  --replay-order-rescue \
+  --replay-report="$REPORT" \
+  --replay-screenshot="$SCREENSHOT" &
 APP_PID=$!
 
 for _ in {1..200}; do
@@ -52,9 +56,11 @@ done
 
 wait "$APP_PID" || true
 test -s "$REPORT"
+test -s "$SCREENSHOT"
 
-python3 - "$REPORT" <<'PY'
+python3 - "$REPORT" "$SCREENSHOT" <<'PY'
 import json
+import struct
 import sys
 
 report = json.load(open(sys.argv[1]))
@@ -73,7 +79,13 @@ assert len(checks) == 7
 assert all(checks.values())
 assert checks["no-refund-issued"]
 assert checks["no-replacement-created"]
+png = open(sys.argv[2], "rb").read()
+assert png[:8] == b"\x89PNG\r\n\x1a\n"
+width, height = struct.unpack(">II", png[16:24])
+assert width >= 500 and height >= 600, (width, height)
+assert len(png) >= 50_000, len(png)
 print("NATIVE ORDER RESCUE REPLAY VERIFIED")
 print(report["summary"])
 print(f"task_version={report['task_version']} ledger_events={len(report['ledger'])} predicates={len(checks)}")
+print(f"companion_screenshot={width}x{height}")
 PY
