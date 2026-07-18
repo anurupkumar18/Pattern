@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "harness": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "shell",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "working",
+              "idle",
+              "blocked",
+              "done"
+            ]
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastActivity": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "string"
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "summary",
+              "at"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "harness",
+          "status",
+          "cwd",
+          "lastActivity"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "focusedAgentId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "listening": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "capturedAt",
+    "agents",
+    "focusedAgentId",
+    "listening"
+  ],
+  "additionalProperties": false
+}

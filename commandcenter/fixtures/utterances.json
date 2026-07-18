@@ -1,0 +1,198 @@
+[
+  {
+    "id": "status-clear-1",
+    "category": "clear",
+    "utterance": "what is the fleet status",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}},{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}},{"id":"deploy","name":"Deploy Agent","harness":"codex","status":"working","cwd":"/repos/infra","lastActivity":{"summary":"Writing deployment plan","at":"2026-07-18T04:57:00.000Z"}}],"focusedAgentId":"tests","listening":true},
+    "expected": {"verb":"status","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "status-clear-2",
+    "category": "clear",
+    "utterance": "give me a fleet update",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"status","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "status-fuzzy-1",
+    "category": "fuzzy",
+    "utterance": "what needs me right now",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"status","resolvedTargetId":"migration","payload":{}}
+  },
+  {
+    "id": "focus-clear-1",
+    "category": "clear",
+    "utterance": "focus the migration agent",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"focus","resolvedTargetId":"migration","payload":{"agentId":"migration"}}
+  },
+  {
+    "id": "focus-clear-2",
+    "category": "clear",
+    "utterance": "switch to the test agent",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"focus","resolvedTargetId":"tests","payload":{"agentId":"tests"}}
+  },
+  {
+    "id": "focus-fuzzy-1",
+    "category": "fuzzy",
+    "utterance": "switch to the one that is blocked",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}},{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":"tests","listening":true},
+    "expected": {"verb":"focus","resolvedTargetId":"migration","payload":{"agentId":"migration"}}
+  },
+  {
+    "id": "focus-fuzzy-2",
+    "category": "fuzzy",
+    "utterance": "show me the second claude",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}},{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"focus","resolvedTargetId":"tests","payload":{"agentId":"tests"}}
+  },
+  {
+    "id": "send-clear-1",
+    "category": "clear",
+    "utterance": "tell the test agent to rerun the auth suite",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"send","resolvedTargetId":"tests","payload":{"agentId":"tests","text":"rerun the auth suite"}}
+  },
+  {
+    "id": "send-clear-2",
+    "category": "clear",
+    "utterance": "send the migration agent use staging not production",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"send","resolvedTargetId":"migration","payload":{"agentId":"migration","text":"use staging not production"}}
+  },
+  {
+    "id": "send-clear-3",
+    "category": "clear",
+    "utterance": "tell deploy agent to only make a plan",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"deploy","name":"Deploy Agent","harness":"codex","status":"working","cwd":"/repos/infra","lastActivity":{"summary":"Writing deployment plan","at":"2026-07-18T04:57:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"send","resolvedTargetId":"deploy","payload":{"agentId":"deploy","text":"only make a plan"}}
+  },
+  {
+    "id": "send-fuzzy-1",
+    "category": "fuzzy",
+    "utterance": "tell the blocked one to use staging",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}},{"id":"deploy","name":"Deploy Agent","harness":"codex","status":"working","cwd":"/repos/infra","lastActivity":{"summary":"Writing deployment plan","at":"2026-07-18T04:57:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"send","resolvedTargetId":"migration","payload":{"agentId":"migration","text":"use staging"}}
+  },
+  {
+    "id": "send-fuzzy-2",
+    "category": "fuzzy",
+    "utterance": "tell it to continue",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":"tests","listening":true},
+    "expected": {"verb":"send","resolvedTargetId":"tests","payload":{"agentId":"tests","text":"continue"}}
+  },
+  {
+    "id": "spawn-clear-1",
+    "category": "clear",
+    "utterance": "open a new codex in /repos/docs",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"spawn","resolvedTargetId":null,"payload":{"harness":"codex","cwd":"/repos/docs"}}
+  },
+  {
+    "id": "spawn-clear-2",
+    "category": "clear",
+    "utterance": "spawn claude in /repos/api",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"spawn","resolvedTargetId":null,"payload":{"harness":"claude","cwd":"/repos/api"}}
+  },
+  {
+    "id": "spawn-clear-3",
+    "category": "clear",
+    "utterance": "start a codex named docs agent in /repos/docs",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"spawn","resolvedTargetId":null,"payload":{"harness":"codex","cwd":"/repos/docs","name":"Docs Agent"}}
+  },
+  {
+    "id": "spawn-clear-4",
+    "category": "clear",
+    "utterance": "open a new claude in /repos/web and have it inspect the build",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"spawn","resolvedTargetId":null,"payload":{"harness":"claude","cwd":"/repos/web","initialMessage":"inspect the build"}}
+  },
+  {
+    "id": "interrupt-destructive-1",
+    "category": "destructive",
+    "utterance": "pause the deploy agent",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"deploy","name":"Deploy Agent","harness":"codex","status":"working","cwd":"/repos/infra","lastActivity":{"summary":"Writing deployment plan","at":"2026-07-18T04:57:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"interrupt","resolvedTargetId":"deploy","payload":{"agentId":"deploy"}}
+  },
+  {
+    "id": "interrupt-destructive-2",
+    "category": "destructive",
+    "utterance": "interrupt the migration agent",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"migration","name":"Migration Agent","harness":"claude","status":"blocked","cwd":"/repos/api","lastActivity":{"summary":"Waiting for database choice","at":"2026-07-18T04:59:00.000Z"}}],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"interrupt","resolvedTargetId":"migration","payload":{"agentId":"migration"}}
+  },
+  {
+    "id": "listen-stop-1",
+    "category": "clear",
+    "utterance": "stop listening",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"listen_ctl","resolvedTargetId":null,"payload":{"action":"stop"}}
+  },
+  {
+    "id": "listen-start-1",
+    "category": "clear",
+    "utterance": "hey listen up",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":false},
+    "expected": {"verb":"listen_ctl","resolvedTargetId":null,"payload":{"action":"start"}}
+  },
+  {
+    "id": "dictate-clear-1",
+    "category": "clear",
+    "utterance": "dictate check the failing assertion",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":"tests","listening":true},
+    "expected": {"verb":"dictate","resolvedTargetId":"tests","payload":{"agentId":"tests","text":"check the failing assertion"}}
+  },
+  {
+    "id": "dictate-clear-2",
+    "category": "clear",
+    "utterance": "type into the focused agent run npm test",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[{"id":"tests","name":"Test Agent","harness":"claude","status":"idle","cwd":"/repos/api","lastActivity":{"summary":"Auth suite passed","at":"2026-07-18T04:58:00.000Z"}}],"focusedAgentId":"tests","listening":true},
+    "expected": {"verb":"dictate","resolvedTargetId":"tests","payload":{"agentId":"tests","text":"run npm test"}}
+  },
+  {
+    "id": "noise-1",
+    "category": "noise",
+    "utterance": "the weather is nice today",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"noise","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "noise-2",
+    "category": "noise",
+    "utterance": "did you bring lunch",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"noise","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "noise-3",
+    "category": "noise",
+    "utterance": "um yeah anyway",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"noise","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "noise-4",
+    "category": "noise",
+    "utterance": "can everyone see the projector",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"noise","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "noise-5",
+    "category": "noise",
+    "utterance": "I think we should order pizza",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"noise","resolvedTargetId":null,"payload":{}}
+  },
+  {
+    "id": "noise-6",
+    "category": "noise",
+    "utterance": "right right that makes sense",
+    "snapshot": {"capturedAt":"2026-07-18T05:00:00.000Z","agents":[],"focusedAgentId":null,"listening":true},
+    "expected": {"verb":"noise","resolvedTargetId":null,"payload":{}}
+  }
+]

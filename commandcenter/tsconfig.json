@@ -11,7 +11,8 @@
     "outDir": "dist",
     "rootDir": ".",
     "resolveJsonModule": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["dist", "node_modules", "console"]
