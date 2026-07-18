@@ -1,136 +1,147 @@
-# VoiceOps Judge Demo Runbook
+# VoiceOps Conversational Order Rescue — Judge Runbook v2
 
-## 1. Demo Goal
+## Demo goal
 
-In under four minutes, prove all eligibility requirements and visibly map the product to every rubric category.
+In under four minutes, show a natural spoken correction changing a persistent
+task from v1 to v2, bind approval to the exact revised actions, execute through
+honestly labeled channels, and prove five required outcomes plus two prohibited
+outcomes by fresh reads.
 
-## 2. Pre-Demo Setup
+## Pre-demo checklist
 
-- Use a dedicated macOS user profile.
-- Run `scripts/seed_order_rescue_demo.sh` and keep the local Order #1842 / Maya
-  Chen workspace visible. It includes the delayed-package message, tracking
-  history, lifetime value, inventory, policy, and Friday deadline without any
-  external credentials or network requests.
-- Keep the exact initial request and correction below available only as presenter backup; speak naturally during the demo.
-- Open `evals/dashboard.html` on a secondary Space or tab.
-- Open **Voice & Intelligence Settings…** and require the live-readiness rows for
-  Microphone, Screen Recording, and Accessibility to say **Ready**. Apple Speech
-  should also say **Ready** when it is the zero-credential fallback. Calendar,
-  Reminders, and Automation are not required for the fixture-backed hero path.
-- Run `scripts/rehearse_order_rescue.sh`; require 20/20 in both deterministic reports before presenting.
-- Run `scripts/replay_order_rescue_app.sh`; require `NATIVE ORDER RESCUE REPLAY VERIFIED`.
-- Confirm the companion's voice badge says either `OpenAI Realtime · gpt-realtime-whisper → gpt-4o-transcribe` or clearly labeled `Apple Speech · FALLBACK`.
-- Keep the network backup hotspot available.
+- Use a dedicated macOS profile and seed the local Order #1842 workspace with
+  `scripts/seed_order_rescue_demo.sh`.
+- In **Voice & Intelligence Settings…**, require Microphone, Screen Recording,
+  and Accessibility to say **Ready**. Apple Speech must also be ready as the
+  contingency provider.
+- Save the OpenAI key, enable **Conversational voice**, and confirm the companion
+  opens as `OpenAI Realtime Conversation · LIVE`.
+- For live commerce, save all five Shopify/Slack sandbox values. Run the
+  read-only probe and require `channel: shopify.live+slack.live`:
 
-## 3. Opening (20 seconds)
+  ```sh
+  cd agent && uv run python -m tests.live_shopify_probe
+  ```
 
-“Knowledge workers know the outcome they want, but they still have to translate it into dozens of clicks across apps. VoiceOps lets them speak the outcome. It sees the current screen, acts on the real Mac, and independently proves the result.”
+- Verify the Slack bot is a member of `#shipping-escalations`. Use only test
+  order #1842 and remove prior demo note/tag/credit/message artifacts through
+  the sandbox UIs before a clean run.
+- Run `scripts/rehearse_order_rescue.sh`; require 27/27 in both deterministic
+  reports, zero false successes, zero duplicates, zero unapproved actions, zero
+  post-stop effects, and `NATIVE ORDER RESCUE REPLAY VERIFIED`.
+- Open `evals/dashboard.html` on a secondary Space. Keep the tested replay and
+  Apple Speech paths ready; never change credentials during the hero.
 
-Show the simple architecture strip: Speak -> Ground -> Act -> Verify.
+## Opening (20 seconds)
 
-## 4. Hero Demo (2 minutes 20 seconds)
+“VoiceOps lets an operator speak the outcome, correct the plan in flight, and
+prove the resulting state. The voice model can converse, but it has no direct
+power: every plan, approval, action, and verification crosses typed tools into
+the task machine.”
 
-Keep Order #1842 visible and press **⌃⌥V**.
+Show: **Speak → Ground → Version → Approve exact actions → Act → Refetch → Prove**.
 
-Speak naturally:
+## Conversational hero (2 minutes 20 seconds)
 
-> “Take care of this delayed order. Check whether it has moved recently. She looks like a valuable customer, so if it has been stuck for more than three days, prepare an expedited replacement, apologize to her, update the order, and remind me tomorrow to verify the new tracking.”
+Keep Order #1842 visible. Press **⌃⌥V** once; this opens the bounded S2S session.
+Say naturally, without reading word-for-word:
 
-End capture with **⌃⌥V**. Point out:
+> “Take care of this delayed order. Check whether it has moved recently. She’s a
+> valuable customer, so if it has been stuck for more than three days, prepare
+> an expedited replacement, apologize, update the order, and remind me tomorrow
+> to verify the new tracking.”
 
-- Live transcript proves natural spoken input.
-- The raw request remains visible beside the compiled objective, evidence, actions, constraints, and completion criteria.
-- The version badge reads **v1**; no action has been presented as complete.
+Point out the live user transcript, terse agent response, task ID, v1 objective,
+actions, constraints, and compiler label. No action is complete yet.
 
-Press **⌃⌥V** again and say:
+While VoiceOps is speaking, interrupt it:
 
-> “Actually, don’t create the replacement yet. Ask whether she would prefer the replacement or a full refund. Give her a twenty-dollar store credit either way, and tag Sarah in Slack because this is the third delayed package from this carrier.”
+> “Actually, don’t create the replacement yet. Ask whether she wants a
+> replacement or a refund, add a twenty-dollar credit, and notify Sarah in Slack
+> because this is the third delay from this carrier.”
 
-End capture. Point out, without narrating hidden chain-of-thought:
+The playback must stop immediately. Point out that the task ID did not change,
+the UI shows **v1 → v2**, replacement creation is removed, three consequential
+actions are added, and the original constraints remain.
 
-- The task ID did not change.
-- The visible patch says **v1 → v2**, removes replacement creation, adds customer choice, credit, and Slack escalation, and preserves the original constraints.
-- The structured execution ledger labels Observed, Interpreted, Decided, Acted, and Verified events with source and confidence.
-- The final card says **ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED**.
-- The last two checks explicitly prove **no refund issued** and **no replacement created**.
+VoiceOps calls `request_approval` and reads the returned text verbatim. Point to
+the bound approval card and hash prefix. Answer clearly:
 
-State clearly that the deterministic demo adapters implement semantic Shopify/customer/Slack/reminder state without requiring external credentials; they are not pixel-click simulations or claims about a live merchant store.
+> “Yes, go ahead.”
 
-## 5. Recovery Micro-Demo (30 seconds)
+An ambiguous phrase such as “yeah, maybe” must not authorize. The click button
+is only a fallback and sends the same hash-bound `confirm_approval` tool call.
 
-Run the stop-barrier rehearsal or press Escape before the Slack action.
+## Live verification beat (35 seconds)
 
-Say:
+Expand the channel-selection ledger event before describing external effects.
 
-> “Stop.”
+- If it says `shopify.live+slack.live`, show the Shopify test order note/tag and
+  $20 test credit, then the marked Slack escalation. State that customer email
+  is still a local sandbox channel.
+- If it says `fixture`, read the displayed reason aloud and say that no merchant
+  account was touched. Continue; this is the designed deterministic fallback.
+- In live mode, show the EventKit reminder and its five native fetch-back and UI
+  checks. The sidecar cannot complete while any of those results is missing.
 
-VoiceOps should terminate the remaining work. Narrate:
+Finish on **ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED**. Call out the two
+negative checks: **no refund issued** and **no replacement created**. A failed
+native reminder check must say `partial` / `NOT VERIFIED`, never success.
 
-“Stop sits below the model and sidecar. No action after the barrier can begin, and the rehearsal asserts zero post-stop side effects.”
+## Safety and recovery moment (25 seconds)
 
-Reset and rerun the Order Rescue rehearsal before presenting again. Do not
-switch to a different product story after a stopped run.
+Expand the approval ledger entry:
 
-## 6. Safety Moment (20 seconds)
+“This SHA-256 binding names the task version and exact pending consequential
+actions. A patch invalidates it. The 27-case rehearsal forces a spoken mishear,
+a stale hash, an unknown tool, an execute replay, an unhealthy live adapter,
+and Escape during conversation; all fail closed.”
 
-Expand the Decided ledger entry that binds the exact customer message, $20 credit, and Slack escalation to the operator's correction.
+If demonstrating stop, press Escape while the session is active. The expected
+order is Realtime socket cancellation, audio stop, playback flush, then sidecar
+termination. Reseed and rehearse before another hero run.
 
-Say:
+## Contingency matrix
 
-“The correction itself explicitly authorizes only these three consequential actions. The approval set is preflighted before the first write; missing one blocks every write. Refund and replacement remain prohibited and are verified absent.”
+| Failure | Presenter action | Honest label / preserved evidence |
+|---|---|---|
+| S2S socket fails or network dies | Continue with hotkey-per-utterance Apple Speech | `FALLBACK`; active task/version is preserved |
+| Shopify or Slack credential/probe fails | Continue through deterministic adapters | Ledger says `fixture` plus the exact reason; do not claim external writes |
+| Live LLM or VLM fails | Continue with deterministic compiler/grounder | Compiler/grounding outcome says `FALLBACK` |
+| Conversation and live credentials both unavailable | Choose **Replay Tested Order Rescue** | `REPLAY`; proves native UI/sidecar contract, not microphone or merchant accounts |
+| Native reminder fetch-back or reveal fails | Stop on the partial result | Never narrate the task as complete |
 
-If time permits, show the `approval_denied` rehearsal row rather than performing a second live write.
+## Evaluation proof (30 seconds)
 
-## 7. Evaluation Proof (30 seconds)
+Open the dashboard and show 27/27 cross-runtime cases plus 27/27 Order Rescue
+runs, zero false successes, zero duplicate effects, zero unapproved actions,
+zero post-stop effects, and the explicit unmeasured live-latency field.
 
-Open the evaluation dashboard.
+Key line: “The automated evidence is offline correctness. The live drill record
+below is separate because permissions, accounts, acoustics, and networks cannot
+be fabricated by CI.”
 
-Show:
+## Freeze-week drill record
 
-- number of repeated trials;
-- end-to-end success;
-- false-success rate;
-- latency;
-- recovery rate;
-- known limitations.
+| Drill | Current outcome |
+|---|---|
+| Deterministic 27-case suites | Automated on this checkout; refresh before demo |
+| Signed native replay and screenshot | Automated on this checkout; refresh before demo |
+| Full conversational hero ×3 | **NOT RUN** — requires product-owner sandbox credentials and a permissioned live session |
+| Network kill mid-session | **NOT RUN** — requires a permissioned live session |
+| Shopify/Slack credential revoke | **NOT RUN** — requires product-owner sandbox credentials |
+| Forced approval mishear | Covered deterministically; live acoustic drill **NOT RUN** |
+| Escape during live execution | Core ordering covered deterministically; permissioned CGEvent delivery drill **NOT RUN** |
 
-Key line:
+Record dates, channel labels, failures, and fixes here after each product-owner
+drill. Do not convert an unrun manual item into a pass based on automated tests.
 
-“VoiceOps does not count a click as success. The executor and verifier are separate, and ambiguous evidence fails closed.”
+## Known limitations to state proactively
 
-## 8. Rubric Closing (20 seconds)
-
-- **Value:** replaces a real multi-app workflow with one request.
-- **Inputs:** voice, screen, accessibility semantics, and trusted application APIs with provenance.
-- **Ease:** one hotkey, visible progress, stop, and recovery.
-- **Model:** multimodal grounding, planning, synthesis, and replanning.
-- **Evidence:** independent predicates, repeated tests, and zero tolerated false-success reports.
-
-## 9. Contingency Paths
-
-### Speech service failure
-
-The app automatically switches from OpenAI Realtime to Apple Speech without restarting the task and preserves the transcript prefix. Point to the visible **FALLBACK** badge. If no API key is configured, Apple Speech is the expected primary demo-safe provider.
-
-### Model latency
-
-Deterministic Order Rescue compilation remains available without a model call. Do not change model configuration mid-demo.
-
-### Full hero failure
-
-Choose **Replay Tested Order Rescue** from the menu-bar app, then show the
-clearly labeled **REPLAY** badge and resulting trace. This drives the real native
-UI and sidecar with canonical transcripts but does not claim microphone input.
-Run the deterministic Order Rescue rehearsal and show its newly generated trace,
-clearly labeled as test evidence rather than a live external-account completion.
-The same versioned task, patch, ledger, stop barrier, and verifier contract remain
-visible; do not imply that fixture-backed actions touched a merchant account.
-
-## 10. Known Limitations to State Proactively
-
-- The Order Rescue execution adapters are deterministic demo state, not a connected production Shopify/Gmail/Slack account.
-- A live OpenAI Realtime audio acceptance run requires a configured API credential; Apple Speech is the tested zero-setup path.
-- Optimized for the delayed high-value order exception rather than every ecommerce workflow.
-- Complex drag-and-drop and canvas applications are not supported.
-- Visual fallback is less reliable than semantic APIs.
-- The agent does not enter passwords, purchase items, or autonomously send external communications.
+- Live customer email is out of scope; the customer-message channel is sandboxed.
+- Production distribution still needs ephemeral Realtime credentials rather
+  than a long-lived API key.
+- The hero is optimized for the delayed high-value order exception, not every
+  ecommerce workflow.
+- Live microphone/TCC, stage acoustics, external-account health, and latency are
+  manual acceptance items, not claims made by the deterministic report.

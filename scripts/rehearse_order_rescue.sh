@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$ROOT/agent"
 if [[ $# -eq 0 ]]; then
-    set -- --runs 20
+    set -- --runs 27
 fi
 uv run python -m voiceops_agent.evals.order_rescue "$@"
 

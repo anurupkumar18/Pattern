@@ -24,7 +24,7 @@ class OrderRescueExecutionError(ValueError):
 
 class OrderRescueActionRecord(VoiceOpsModel):
     action_id: str
-    status: Literal["executed", "no_op"]
+    status: Literal["executed", "no_op", "deferred"]
     evidence_ids: list[str] = Field(default_factory=list)
     observed: dict[str, Any] = Field(default_factory=dict)
 
@@ -69,6 +69,7 @@ class FixtureOrderRescueExecutor:
         stop_before_action: str | None = None,
         adapters: OrderRescueChannelAdapters | None = None,
         channel_reason: str | None = None,
+        defer_native_reminder: bool = False,
     ) -> OrderRescueExecutionResult:
         adapters = adapters if adapters is not None else FixtureOrderRescueAdapters(fixture)
         _require_corrected_task(task)
@@ -117,6 +118,23 @@ class FixtureOrderRescueExecutor:
         for action_id in ACTION_ORDER:
             action = task.actions.get(action_id)
             if action is None or action.status != "pending":
+                continue
+            if defer_native_reminder and action_id == "create_followup":
+                actions[action_id] = OrderRescueActionRecord(
+                    action_id=action_id,
+                    status="deferred",
+                    evidence_ids=["eventkit:pending"],
+                )
+                ledger.append(clock.event(
+                    "decided",
+                    where="VoiceOps native action bridge",
+                    what="Deferred the follow-up reminder to macOS EventKit.",
+                    found="No in-memory reminder write was performed.",
+                    source="eventkit:pending",
+                    why="Live mode must prove the reminder through native fetch-back.",
+                    confidence=1,
+                    next="Wait for one native action result and five verifier results.",
+                ))
                 continue
             if stop_before_action == action_id:
                 ledger.append(clock.event(
@@ -288,6 +306,7 @@ def verify_order_rescue(
     fixture: OrderRescueFixture,
     execution: OrderRescueExecutionResult,
     adapters: OrderRescueChannelAdapters | None = None,
+    native_reminder: VerificationResult | None = None,
 ) -> OrderRescueVerificationReport:
     """Evaluate freshly fetched channel state; executor status never implies success."""
     if adapters is None:
@@ -341,7 +360,7 @@ def verify_order_rescue(
             {"message_count": len(operations_messages)},
             ["slack:carrier-escalation"],
         ),
-        _check(
+        native_reminder or _check(
             "followup-scheduled",
             "Verify Order #1842 tracking — 2026-07-19 09:00" in reminders,
             f"reminders_refetch@{channel}",

@@ -88,6 +88,8 @@ final class EventKitReminderWorkflow {
             dueComponents.year = draft.dueDate.year
             dueComponents.month = draft.dueDate.month
             dueComponents.day = draft.dueDate.day
+            dueComponents.hour = draft.dueTime?.hour
+            dueComponents.minute = draft.dueTime?.minute
             reminder.dueDateComponents = dueComponents
             try eventStore.save(reminder, commit: true)
 
@@ -232,17 +234,25 @@ final class EventKitReminderWorkflow {
     private func record(_ reminder: EKReminder) -> ReminderRecord {
         let components = reminder.dueDateComponents
         let dueDate: LocalDate?
+        let dueTime: LocalTime?
         if let year = components?.year,
            let month = components?.month,
            let day = components?.day {
             dueDate = LocalDate(year: year, month: month, day: day)
+            if let hour = components?.hour, let minute = components?.minute {
+                dueTime = LocalTime(hour: hour, minute: minute)
+            } else {
+                dueTime = nil
+            }
         } else {
             dueDate = nil
+            dueTime = nil
         }
         return ReminderRecord(
             identifier: reminder.calendarItemIdentifier,
             title: reminder.title,
             dueDate: dueDate,
+            dueTime: dueTime,
             notes: reminder.notes,
             calendarTitle: reminder.calendar.title)
     }

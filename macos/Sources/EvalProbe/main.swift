@@ -95,6 +95,18 @@ emit(ProbeResult(
     detail: "Only Escape while armed triggers the lower-level panic policy.",
     recoveryAttempted: false, recoverySucceeded: false, duplicateCount: 0))
 
+let conversation = SessionState.conversing(
+    agentSpeaking: true, planVersion: 2, transcript: "stop now")
+let cancelled = SessionStateMachine.reduce(conversation, .stopRequested)
+let teardownOrdered = ConversationTeardownPlan.panicStop == [
+    .cancelRealtimeSocket, .stopAudioEngine, .flushPlayback, .cancelSidecar,
+]
+let conversationPanicPassed = cancelled == .result(.cancelled) && teardownOrdered
+emit(ProbeResult(
+    caseID: "native_conversation_panic_stop", passed: conversationPanicPassed,
+    detail: "Conversation stop cancels and tears down socket/audio before the sidecar.",
+    recoveryAttempted: false, recoverySucceeded: false, duplicateCount: 0))
+
 let traceStart = Date(timeIntervalSince1970: 100)
 var trace = TaskTrace(startedAt: traceStart)
 trace.record(.action, "fixture action", at: traceStart.addingTimeInterval(0.1))

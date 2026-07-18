@@ -13,7 +13,7 @@ swift test --package-path "$ROOT/macos"
 echo "==> End-to-end mock exchange"
 (cd "$ROOT" && swift run -q --package-path "$ROOT/macos" voiceops-mock-client)
 
-echo "==> Deterministic 20-case evaluation report"
+echo "==> Deterministic 27-case evaluation report"
 (cd "$ROOT/agent" && uv run python -m voiceops_agent.evaluation \
   --repo-root "$ROOT" \
   --output-dir "$ROOT/evals/reports" \

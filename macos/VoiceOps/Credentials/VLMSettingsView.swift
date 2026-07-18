@@ -16,7 +16,14 @@ struct DemoPermissionReadiness: Identifiable {
 final class VLMSettingsModel: ObservableObject {
     @Published var pendingAPIKey = ""
     @Published var model: String
+    @Published var conversationalVoice: Bool
+    @Published var shopifyShop = ""
+    @Published var shopifyToken = ""
+    @Published var shopifyOrderID = ""
+    @Published var slackBotToken = ""
+    @Published var slackChannelID = ""
     @Published private(set) var isConfigured = false
+    @Published private(set) var commerceConfigured = false
     @Published private(set) var statusMessage: String?
     @Published private(set) var statusIsError = false
     @Published private(set) var demoPermissions: [DemoPermissionReadiness] = []
@@ -27,6 +34,8 @@ final class VLMSettingsModel: ObservableObject {
         model = UserDefaults.standard.string(
             forKey: VLMConfiguration.modelDefaultsKey)
             ?? VLMConfiguration.defaultModel
+        conversationalVoice = UserDefaults.standard.object(
+            forKey: VLMConfiguration.conversationalVoiceDefaultsKey) as? Bool ?? true
         refresh()
         refreshDemoReadiness()
     }
@@ -42,6 +51,9 @@ final class VLMSettingsModel: ObservableObject {
             let normalizedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
             model = normalizedModel.isEmpty ? VLMConfiguration.defaultModel : normalizedModel
             UserDefaults.standard.set(model, forKey: VLMConfiguration.modelDefaultsKey)
+            UserDefaults.standard.set(
+                conversationalVoice,
+                forKey: VLMConfiguration.conversationalVoiceDefaultsKey)
             isConfigured = true
             statusIsError = false
             statusMessage = "Saved securely. OpenAI Realtime voice and flagship vision are enabled."
@@ -49,6 +61,44 @@ final class VLMSettingsModel: ObservableObject {
             statusIsError = true
             statusMessage = error.localizedDescription
             refreshConfigurationFlag()
+        }
+    }
+
+    func saveCommerce() {
+        do {
+            let pending: [(CommerceCredential, String)] = [
+                (.shopifyShop, shopifyShop), (.shopifyToken, shopifyToken),
+                (.shopifyOrderID, shopifyOrderID), (.slackBotToken, slackBotToken),
+                (.slackChannelID, slackChannelID),
+            ]
+            for (credential, value) in pending
+                where !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                try store.save(value, for: credential)
+            }
+            clearPendingCommerce()
+            refreshCommerceFlag()
+            guard commerceConfigured else {
+                throw VLMCredentialError.incompleteCommerceCredentials
+            }
+            statusIsError = false
+            statusMessage = "Commerce sandbox credentials saved. Shopify and Slack health are probed by the sidecar before live selection."
+        } catch {
+            statusIsError = true
+            statusMessage = error.localizedDescription
+            refreshCommerceFlag()
+        }
+    }
+
+    func removeCommerceCredentials() {
+        do {
+            for credential in CommerceCredential.allCases { try store.delete(credential) }
+            clearPendingCommerce()
+            commerceConfigured = false
+            statusIsError = false
+            statusMessage = "Commerce credentials removed. Order Rescue will use the visibly labeled fixture channel."
+        } catch {
+            statusIsError = true
+            statusMessage = error.localizedDescription
         }
     }
 
@@ -101,6 +151,26 @@ final class VLMSettingsModel: ObservableObject {
         statusMessage = nil
         statusIsError = false
         refreshConfigurationFlag()
+        refreshCommerceFlag()
+    }
+
+    private func refreshCommerceFlag() {
+        do {
+            commerceConfigured = try store.loadCommerceEnvironment().count
+                == CommerceCredential.allCases.count
+        } catch {
+            commerceConfigured = false
+            statusIsError = true
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func clearPendingCommerce() {
+        shopifyShop = ""
+        shopifyToken = ""
+        shopifyOrderID = ""
+        slackBotToken = ""
+        slackChannelID = ""
     }
 
     private func refreshConfigurationFlag() {
@@ -159,9 +229,38 @@ struct VLMSettingsView: View {
                     text: $model.pendingAPIKey)
                     .textContentType(.password)
                 TextField("Vision model", text: $model.model)
+                Toggle("Conversational voice (Realtime S2S)", isOn: $model.conversationalVoice)
                 Text("Default: \(VLMConfiguration.defaultModel). The model name is not secret and is stored in UserDefaults.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Commerce Sandbox") {
+                LabeledContent("Selection") {
+                    Label(
+                        model.commerceConfigured
+                            ? "Credentials ready · health probe at session start"
+                            : "Fixture fallback armed",
+                        systemImage: model.commerceConfigured
+                            ? "checkmark.circle.fill" : "shippingbox")
+                }
+                TextField("Shopify shop (store.myshopify.com)", text: $model.shopifyShop)
+                SecureField("Shopify Admin access token", text: $model.shopifyToken)
+                TextField("Shopify test order ID", text: $model.shopifyOrderID)
+                SecureField("Slack bot token", text: $model.slackBotToken)
+                TextField("Slack shipping-escalations channel ID", text: $model.slackChannelID)
+                Text("Live mode is selected only when all five values exist and both Shopify and Slack health probes pass. Any failure remains on the deterministic fixture channel and is labeled in the ledger.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    if model.commerceConfigured {
+                        Button("Remove Commerce Credentials", role: .destructive) {
+                            model.removeCommerceCredentials()
+                        }
+                    }
+                    Spacer()
+                    Button("Save Commerce Sandbox") { model.saveCommerce() }
+                }
             }
 
             Section("Privacy") {
@@ -212,7 +311,7 @@ struct VLMSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
-        .frame(width: 620, height: 650)
+        .frame(width: 660, height: 820)
         .onAppear { model.refreshDemoReadiness() }
     }
 }

@@ -13,7 +13,7 @@ from voiceops_agent.adapters.live import (
     build_order_rescue_adapters,
 )
 from voiceops_agent.conversation import ConversationToolRouter
-from voiceops_agent.schemas import ConversationToolCall, EventType
+from voiceops_agent.schemas import ConversationToolCall, EventType, VerificationResult
 from voiceops_agent.workflows.order_rescue import OrderRescueFixture
 
 FIXTURE_PATH = (
@@ -160,12 +160,31 @@ class TestRouterUsesSelectedChannel:
             binding_hash=binding["binding_hash"], utterance="yes",
         ))
         events = r.handle(TASK_ID, self.call("execute_plan"))
+        plan = next(e.payload for e in events if e.type == EventType.PLAN_READY)
+        native = [
+            VerificationResult(
+                predicate_id=predicate.id,
+                passed=True,
+                method="eventkit_fetch_back",
+                confidence=1,
+                expected=predicate.expected,
+                observed={"verified": True},
+                evidence_ids=["eventkit:test"],
+            )
+            for predicate in plan.steps[0].postconditions
+        ]
+        events += r.complete_native_reminder(TASK_ID, native)
         completed = next(e for e in events if e.type == EventType.TASK_COMPLETED)
         assert completed.payload.state == "succeeded"
         assert all(
             check.method.endswith("@shopify.live+slack.live")
             for check in completed.payload.verification
+            if check.predicate_id != "followup-scheduled"
         )
+        reminder = next(
+            check for check in completed.payload.verification
+            if check.predicate_id == "followup-scheduled")
+        assert reminder.method == "eventkit_fetch_back@native"
         ledger_texts = [
             e.payload.found for e in events if e.type == EventType.LEDGER_EVENT
         ]

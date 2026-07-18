@@ -44,15 +44,22 @@ def native_results():
             "recovery_succeeded": True,
             "duplicate_count": 0,
         },
+        "native_conversation_panic_stop": {
+            "passed": True,
+            "detail": "conversation cancelled before sidecar teardown",
+            "recovery_attempted": False,
+            "recovery_succeeded": False,
+            "duplicate_count": 0,
+        },
     }
 
 
-def test_cross_runtime_report_has_twenty_cases_and_all_safety_gates():
+def test_cross_runtime_report_has_twenty_seven_cases_and_all_safety_gates():
     report = run_evaluation(
         REPO, run_id="unit-fixture", native_results=native_results())
 
-    assert report["cases"] == 20
-    assert report["passed"] == 20
+    assert report["cases"] == 27
+    assert report["passed"] == 27
     assert report["false_successes"] == 0
     assert report["duplicate_side_effects"] == 0
     assert report["provenance_coverage_rate"] == 1
@@ -69,7 +76,7 @@ def test_writes_machine_and_human_readable_reports(tmp_path):
 
     assert json.loads(json_path.read_text())["status"] == "passed"
     markdown = markdown_path.read_text()
-    assert "20/20" in markdown
+    assert "27/27" in markdown
     assert "False successes | 0" in markdown
     assert "not a claim of completed live acceptance testing" in markdown
     assert render_markdown(report) == markdown

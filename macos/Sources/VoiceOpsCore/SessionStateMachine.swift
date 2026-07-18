@@ -42,6 +42,7 @@ public enum SessionEvent: Equatable, Sendable {
     case conversationClosed
     case agentSpeechStarted
     case agentSpeechEnded
+    case conversationFallback(objective: String?)
 }
 
 /// Pure reducer: (state, event) -> next state, or nil when the event is
@@ -143,6 +144,14 @@ public enum SessionStateMachine {
             return .result(.completed(state: taskState, summary: summary))
         case (.conversing, .taskFailed(let reason)):
             return .result(.failed(reason: reason))
+        case (.conversing(_, .some(let version), _),
+              .conversationFallback(let objective)):
+            return .readyForCorrection(
+                objective: objective ?? "Active task",
+                version: version,
+                groundingChips: [])
+        case (.conversing(_, .none, let transcript), .conversationFallback):
+            return .listening(transcript: transcript)
 
         default:
             return nil

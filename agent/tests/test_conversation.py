@@ -2,6 +2,7 @@
 gating, and the typed tool router that is the S2S voice layer's only
 side-effect path into the task machine."""
 
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -13,7 +14,16 @@ from voiceops_agent.conversation import (
     approval_binding_for,
     classify_affirmative,
 )
-from voiceops_agent.schemas import ConversationToolCall, EventType
+from voiceops_agent.schemas import (
+    ActionResult,
+    ConversationToolCall,
+    EventType,
+    VerificationResult,
+    make_envelope,
+)
+from voiceops_agent.main import SidecarRuntime
+from voiceops_agent.adapters.live import AdapterSelection
+from voiceops_agent.workflows.order_rescue_adapters import FixtureOrderRescueAdapters
 from voiceops_agent.workflows.order_rescue import (
     OrderRescueFixture,
     apply_plan_patch,
@@ -187,6 +197,140 @@ class TestApprovalAndExecution:
         ))
         assert events[-1].payload.status == "rejected"
         assert r.handle(TASK_ID, call("execute_plan"))[-1].payload.status == "rejected"
+
+
+class NativeReminderLiveAdapters(FixtureOrderRescueAdapters):
+    channel = "shopify.live+slack.live"
+
+    def create_followup_reminder(self, title: str) -> None:
+        raise AssertionError("live mode must defer the reminder to native EventKit")
+
+
+def live_router() -> ConversationToolRouter:
+    live = NativeReminderLiveAdapters(fixture())
+    return ConversationToolRouter(
+        fixture=fixture(),
+        adapters_factory=lambda: AdapterSelection(
+            adapters=live, reason="test live channel"),
+    )
+
+
+def approved_live_router() -> ConversationToolRouter:
+    r = live_router()
+    r.handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+    r.handle(TASK_ID, call("apply_patch", transcript=CORRECTION))
+    binding = r.handle(TASK_ID, call("request_approval"))[-1].payload.result
+    r.handle(TASK_ID, call(
+        "confirm_approval",
+        binding_hash=binding["binding_hash"], utterance="yes",
+    ))
+    return r
+
+
+class TestNativeReminderHandoff:
+    def test_live_execute_emits_native_plan_and_defers_completion(self):
+        events = approved_live_router().handle(TASK_ID, call("execute_plan"))
+        types = [event.type for event in events]
+        assert EventType.PLAN_READY in types
+        assert EventType.TASK_COMPLETED not in types
+        assert EventType.CONVERSATION_TOOL_RESULT not in types
+        plan = next(event.payload for event in events if event.type is EventType.PLAN_READY)
+        step = plan.steps[0]
+        assert step.tool == "reminders.create"
+        assert step.arguments["title"] == "Verify Order 1842 tracking"
+        assert step.arguments["due_time"] == "09:00"
+        assert len(step.postconditions) == 5
+
+    def test_native_success_finishes_only_after_all_five_verifications(self):
+        r = approved_live_router()
+        events = r.handle(TASK_ID, call("execute_plan"))
+        plan = next(event.payload for event in events if event.type is EventType.PLAN_READY)
+        verifications = [
+            VerificationResult(
+                predicate_id=predicate.id,
+                passed=True,
+                method="eventkit_fetch_back",
+                confidence=1,
+                expected=predicate.expected,
+                observed={"verified": True},
+                evidence_ids=["eventkit:test"],
+            )
+            for predicate in plan.steps[0].postconditions
+        ]
+        completed = r.complete_native_reminder(TASK_ID, verifications)
+        task = next(e.payload for e in completed if e.type is EventType.TASK_COMPLETED)
+        assert task.state == "succeeded"
+        assert task.summary == "ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED"
+        assert completed[-1].type is EventType.CONVERSATION_TOOL_RESULT
+
+    def test_failed_native_verification_is_partial_never_succeeded(self):
+        r = approved_live_router()
+        events = r.handle(TASK_ID, call("execute_plan"))
+        plan = next(event.payload for event in events if event.type is EventType.PLAN_READY)
+        verifications = [
+            VerificationResult(
+                predicate_id=predicate.id,
+                passed=predicate.id != "reminder-visible",
+                method="eventkit_fetch_back",
+                confidence=1,
+                expected=predicate.expected,
+                observed={"verified": predicate.id != "reminder-visible"},
+                evidence_ids=["eventkit:test"],
+                failure_reason=(
+                    None if predicate.id != "reminder-visible" else "not visible"
+                ),
+            )
+            for predicate in plan.steps[0].postconditions
+        ]
+        completed = r.complete_native_reminder(TASK_ID, verifications)
+        task = next(e.payload for e in completed if e.type is EventType.TASK_COMPLETED)
+        assert task.state == "partial"
+        assert "NOT VERIFIED" in task.summary
+
+    def test_runtime_registers_plan_and_waits_for_native_action_and_checks(self):
+        r = approved_live_router()
+        runtime = SidecarRuntime(
+            order_rescue_fixture=fixture(), conversation_router=r)
+        execute = make_envelope(
+            EventType.CONVERSATION_TOOL_CALL,
+            TASK_ID,
+            call("execute_plan"),
+        )
+        events = runtime.handle_line(execute.to_ndjson())
+        plan = next(event.payload for event in events if event.type is EventType.PLAN_READY)
+        step = plan.steps[0]
+        now = datetime.now(UTC)
+        action = ActionResult(
+            step_id=step.id,
+            status="executed",
+            started_at=now,
+            ended_at=now,
+            channel="eventkit",
+        )
+        assert runtime.handle_line(make_envelope(
+            EventType.ACTION_FINISHED, TASK_ID, action
+        ).to_ndjson()) == []
+
+        terminal = []
+        for predicate in step.postconditions:
+            terminal = runtime.handle_line(make_envelope(
+                EventType.VERIFICATION_FINISHED,
+                TASK_ID,
+                VerificationResult(
+                    predicate_id=predicate.id,
+                    passed=True,
+                    method="eventkit_fetch_back",
+                    confidence=1,
+                    expected=predicate.expected,
+                    observed={"verified": True},
+                    evidence_ids=["eventkit:test"],
+                ),
+            ).to_ndjson())
+        assert any(event.type is EventType.TASK_COMPLETED for event in terminal)
+        assert terminal[-1].type is EventType.CONVERSATION_TOOL_RESULT
+
+
+class TestApprovalAndExecutionContinued:
 
     def test_corrupted_hash_is_rejected(self):
         r = compiled_and_patched_router()

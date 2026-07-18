@@ -30,16 +30,40 @@ public struct LocalDate: Codable, Equatable, Sendable {
     }
 }
 
+public struct LocalTime: Codable, Equatable, Sendable {
+    public let hour: Int
+    public let minute: Int
+
+    public init(hour: Int, minute: Int) {
+        self.hour = hour
+        self.minute = minute
+    }
+
+    public init(hhmm: String) throws {
+        let parts = hhmm.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              parts[0].count == 2, parts[1].count == 2,
+              let hour = Int(parts[0]), (0...23).contains(hour),
+              let minute = Int(parts[1]), (0...59).contains(minute)
+        else { throw ReminderDraftError.invalidDueTime(hhmm) }
+        self.init(hour: hour, minute: minute)
+    }
+
+    public var hhmm: String { String(format: "%02d:%02d", hour, minute) }
+}
+
 public enum ReminderDraftError: Error, Equatable, LocalizedError {
     case wrongTool(String)
     case missingArgument(String)
     case invalidDueDate(String)
+    case invalidDueTime(String)
 
     public var errorDescription: String? {
         switch self {
         case .wrongTool(let tool): "Unsupported reminder tool: \(tool)."
         case .missingArgument(let name): "Reminder plan is missing \(name)."
         case .invalidDueDate(let value): "Reminder due date is invalid: \(value)."
+        case .invalidDueTime(let value): "Reminder due time is invalid: \(value)."
         }
     }
 }
@@ -48,6 +72,7 @@ public struct ReminderDraft: Equatable, Sendable {
     public let stepID: String
     public let title: String
     public let dueDate: LocalDate
+    public let dueTime: LocalTime?
     public let notes: String
     public let taskMarker: String
     public let predicates: [Predicate]
@@ -60,6 +85,11 @@ public struct ReminderDraft: Equatable, Sendable {
         title = try Self.requiredString("title", in: step.arguments)
         dueDate = try LocalDate(
             iso8601: Self.requiredString("due_date", in: step.arguments))
+        if case .string(let value)? = step.arguments["due_time"] {
+            dueTime = try LocalTime(hhmm: value)
+        } else {
+            dueTime = nil
+        }
         notes = try Self.requiredString("notes", in: step.arguments)
         taskMarker = try Self.requiredString("task_marker", in: step.arguments)
         predicates = step.postconditions
@@ -79,6 +109,7 @@ public struct ReminderRecord: Equatable, Sendable {
     public let identifier: String
     public let title: String
     public let dueDate: LocalDate?
+    public let dueTime: LocalTime?
     public let notes: String?
     public let calendarTitle: String
 
@@ -86,12 +117,14 @@ public struct ReminderRecord: Equatable, Sendable {
         identifier: String,
         title: String,
         dueDate: LocalDate?,
+        dueTime: LocalTime? = nil,
         notes: String?,
         calendarTitle: String
     ) {
         self.identifier = identifier
         self.title = title
         self.dueDate = dueDate
+        self.dueTime = dueTime
         self.notes = notes
         self.calendarTitle = calendarTitle
     }
@@ -148,11 +181,21 @@ public enum ReminderVerificationEngine {
                 "The fetched reminder title did not contain the visible commitment.")
 
         case "reminder-due-date":
-            let passed = fetched?.dueDate == draft.dueDate
+            let expectedTime = predicate.expected["local_time"]
+            let timePassed: Bool
+            if case .string(let value)? = expectedTime {
+                timePassed = fetched?.dueTime?.hhmm == value
+            } else {
+                timePassed = true
+            }
+            let passed = fetched?.dueDate == draft.dueDate && timePassed
             return (
                 passed,
-                ["local_date": fetched?.dueDate.map { .string($0.iso8601) } ?? .null],
-                "The fetched reminder due date did not match the planned local date.")
+                [
+                    "local_date": fetched?.dueDate.map { .string($0.iso8601) } ?? .null,
+                    "local_time": fetched?.dueTime.map { .string($0.hhmm) } ?? .null,
+                ],
+                "The fetched reminder due date or time did not match the plan.")
 
         case "reminder-notes":
             let required = predicate.expected["contains"]?.stringArray ?? []

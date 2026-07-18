@@ -22,12 +22,15 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var voiceModel = "On-device/system fallback"
     @Published private(set) var voiceFallbackActive = false
     @Published private(set) var voiceStatus = "LIVE"
+    @Published private(set) var agentTranscript = ""
+    @Published private(set) var pendingConversationApproval: ConversationApprovalCard?
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
     private var panicStop: PanicStopMonitor?
     private var panel: CompanionPanelController?
     private var voiceSession: VoiceSessionController?
+    private var conversationSession: RealtimeConversationSession?
     private var sidecarClient: SidecarClient?
     private var sidecarTask: Task<Void, Never>?
     private var contextTask: Task<Void, Never>?
@@ -41,6 +44,7 @@ final class AppCoordinator: ObservableObject {
     private var attemptLedger = ActionAttemptLedger()
     private var cachedActions: [String: ActionResult] = [:]
     private var activeTaskID: UUID?
+    private var conversationTaskActive = false
     private var microphonePermissionGranted = false
     private var isReplayingOrderRescue = false
     private var replayReportURL: URL?
@@ -67,7 +71,7 @@ final class AppCoordinator: ObservableObject {
         replayScreenshotURL = ProcessInfo.processInfo.arguments
             .first(where: { $0.hasPrefix("--replay-screenshot=") })
             .map { URL(fileURLWithPath: String($0.dropFirst("--replay-screenshot=".count))) }
-        hotKey = HotKeyManager { [weak self] in self?.dispatch(.hotkeyTapped) }
+        hotKey = HotKeyManager { [weak self] in self?.toggle() }
         panicStop = PanicStopMonitor { [weak self] in self?.stop() }
         panel = CompanionPanelController(coordinator: self)
         if ProcessInfo.processInfo.arguments.contains("--replay-order-rescue") {
@@ -78,12 +82,31 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
-    func toggle() { dispatch(.hotkeyTapped) }
+    func toggle() {
+        switch state {
+        case .idle where ConversationModePolicy.shouldOpen(
+            preferenceEnabled: conversationalVoiceEnabled,
+            credentialAvailable: loadOpenAIApiKey() != nil):
+            dispatch(.conversationOpened)
+        case .conversing:
+            endConversationSession(label: "CLOSED")
+        default:
+            dispatch(.hotkeyTapped)
+        }
+    }
     func stop() {
         resolveApproval(false)
         dispatch(.stopRequested)
     }
     func approvePendingAction() {
+        if let approval = pendingConversationApproval {
+            pendingConversationApproval = nil
+            sendConversationTool(
+                name: "confirm_approval",
+                arguments: approval.confirmationArguments,
+                callID: "ui-confirm-\(UUID().uuidString.lowercased())")
+            return
+        }
         guard case .awaitingApproval = state else { return }
         let continuation = approvalContinuation
         approvalContinuation = nil
@@ -91,6 +114,11 @@ final class AppCoordinator: ObservableObject {
         continuation?.resume(returning: true)
     }
     func denyPendingAction() {
+        if pendingConversationApproval != nil {
+            pendingConversationApproval = nil
+            recordTrace(.approval, "Spoken approval declined; no action was authorized")
+            return
+        }
         guard case .awaitingApproval = state else { return }
         let continuation = approvalContinuation
         approvalContinuation = nil
@@ -143,6 +171,10 @@ final class AppCoordinator: ObservableObject {
         switch state {
         case .idle:
             if case .listening = previous { cancelCapture() }
+            if case .conversing = previous {
+                cancelConversationAudio()
+                cancelSidecar()
+            }
             cleanupScreenContext()
             panel?.hide()
 
@@ -151,7 +183,10 @@ final class AppCoordinator: ObservableObject {
             // idle -> listening transition may reset the session and install
             // an audio tap; otherwise every partial would start another
             // VoiceSessionController on the same AVAudioEngine input.
-            guard case .idle = previous else { return }
+            switch previous {
+            case .idle, .conversing: break
+            default: return
+            }
             taskTrace = TaskTrace()
             recordTrace(.listening, "Voice capture started")
             permissionSettingsURL = nil
@@ -162,6 +197,8 @@ final class AppCoordinator: ObservableObject {
             activeTaskSpec = nil
             appliedPlanPatch = nil
             executionLedger = []
+            pendingConversationApproval = nil
+            agentTranscript = ""
             cleanupScreenContext()
             panel?.show()
             // Never play synthesized speech while the microphone is open; it
@@ -223,8 +260,11 @@ final class AppCoordinator: ObservableObject {
             activeTaskSpec = nil
             appliedPlanPatch = nil
             executionLedger = []
+            pendingConversationApproval = nil
+            agentTranscript = ""
             cleanupScreenContext()
             panel?.show()
+            startConversationSession()
 
         case .result(let result):
             let shouldExitAfterReplay = isReplayingOrderRescue && replayReportURL != nil
@@ -248,6 +288,7 @@ final class AppCoordinator: ObservableObject {
             case .cancelled: narrate("Stopped")
             }
             cancelCapture()
+            cancelConversationAudio()
             contextTask?.cancel()
             contextTask = nil
             writeOrderRescueReplayReport(result)
@@ -260,6 +301,232 @@ final class AppCoordinator: ObservableObject {
                     NSApplication.shared.terminate(nil)
                 }
             }
+        }
+    }
+
+    // MARK: Conversational voice
+
+    private var conversationalVoiceEnabled: Bool {
+        UserDefaults.standard.object(
+            forKey: VLMConfiguration.conversationalVoiceDefaultsKey) as? Bool ?? true
+    }
+
+    private func startConversationSession() {
+        sidecarTask = Task { [weak self] in
+            guard let self, let apiKey = loadOpenAIApiKey() else {
+                self?.handleConversationFailure(VLMCredentialError.invalidCredential)
+                return
+            }
+            if !microphonePermissionGranted {
+                microphonePermissionGranted = await SpeechTranscriber
+                    .requestMicrophonePermission()
+            }
+            guard microphonePermissionGranted, case .conversing = state else {
+                handleConversationFailure(SpeechTranscriber.SpeechError.microphoneDenied)
+                return
+            }
+
+            let client = SidecarClient(
+                agentProjectURL: Self.agentProjectURL,
+                additionalEnvironment: sidecarEnvironment())
+            let taskID = UUID()
+            let session = RealtimeConversationSession(
+                apiKey: apiKey,
+                taskID: taskID,
+                sidecar: client,
+                onEvent: { [weak self] event in
+                    Task { @MainActor [weak self] in self?.handleConversationEvent(event) }
+                },
+                onFailure: { [weak self] error in
+                    Task { @MainActor [weak self] in self?.handleConversationFailure(error) }
+                })
+            sidecarClient = client
+            activeTaskID = taskID
+            conversationTaskActive = true
+            conversationSession = session
+            do {
+                let events = try await client.start()
+                try await session.start()
+                voiceProvider = "OpenAI Realtime Conversation"
+                voiceModel = "gpt-realtime · marin · semantic VAD"
+                voiceFallbackActive = false
+                voiceStatus = "LIVE"
+                recordTrace(.listening, "S2S session ready with echo-cancelled barge-in")
+
+                for try await envelope in events {
+                    guard envelope.taskID == taskID else { continue }
+                    if await handleConversationEnvelope(envelope, client: client) {
+                        return
+                    }
+                }
+                if !Task.isCancelled {
+                    dispatch(.taskFailed(reason:
+                        "The agent exited before the conversation completed."))
+                }
+            } catch is CancellationError {
+                // Panic stop or intentional close owns the visible transition.
+            } catch {
+                if !Task.isCancelled { handleConversationFailure(error) }
+            }
+        }
+    }
+
+    private func handleConversationEvent(_ event: RealtimeConversationServerEvent) {
+        switch event {
+        case .sessionReady:
+            voiceStatus = "LIVE"
+        case .userSpeechStarted:
+            dispatch(.agentSpeechEnded)
+            recordTrace(.listening, "Barge-in stopped agent playback")
+        case .userTranscript(let transcript):
+            dispatch(.partialTranscript(transcript))
+        case .agentTranscriptDelta(let delta):
+            if case .conversing(let speaking, _, _) = state, !speaking {
+                agentTranscript = ""
+            }
+            agentTranscript += delta
+            dispatch(.agentSpeechStarted)
+        case .audioDelta:
+            if case .conversing(let speaking, _, _) = state, !speaking {
+                agentTranscript = ""
+            }
+            dispatch(.agentSpeechStarted)
+        case .responseDone:
+            dispatch(.agentSpeechEnded)
+        case .functionCall(_, let name, _):
+            recordTrace(.planning, "Realtime requested typed tool \(name)")
+        case .error(let message):
+            handleConversationFailure(
+                RealtimeConversationSession.SessionError.server(message))
+        case .ignored:
+            break
+        }
+    }
+
+    private func handleConversationEnvelope(
+        _ envelope: Envelope, client: SidecarClient
+    ) async -> Bool {
+        switch envelope.payload {
+        case .taskSpecReady(let task):
+            activeTaskSpec = task
+            recordTrace(.planning, "Compiled persistent Order Rescue task version \(task.version)")
+            dispatch(.taskSpecReady(version: task.version, objective: task.objective))
+        case .planPatchApplied(let patch):
+            appliedPlanPatch = patch
+            recordTrace(
+                .planning,
+                "Applied plan patch v\(patch.baseVersion) → v\(patch.newVersion)")
+        case .approvalRequested(let request):
+            do {
+                pendingConversationApproval = try ConversationApprovalCard(request: request)
+                recordTrace(.approval, "Read-back binding is waiting for spoken or click confirmation")
+            } catch {
+                dispatch(.taskFailed(reason: "The approval binding was malformed; nothing was authorized."))
+                return true
+            }
+        case .ledgerEvent(let event):
+            executionLedger.append(event)
+            recordTrace(traceStage(for: event.eventType), "\(event.eventType.rawValue.capitalized): \(event.what)")
+        case .conversationToolResult(let result):
+            try? await conversationSession?.accept(result)
+            if result.callID.hasPrefix("ui-confirm-") && result.status == "ok" {
+                sendConversationTool(
+                    name: "execute_plan", arguments: [:],
+                    callID: "ui-execute-\(UUID().uuidString.lowercased())")
+            } else if result.callID.hasPrefix("fallback-patch-") && result.status == "ok" {
+                sendConversationTool(
+                    name: "request_approval", arguments: [:],
+                    callID: "fallback-approval-\(UUID().uuidString.lowercased())")
+            }
+        case .planReady(let plan):
+            await executeConversationNativePlan(plan, client: client)
+        case .taskCompleted(let completed):
+            verificationResults = completed.verification
+            pendingConversationApproval = nil
+            dispatch(.taskCompleted(state: completed.state, summary: completed.summary))
+            await client.cancel()
+            return true
+        case .taskFailed(let failure):
+            dispatch(.taskFailed(reason: failure.error.message))
+            await client.cancel()
+            return true
+        default:
+            break
+        }
+        return false
+    }
+
+    private func handleConversationFailure(_ error: Error) {
+        guard case .conversing = state else { return }
+        cancelConversationAudio()
+        let fallback = ConversationFallbackPresentation(reason: error.localizedDescription)
+        voiceProvider = fallback.provider
+        voiceModel = "System recognizer · task-preserving fallback"
+        voiceFallbackActive = true
+        voiceStatus = fallback.status
+        recordTrace(.recovery, fallback.detail)
+        let hasTask = activeTaskSpec != nil
+        if !hasTask { cancelSidecar() }
+        dispatch(.conversationFallback(objective: activeTaskSpec?.objective))
+    }
+
+    private func endConversationSession(label: String) {
+        cancelConversationAudio()
+        voiceStatus = label
+        if activeTaskSpec == nil { cancelSidecar() }
+        dispatch(.conversationFallback(objective: activeTaskSpec?.objective))
+    }
+
+    private func cancelConversationAudio() {
+        conversationSession?.cancel()
+        conversationSession = nil
+    }
+
+    private func sendConversationTool(
+        name: String, arguments: [String: JSONValue], callID: String
+    ) {
+        guard let client = sidecarClient, let taskID = activeTaskID else { return }
+        if let session = conversationSession {
+            Task {
+                do { try await session.sendTool(name: name, arguments: arguments, callID: callID) }
+                catch { await MainActor.run { self.handleConversationFailure(error) } }
+            }
+            return
+        }
+        let bridge = ConversationToolBridge(taskID: taskID)
+        let json = (try? JSONEncoder().encode(arguments)).map {
+            String(decoding: $0, as: UTF8.self)
+        } ?? "{}"
+        guard case .success(let envelope) = bridge.envelope(for: (callID, name, json))
+        else { return }
+        Task {
+            do { try await client.send(envelope) }
+            catch { await MainActor.run { self.dispatch(.taskFailed(reason: error.localizedDescription)) } }
+        }
+    }
+
+    private func executeConversationNativePlan(
+        _ plan: TaskPlan, client: SidecarClient
+    ) async {
+        guard let step = plan.steps.first, let taskID = activeTaskID else { return }
+        guard let action = await executeNativeStep(step, taskID: taskID) else { return }
+        do {
+            try await client.send(Envelope(
+                type: .actionFinished, taskID: taskID,
+                payload: .actionFinished(action)))
+            guard action.status == .executed else { return }
+            dispatch(.verificationStarted)
+            let verifications = step.tool == "reminders.create"
+                ? reminderWorkflow.verify(step: step, action: action) : []
+            for verification in verifications {
+                try await client.send(Envelope(
+                    type: .verificationFinished, taskID: taskID,
+                    payload: .verificationFinished(verification)))
+            }
+        } catch {
+            dispatch(.taskFailed(reason:
+                "The native reminder result could not reach the verifier: "
+                    + error.localizedDescription))
         }
     }
 
@@ -462,10 +729,23 @@ final class AppCoordinator: ObservableObject {
                 recordTrace(
                     .planning,
                     "Correction transcribed and sent as a patch to task \(taskID.uuidString.prefix(8))")
-                try await client.send(Envelope(
-                    type: .voiceCorrection,
-                    taskID: taskID,
-                    payload: .voiceCorrection(correction)))
+                if conversationTaskActive {
+                    let bridge = ConversationToolBridge(taskID: taskID)
+                    let arguments: [String: JSONValue] = [
+                        "transcript": .string(correction.transcript)
+                    ]
+                    let data = try JSONEncoder().encode(arguments)
+                    let callID = "fallback-patch-\(UUID().uuidString.lowercased())"
+                    guard case .success(let envelope) = bridge.envelope(for: (
+                        callID, "apply_patch", String(decoding: data, as: UTF8.self)))
+                    else { throw SidecarError.notRunning }
+                    try await client.send(envelope)
+                } else {
+                    try await client.send(Envelope(
+                        type: .voiceCorrection,
+                        taskID: taskID,
+                        payload: .voiceCorrection(correction)))
+                }
             } catch VoiceSessionError.cancelled {
                 // stop already handled by the state machine
             } catch VoiceSessionError.noSpeech {
@@ -746,6 +1026,8 @@ final class AppCoordinator: ObservableObject {
             cachedActions = cachedActions.filter { !$0.key.hasPrefix(prefix) }
         }
         activeTaskID = nil
+        conversationTaskActive = false
+        pendingConversationApproval = nil
         isReplayingOrderRescue = false
         Task { await client?.cancel() }
     }
@@ -927,24 +1209,27 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
-    private func sidecarVLMEnvironment() -> [String: String] {
+    private func sidecarEnvironment() -> [String: String] {
+        var environment = (try? VLMCredentialStore().loadCommerceEnvironment()) ?? [:]
         let apiKey: String?
         do {
             apiKey = try VLMCredentialStore().load()
         } catch {
-            return [:]
+            return environment
         }
         guard let apiKey else {
-            return [:]
+            return environment
         }
         let model = UserDefaults.standard.string(
             forKey: VLMConfiguration.modelDefaultsKey)
             ?? VLMConfiguration.defaultModel
-        return [
-            "VOICEOPS_OPENAI_API_KEY": apiKey,
-            "VOICEOPS_VLM_MODEL": model,
-        ]
+        environment["VOICEOPS_OPENAI_API_KEY"] = apiKey
+        environment["VOICEOPS_VLM_MODEL"] = model
+        environment["VOICEOPS_LLM_MODEL"] = model
+        return environment
     }
+
+    private func sidecarVLMEnvironment() -> [String: String] { sidecarEnvironment() }
 
     private func loadOpenAIApiKey() -> String? {
         try? VLMCredentialStore().load()

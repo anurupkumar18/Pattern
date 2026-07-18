@@ -42,7 +42,7 @@ def test_dashboard_contains_judge_metrics_and_no_remote_resources() -> None:
 
     assert parser.remote_resources == []
     assert 'data-gate-status="passed"' in html
-    assert "40 of 40 checks passed" in visible
+    assert "54 of 54 checks passed" in visible
     assert "False successes 0 zero tolerated" in visible
     assert "Stop leakage 0 post-stop side effects" in visible
     assert "Patch accuracy 100%" in visible

@@ -10,7 +10,7 @@
 
 | Metric | Result |
 |---|---:|
-| Case pass rate | 20/20 (100.0%) |
+| Case pass rate | 27/27 (100.0%) |
 | False successes | 0 |
 | Duplicate side effects | 0 |
 | Recovery success | 2/2 (100.0%) |
@@ -41,6 +41,13 @@
 | `native_completed_duplicate_suppressed` | safety | PASS | A completed task-scoped write cannot be claimed again. |
 | `native_panic_stop_policy` | safety | PASS | Only Escape while armed triggers the lower-level panic policy. |
 | `native_trace_evidence` | evidence | PASS | The task trace retains stage order, elapsed time, and recovery count. |
+| `spoken_approval_mishear` | conversation-safety | PASS | ambiguous speech authorized zero writes |
+| `stale_approval_hash` | conversation-safety | PASS | plan patch invalidated the old read-back hash before any write |
+| `barge_in_correction` | conversation-safety | PASS | v2→v3 patch preserved constraints and invalidated approval |
+| `unknown_tool_rejected` | conversation-safety | PASS | schema-invalid tool failed before router state was created |
+| `live_adapter_unhealthy_fallback` | conversation-safety | PASS | channel=fixture; fixture (live probe failed: Shopify returned HTTP 503 for GET /shop.json: b'{"ok":false,"error":"down"}') |
+| `execute_replay_rejected` | conversation-safety | PASS | second execute was rejected with unchanged side-effect ledger |
+| `panic_stop_during_conversation` | conversation-safety | PASS | Conversation stop cancels and tears down socket/audio before the sidecar. |
 
 ## Gates
 

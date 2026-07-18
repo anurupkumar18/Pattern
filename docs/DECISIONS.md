@@ -211,9 +211,9 @@ without retaining raw screen or speech content.
 
 **Date:** 2026-07-18 · **Phase:** 7
 
-**Decision:** The final automated gate contains 20 catalogued correctness cases.
-Fifteen execute the Python grounding, planning, research safety, IPC, action,
-and verification orchestration directly. Five execute compiled Swift core code
+**Decision:** The final automated gate contains 27 catalogued correctness cases.
+Twenty-one execute the Python grounding, planning, research safety, IPC, action,
+conversation-authority, and verification orchestration directly. Six execute compiled Swift core code
 through `voiceops-eval-probe` for bounded recovery, uncertain-write refusal,
 completed-action deduplication, panic-stop policy, and task traces. The runner
 computes pass rate, false successes, duplicate side effects, recovery success,
@@ -243,7 +243,7 @@ judges and engineers a useful report with an honest boundary.
 
 **Date:** 2026-07-18 · **Demo hardening**
 
-**Decision:** The demo uses typed, idempotent fixture adapters for carrier tracking, Shopify note/tag/credit state, customer messaging, Slack escalation, and reminders. Every confirmation-gated action is preflighted before the first write. The executor emits structured Observed, Interpreted, Decided, and Acted records but cannot declare completion. A separate verifier refetches five required states and proves two prohibited states—no refund and no replacement—before emitting `succeeded`. The full safety rehearsal runs 20 deterministic cases and exits nonzero on any false success, unapproved action, post-stop effect, stale patch acceptance, duplicate effect, or constraint loss.
+**Decision:** The demo uses typed, idempotent fixture adapters for carrier tracking, Shopify note/tag/credit state, customer messaging, Slack escalation, and reminders. Every confirmation-gated action is preflighted before the first write. The executor emits structured Observed, Interpreted, Decided, and Acted records but cannot declare completion. A separate verifier refetches five required states and proves two prohibited states—no refund and no replacement—before emitting `succeeded`. The full safety rehearsal runs 27 deterministic cases and exits nonzero on any false success, unapproved action, post-stop effect, stale patch acceptance, duplicate effect, or constraint loss.
 
 **Reason:** A credential-free semantic demo is repeatable and honest, while the same adapter boundary can accept live Shopify, messaging, and Slack implementations later. Positive and negative verification prevents an executor response from being confused with real completion.
 
@@ -254,3 +254,65 @@ judges and engineers a useful report with an honest boundary.
 **Decision:** When a Keychain credential exists, the macOS shell opens a transcription-only Realtime WebSocket using `gpt-realtime-whisper`, streams 24 kHz mono PCM16, requests balanced delay, disables server turn detection, and commits only when the operator ends capture. Session readiness is required before the microphone starts. On commit, the client wraps at most 10 MiB of retained PCM in a mono WAV and gives `gpt-4o-transcribe` five seconds to refine the complete utterance with ecommerce vocabulary. An empty response, error, oversized capture, or timeout retains the already-completed Realtime transcript. The provider badge and task timeline expose `LIVE`, `FINALIZING`, `REFINED`, `RECOVERED`, or `FALLBACK` without claiming a refinement that did not complete. Apple Speech remains the zero-setup provider and automatically takes over on a primary start or midstream failure. A midstream handoff preserves the already-displayed transcript prefix, labels the fallback in the UI, and keeps the same `VoiceSessionController`. Narration never runs while capture is open. The live vision default moves to flagship `gpt-5.6-sol`.
 
 **Reason:** The specialized streaming model preserves immediate feedback while the final transcription model gets the complete utterance and domain context for names, order numbers, and operational terms. The bounded refinement cannot erase a successful live result. Manual commit preserves hotkey semantics; dual providers remove a single network dependency; retaining the partial transcript prevents a provider outage from silently changing the user's request. A distributed production client should use ephemeral Realtime credentials rather than a long-lived API key.
+
+## ADR-022: Speech-to-speech conversation drives typed task tools
+
+**Date:** 2026-07-18 · **Conversational Order Rescue**
+
+**Decision:** When the Keychain OpenAI credential exists and **Conversational
+voice** is enabled, ⌃⌥V opens a bounded `gpt-realtime` speech-to-speech session
+using the `marin` voice, 24 kHz PCM16, semantic server VAD, and AVAudioEngine
+voice processing. The open microphone exists only for that explicit session.
+User speech immediately flushes scheduled playback so barge-in is real rather
+than simulated. The model has exactly seven registered functions, and every
+function call crosses the typed Swift bridge and NDJSON protocol into the
+Python sidecar. It cannot create a new side-effect route or declare success.
+
+This deliberately differs from ADR-021: conversational mode uses semantic VAD
+for natural turn taking, while the retained transcription pipeline still uses
+manual hotkey commit. A socket or network failure tears down Realtime audio,
+labels **FALLBACK**, and preserves the active task/version for the next Apple
+Speech utterance. Panic stop cancels the socket, engine, and playback before it
+terminates the sidecar.
+
+**Reason:** Native turn taking and barge-in make a spoken operator usable on
+stage, but authority must remain in the deterministic task machine. Keeping the
+older transcription path armed provides a rehearsed contingency without
+weakening typed authorization or losing an in-flight plan.
+
+## ADR-023: Credential-gated live commerce with labeled fallback
+
+**Date:** 2026-07-18 · **Conversational Order Rescue**
+
+**Decision:** Shopify Admin and Slack adapters are selected only when all five
+sandbox values are present in Keychain and both provider health probes pass.
+Otherwise the same execution seam uses deterministic fixture adapters and
+records the precise fallback reason in a `decided` ledger event. Live Shopify
+writes use read-before-write idempotency; Slack uses a task marker; provider
+errors never become silent success. Customer email remains an explicitly
+in-memory sandbox channel. In live mode, the follow-up is deferred to the
+native EventKit bridge and completion waits for its action result and five
+fetch-back/visibility predicates. The Order Rescue verifier still owns the
+final five positive and two negative checks.
+
+**Reason:** A live sandbox improves demo realism only when the UI and evidence
+say which systems were actually touched. Credential presence alone is not
+health, executor echoes are not verification, and a missing sandbox must not
+make the offline rehearsal flaky.
+
+## ADR-024: Spoken approval is bound to the exact pending action set
+
+**Date:** 2026-07-18 · **Conversational Order Rescue**
+
+**Decision:** `request_approval` canonicalizes the task id, plan version, and
+sorted pending consequential actions into a SHA-256 binding and returns the
+exact read-back. Only a small strict set of standalone affirmative utterances
+can confirm that current hash. Any patch, stale hash, ambiguous phrase, or
+missing binding rejects authorization and performs zero writes. The companion
+shows the read-back and hash prefix. Its click fallback sends the same typed
+`confirm_approval` call with the same binding and `utterance: "yes"`; it is not
+a second approval implementation.
+
+**Reason:** Speech recognition is probabilistic, but authorization cannot be.
+Binding approval to immutable action identity makes a mishear harmless and
+forces a fresh read-back whenever the operator changes the plan.

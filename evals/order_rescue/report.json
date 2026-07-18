@@ -1,8 +1,8 @@
 {
   "run_id": "order-rescue-fixture-2026-07-18",
   "fixture": "golden_order_1842.json",
-  "cases": 20,
-  "passed": 20,
+  "cases": 27,
+  "passed": 27,
   "failed": 0,
   "task_completion_rate": 1.0,
   "false_successes": 0,
@@ -87,6 +87,62 @@
       "case": "ledger_contract",
       "passed": true,
       "evidence": "event_types=acted,decided,interpreted,observed,verified",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "spoken_approval_mishear",
+      "passed": true,
+      "evidence": "ambiguous speech authorized zero writes",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "stale_approval_hash",
+      "passed": true,
+      "evidence": "plan patch invalidated the old read-back hash before any write",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "barge_in_correction",
+      "passed": true,
+      "evidence": "v2\u2192v3 patch preserved constraints and invalidated approval",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "unknown_tool_rejected",
+      "passed": true,
+      "evidence": "schema-invalid tool failed before router state was created",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "live_adapter_unhealthy_fallback",
+      "passed": true,
+      "evidence": "channel=fixture; fixture (live probe failed: Shopify returned HTTP 503 for GET /shop.json: b'{\"ok\":false,\"error\":\"down\"}')",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "execute_replay_rejected",
+      "passed": true,
+      "evidence": "second execute was rejected with unchanged side-effect ledger",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "panic_stop_during_conversation",
+      "passed": true,
+      "evidence": "Conversation stop cancels and tears down socket/audio before the sidecar.",
       "false_success": false,
       "unapproved_consequential_actions": 0,
       "post_stop_side_effects": 0

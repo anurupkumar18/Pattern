@@ -37,6 +37,9 @@ struct CompanionView: View {
     private var detailContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             content
+            if let approval = coordinator.pendingConversationApproval {
+                conversationApprovalCard(approval)
+            }
             if coordinator.activeTaskSpec != nil { versionedPlan }
             if !coordinator.executionLedger.isEmpty { executionLedger }
             if coordinator.state != .idle { taskTimeline }
@@ -176,6 +179,16 @@ struct CompanionView: View {
         case .conversing(let speaking, let version, let transcript):
             VStack(alignment: .leading, spacing: 8) {
                 transcriptView(transcript.isEmpty ? "…" : transcript)
+                if !coordinator.agentTranscript.isEmpty {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("VOICEOPS").font(.caption2.monospaced().weight(.bold))
+                        Text(coordinator.agentTranscript)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                    }
+                    .padding(8)
+                    .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+                }
                 HStack(spacing: 6) {
                     Image(systemName: speaking ? "speaker.wave.2.fill" : "mic.fill")
                         .foregroundStyle(speaking ? Color.accentColor : .secondary)
@@ -575,35 +588,62 @@ struct CompanionView: View {
 
     // MARK: Footer
 
+    private func conversationApprovalCard(
+        _ approval: ConversationApprovalCard
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Label("Bound approval read-back", systemImage: "lock.shield.fill")
+                .font(.caption.weight(.semibold))
+            Text(approval.readBack).font(.callout.weight(.medium))
+            Text("Binding \(approval.bindingHash.prefix(12))… · \(approval.actionIDs.count) actions")
+                .font(.caption2.monospaced())
+                .foregroundStyle(.secondary)
+            Text("Say an unambiguous yes, or use the button below. Both authorize only this exact hash.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(10)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+    }
+
     @ViewBuilder
     private var footer: some View {
-        switch coordinator.state {
-        case .awaitingApproval:
+        if coordinator.pendingConversationApproval != nil {
             HStack {
                 Button("Cancel") { coordinator.denyPendingAction() }
                 Spacer()
-                Button("Approve Schedule") { coordinator.approvePendingAction() }
+                Button("Approve exact actions") { coordinator.approvePendingAction() }
                     .buttonStyle(.borderedProminent)
             }
-        case .listening, .grounding, .planning, .readyForCorrection,
-             .correctionListening, .acting, .verifying, .conversing:
-            HStack {
-                Spacer()
-                Button(role: .destructive) {
-                    coordinator.stop()
-                } label: {
-                    Label("Stop", systemImage: "stop.fill")
+        } else {
+            switch coordinator.state {
+            case .awaitingApproval:
+                HStack {
+                    Button("Cancel") { coordinator.denyPendingAction() }
+                    Spacer()
+                    Button("Approve Schedule") { coordinator.approvePendingAction() }
+                        .buttonStyle(.borderedProminent)
                 }
-                .keyboardShortcut(.cancelAction)  // Escape while the panel has focus
-            }
-        case .result:
-            HStack {
-                Spacer()
-                Button("Dismiss") { coordinator.dismiss() }
+            case .listening, .grounding, .planning, .readyForCorrection,
+                 .correctionListening, .acting, .verifying, .conversing:
+                HStack {
+                    Spacer()
+                    Button(role: .destructive) {
+                        coordinator.stop()
+                    } label: {
+                        Label("Stop", systemImage: "stop.fill")
+                    }
                     .keyboardShortcut(.cancelAction)
+                }
+            case .result:
+                HStack {
+                    Spacer()
+                    Button("Dismiss") { coordinator.dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                }
+            case .idle:
+                EmptyView()
             }
-        case .idle:
-            EmptyView()
         }
     }
 }

@@ -122,6 +122,7 @@ class SidecarRuntime:
         grounding_adapter: MultimodalGroundingAdapter | None = None,
         research_adapter: CompanyResearchAdapter | None = None,
         order_rescue_fixture: OrderRescueFixture | None = None,
+        conversation_router: ConversationToolRouter | None = None,
     ) -> None:
         self._observations: dict[UUID, Observation] = {}
         self._grounding_adapter = grounding_adapter or build_grounding_adapter()
@@ -131,7 +132,7 @@ class SidecarRuntime:
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
         self._order_rescue_fixture = order_rescue_fixture or load_order_rescue_fixture()
         self._order_rescue_tasks: dict[UUID, VersionedTaskSpec] = {}
-        self._conversation = ConversationToolRouter(
+        self._conversation = conversation_router or ConversationToolRouter(
             fixture=self._order_rescue_fixture,
             compiler=build_order_rescue_compiler(),
         )
@@ -151,7 +152,13 @@ class SidecarRuntime:
             return []
 
         if envelope.type is EventType.CONVERSATION_TOOL_CALL:
-            return self._conversation.handle(envelope.task_id, envelope.payload)
+            events = self._conversation.handle(envelope.task_id, envelope.payload)
+            for event in events:
+                if event.type is EventType.PLAN_READY:
+                    self._plans[envelope.task_id] = event.payload
+                    self._actions.pop(envelope.task_id, None)
+                    self._verifications.pop(envelope.task_id, None)
+            return events
 
         if envelope.type is EventType.ACTION_FINISHED:
             return self._handle_action_finished(envelope.task_id, envelope.payload)
@@ -416,6 +423,26 @@ class SidecarRuntime:
                 task_id, f"action result referenced unknown step {action.step_id!r}"
             )]
         if action.status != "executed":
+            if self._conversation.has_pending_native_reminder(task_id):
+                failed = [
+                    VerificationResult(
+                        predicate_id=predicate.id,
+                        passed=False,
+                        method="eventkit_fetch_back",
+                        confidence=1,
+                        expected=predicate.expected,
+                        observed={"action_status": action.status},
+                        evidence_ids=[],
+                        failure_reason=(
+                            action.state_change_hint
+                            or "The native reminder action did not complete"
+                        ),
+                    )
+                    for predicate in step.postconditions
+                ]
+                events = self._conversation.complete_native_reminder(task_id, failed)
+                self._cleanup(task_id)
+                return events
             error = action.error or StructuredError(
                 code=(
                     FailureCode.CONSEQUENTIAL_STATE_UNCERTAIN
@@ -481,6 +508,10 @@ class SidecarRuntime:
             return []
 
         ordered = [received[predicate_id] for predicate_id in expected_predicates]
+        if self._conversation.has_pending_native_reminder(task_id):
+            events = self._conversation.complete_native_reminder(task_id, ordered)
+            self._cleanup(task_id)
+            return events
         passed_count = sum(result.passed for result in ordered)
         if passed_count == len(ordered):
             state = "succeeded"

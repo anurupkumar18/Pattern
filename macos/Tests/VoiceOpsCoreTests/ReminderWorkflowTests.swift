@@ -64,6 +64,38 @@ final class ReminderWorkflowTests: XCTestCase {
         XCTAssertThrowsError(try ReminderDraft(step: invalid))
     }
 
+    func testDraftAndVerifierHonorOptionalDueTime() throws {
+        let original = planStep()
+        let timed = TaskStep(
+            id: original.id, description: original.description, tool: original.tool,
+            arguments: original.arguments.merging(["due_time": .string("09:00")]) { _, new in new },
+            preconditions: original.preconditions,
+            postconditions: original.postconditions.map { predicate in
+                guard predicate.id == "reminder-due-date" else { return predicate }
+                return Predicate(
+                    id: predicate.id, description: predicate.description,
+                    expected: [
+                        "local_date": .string("2026-07-29"),
+                        "local_time": .string("09:00"),
+                    ])
+            },
+            risk: original.risk, requiresConfirmation: original.requiresConfirmation,
+            fallbackTools: original.fallbackTools, maxAttempts: original.maxAttempts,
+            timeoutSeconds: original.timeoutSeconds, verifier: original.verifier)
+        let draft = try ReminderDraft(step: timed)
+        XCTAssertEqual(draft.dueTime, LocalTime(hour: 9, minute: 0))
+
+        let missingTime = ReminderRecord(
+            identifier: "eventkit-id", title: draft.title,
+            dueDate: draft.dueDate, notes: draft.notes,
+            calendarTitle: "Reminders")
+        let results = ReminderVerificationEngine.verify(
+            draft: draft, fetched: missingTime, visiblyDisplayed: true)
+        XCTAssertFalse(results.first {
+            $0.predicateId == "reminder-due-date"
+        }!.passed)
+    }
+
     func testVerifierPassesOnlyWhenFetchedFieldsAndVisibilityMatch() throws {
         let draft = try ReminderDraft(step: planStep())
         let record = ReminderRecord(

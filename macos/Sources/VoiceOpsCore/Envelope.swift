@@ -303,6 +303,18 @@ public struct ApprovalRequest: Codable, Equatable, Sendable {
     public let risk: Risk
     public let dataPreview: [String: JSONValue]
 
+    public init(
+        stepID: String,
+        description: String,
+        risk: Risk,
+        dataPreview: [String: JSONValue]
+    ) {
+        self.stepID = stepID
+        self.description = description
+        self.risk = risk
+        self.dataPreview = dataPreview
+    }
+
     enum CodingKeys: String, CodingKey {
         case description, risk
         case stepID = "step_id"

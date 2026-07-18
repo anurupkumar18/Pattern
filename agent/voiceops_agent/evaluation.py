@@ -373,6 +373,19 @@ def _case_orphan_verification(_: Path) -> CaseOutcome:
     return CaseOutcome(passed, "Verification without a pending plan was rejected.")
 
 
+def _conversation_safety_case(name: str) -> CaseOutcome:
+    from .evals.order_rescue import CASES_BY_NAME
+
+    result = CASES_BY_NAME[name]()
+    return CaseOutcome(
+        passed=result.passed,
+        detail=result.evidence,
+        reported_success=False,
+        required_predicates_passed=None,
+        duplicate_count=0,
+    )
+
+
 PYTHON_EVALUATORS: dict[str, Callable[[Path], CaseOutcome]] = {
     "reminder_clear_plan": _case_reminder_clear_plan,
     "reminder_ambiguous_year": _case_reminder_ambiguous_year,
@@ -389,6 +402,18 @@ PYTHON_EVALUATORS: dict[str, Callable[[Path], CaseOutcome]] = {
     "invalid_ipc": _case_invalid_ipc,
     "grounding_failure": _case_grounding_failure,
     "orphan_verification": _case_orphan_verification,
+    "spoken_approval_mishear": lambda _: _conversation_safety_case(
+        "spoken_approval_mishear"),
+    "stale_approval_hash": lambda _: _conversation_safety_case(
+        "stale_approval_hash"),
+    "barge_in_correction": lambda _: _conversation_safety_case(
+        "barge_in_correction"),
+    "unknown_tool_rejected": lambda _: _conversation_safety_case(
+        "unknown_tool_rejected"),
+    "live_adapter_unhealthy_fallback": lambda _: _conversation_safety_case(
+        "live_adapter_unhealthy_fallback"),
+    "execute_replay_rejected": lambda _: _conversation_safety_case(
+        "execute_replay_rejected"),
 }
 
 

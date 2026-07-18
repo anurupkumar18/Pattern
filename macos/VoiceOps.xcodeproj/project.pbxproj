@@ -19,7 +19,9 @@
 		9C4DF7E480E6645134DE67E9 /* EventKitReminderWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81BA61A11E1CCE43E977DE22 /* EventKitReminderWorkflow.swift */; };
 		9D5B3C4698062F0076E421E8 /* EventKitMeetingBriefingWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FB862D7D6AF55B8C141B364 /* EventKitMeetingBriefingWorkflow.swift */; };
 		B13BAE782EAC68EA8B01114D /* NativeScreenContextCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073A460C4C0C1CD6F0303380 /* NativeScreenContextCollector.swift */; };
+		B5788B0494BA6E8CB8FDD973 /* ConversationAudioIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5982DFE98057249600B5A09 /* ConversationAudioIO.swift */; };
 		B6CD6BDFD3C9099AE88EF474 /* VLMCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9C104E1CCE5E5DA76E093F /* VLMCredentialStore.swift */; };
+		EF33C91CD88B4AFB5F5F726B /* RealtimeConversationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C36255683CE2CD4EDE209C9 /* RealtimeConversationSession.swift */; };
 		F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8EA48DF1165324115400FCD /* HotKeyManager.swift */; };
 		FFA95AB014A1FC36A316FB1E /* CompanionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D6E0E89BE0D3CBA9396AE1 /* CompanionPanel.swift */; };
 /* End PBXBuildFile section */
@@ -36,11 +38,13 @@
 		7FB862D7D6AF55B8C141B364 /* EventKitMeetingBriefingWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitMeetingBriefingWorkflow.swift; sourceTree = "<group>"; };
 		81BA61A11E1CCE43E977DE22 /* EventKitReminderWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitReminderWorkflow.swift; sourceTree = "<group>"; };
 		95471A0FBE9BA112F119067F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		9C36255683CE2CD4EDE209C9 /* RealtimeConversationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeConversationSession.swift; sourceTree = "<group>"; };
 		AA05ED2D6C822EFCB6088F07 /* ResearchFollowupWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResearchFollowupWorkflow.swift; sourceTree = "<group>"; };
 		B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOpsApp.swift; sourceTree = "<group>"; };
 		B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriber.swift; sourceTree = "<group>"; };
 		B8EA48DF1165324115400FCD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		D9BD5A242344182CAFDF5877 /* PanicStopMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicStopMonitor.swift; sourceTree = "<group>"; };
+		E5982DFE98057249600B5A09 /* ConversationAudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationAudioIO.swift; sourceTree = "<group>"; };
 		EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -136,6 +140,8 @@
 		998B9219220454E6BE15B29A /* Voice */ = {
 			isa = PBXGroup;
 			children = (
+				E5982DFE98057249600B5A09 /* ConversationAudioIO.swift */,
+				9C36255683CE2CD4EDE209C9 /* RealtimeConversationSession.swift */,
 				B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */,
 			);
 			path = Voice;
@@ -233,12 +239,14 @@
 				08B05F4CD2CE49C398827282 /* AppCoordinator.swift in Sources */,
 				FFA95AB014A1FC36A316FB1E /* CompanionPanel.swift in Sources */,
 				468B7C4A56E05E2AF136DC72 /* CompanionView.swift in Sources */,
+				B5788B0494BA6E8CB8FDD973 /* ConversationAudioIO.swift in Sources */,
 				9D5B3C4698062F0076E421E8 /* EventKitMeetingBriefingWorkflow.swift in Sources */,
 				9C4DF7E480E6645134DE67E9 /* EventKitReminderWorkflow.swift in Sources */,
 				F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */,
 				7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */,
 				B13BAE782EAC68EA8B01114D /* NativeScreenContextCollector.swift in Sources */,
 				21982D95CF204511B295DD9C /* PanicStopMonitor.swift in Sources */,
+				EF33C91CD88B4AFB5F5F726B /* RealtimeConversationSession.swift in Sources */,
 				4390619FE71FEEC0D90ED7A0 /* ResearchFollowupWorkflow.swift in Sources */,
 				32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */,
 				B6CD6BDFD3C9099AE88EF474 /* VLMCredentialStore.swift in Sources */,

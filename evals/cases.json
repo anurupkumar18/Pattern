@@ -18,5 +18,12 @@
   {"id":"native_uncertain_never_retries","workflow":"safety","evaluator":"native_uncertain_never_retries","kind":"native","requires_provenance":false},
   {"id":"native_completed_duplicate_suppressed","workflow":"safety","evaluator":"native_completed_duplicate_suppressed","kind":"native","requires_provenance":false},
   {"id":"native_panic_stop_policy","workflow":"safety","evaluator":"native_panic_stop_policy","kind":"native","requires_provenance":false},
-  {"id":"native_trace_evidence","workflow":"evidence","evaluator":"native_trace_evidence","kind":"native","requires_provenance":false}
+  {"id":"native_trace_evidence","workflow":"evidence","evaluator":"native_trace_evidence","kind":"native","requires_provenance":false},
+  {"id":"spoken_approval_mishear","workflow":"conversation-safety","evaluator":"spoken_approval_mishear","kind":"python","requires_provenance":false},
+  {"id":"stale_approval_hash","workflow":"conversation-safety","evaluator":"stale_approval_hash","kind":"python","requires_provenance":false},
+  {"id":"barge_in_correction","workflow":"conversation-safety","evaluator":"barge_in_correction","kind":"python","requires_provenance":false},
+  {"id":"unknown_tool_rejected","workflow":"conversation-safety","evaluator":"unknown_tool_rejected","kind":"python","requires_provenance":false},
+  {"id":"live_adapter_unhealthy_fallback","workflow":"conversation-safety","evaluator":"live_adapter_unhealthy_fallback","kind":"python","requires_provenance":false},
+  {"id":"execute_replay_rejected","workflow":"conversation-safety","evaluator":"execute_replay_rejected","kind":"python","requires_provenance":false},
+  {"id":"panic_stop_during_conversation","workflow":"conversation-safety","evaluator":"native_conversation_panic_stop","kind":"native","requires_provenance":false}
 ]
