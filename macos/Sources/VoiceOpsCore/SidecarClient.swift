@@ -22,12 +22,40 @@ public actor SidecarClient {
 
     public var isRunning: Bool { process?.isRunning ?? false }
 
+    /// Default uv install locations, checked before PATH. GUI-launched apps
+    /// inherit launchd's minimal PATH, which never includes Homebrew.
+    public static nonisolated let defaultUVCandidates = [
+        ProcessInfo.processInfo.environment["VOICEOPS_UV"],
+        "/opt/homebrew/bin/uv",
+        "/usr/local/bin/uv",
+        NSHomeDirectory() + "/.local/bin/uv",
+    ].compactMap(\.self)
+
+    public static nonisolated func resolveUVExecutable(
+        candidates: [String] = defaultUVCandidates,
+        environmentPATH: String = ProcessInfo.processInfo.environment["PATH"] ?? ""
+    ) -> String? {
+        let fm = FileManager.default
+        for candidate in candidates where fm.isExecutableFile(atPath: candidate) {
+            return candidate
+        }
+        for dir in environmentPATH.split(separator: ":") {
+            let path = String(dir) + "/uv"
+            if fm.isExecutableFile(atPath: path) { return path }
+        }
+        return nil
+    }
+
     public func start() throws -> AsyncThrowingStream<Envelope, Error> {
         guard process == nil else { throw SidecarError.alreadyStarted }
 
+        guard let uv = Self.resolveUVExecutable() else {
+            throw SidecarError.launchFailed(
+                "uv not found — install it (https://docs.astral.sh/uv/) or set VOICEOPS_UV")
+        }
         let sidecar = Process()
-        sidecar.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        sidecar.arguments = ["uv", "run", "--project", agentProjectURL.path, "voiceops-agent"]
+        sidecar.executableURL = URL(fileURLWithPath: uv)
+        sidecar.arguments = ["run", "--project", agentProjectURL.path, "voiceops-agent"]
         let stdinPipe = Pipe()
         let stdoutPipe = Pipe()
         sidecar.standardInput = stdinPipe

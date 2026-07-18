@@ -102,6 +102,34 @@ final class VoiceSessionControllerTests: XCTestCase {
         _ = try await controller.end()
     }
 
+    func testEndFallsBackToLastPartialWhenFinalNeverArrives() async throws {
+        // SFSpeechRecognizer is not guaranteed to deliver a final after
+        // endAudio; the session must not hang in planning forever.
+        let fake = FakeTranscriber()
+        let controller = VoiceSessionController(
+            transcriber: fake, locale: "en-US", finalizationTimeout: .milliseconds(100))
+        try await controller.begin()
+        await fake.emit(TranscriptUpdate(text: "remind me tomorrow", isFinal: false, confidence: nil, segments: []))
+
+        let request = try await controller.end()  // no final ever emitted
+        XCTAssertEqual(request.transcript, "remind me tomorrow")
+        XCTAssertEqual(request.confidence, 0)
+    }
+
+    func testEndThrowsNoSpeechWhenNothingWasHeard() async throws {
+        let fake = FakeTranscriber()
+        let controller = VoiceSessionController(
+            transcriber: fake, locale: "en-US", finalizationTimeout: .milliseconds(100))
+        try await controller.begin()
+        do {
+            _ = try await controller.end()  // no partials, no final
+            XCTFail("expected noSpeech")
+        } catch VoiceSessionError.noSpeech {
+        } catch {
+            XCTFail("expected .noSpeech, got \(error)")
+        }
+    }
+
     func testCaptureErrorWhileListeningFiresOnError() async throws {
         // A recognizer failure with no end() waiting must reach the app —
         // otherwise the UI sits in "Listening…" forever.

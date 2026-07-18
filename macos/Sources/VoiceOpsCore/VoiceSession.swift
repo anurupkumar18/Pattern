@@ -47,15 +47,23 @@ public final class VoiceSessionController {
     /// the app would sit in listening state with a dead microphone.
     public var onError: ((Error) -> Void)?
 
+    private let finalizationTimeout: Duration
     private var consumeTask: Task<Void, Never>?
+    private var timeoutTask: Task<Void, Never>?
     private var storedFinal: TranscriptUpdate?
+    private var lastPartial = ""
     private var pendingEnd: CheckedContinuation<TranscriptUpdate, Error>?
     private var isActive = false
     private var isCancelled = false
 
-    public init(transcriber: any Transcriber, locale: String) {
+    public init(
+        transcriber: any Transcriber,
+        locale: String,
+        finalizationTimeout: Duration = .seconds(2.5)
+    ) {
         self.transcriber = transcriber
         self.locale = locale
+        self.finalizationTimeout = finalizationTimeout
     }
 
     public func begin() async throws {
@@ -95,6 +103,13 @@ public final class VoiceSessionController {
         }
         let final = try await withCheckedThrowingContinuation { continuation in
             pendingEnd = continuation
+            // Providers are not guaranteed to deliver a final after finish()
+            // (SFSpeechRecognizer notoriously). Fall back to the last partial.
+            timeoutTask = Task { [weak self, finalizationTimeout] in
+                try? await Task.sleep(for: finalizationTimeout)
+                guard !Task.isCancelled else { return }
+                self?.finalizationTimedOut()
+            }
         }
         finishSession()
         return buildRequest(from: final)
@@ -121,7 +136,19 @@ public final class VoiceSessionController {
                 onAutoFinal?(update.text)
             }
         } else {
+            lastPartial = update.text
             onPartial?(update.text)
+        }
+    }
+
+    private func finalizationTimedOut() {
+        guard let pendingEnd else { return }
+        self.pendingEnd = nil
+        if lastPartial.isEmpty {
+            pendingEnd.resume(throwing: VoiceSessionError.noSpeech)
+        } else {
+            pendingEnd.resume(returning: TranscriptUpdate(
+                text: lastPartial, isFinal: true, confidence: nil, segments: []))
         }
     }
 
@@ -145,6 +172,8 @@ public final class VoiceSessionController {
     private func finishSession() {
         isActive = false
         consumeTask = nil
+        timeoutTask?.cancel()
+        timeoutTask = nil
     }
 
     private func buildRequest(from final: TranscriptUpdate) -> VoiceRequest {

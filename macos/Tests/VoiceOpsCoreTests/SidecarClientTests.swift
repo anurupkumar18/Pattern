@@ -28,6 +28,41 @@ final class SidecarClientTests: XCTestCase {
         SidecarClient(agentProjectURL: Self.repoRoot.appendingPathComponent("agent"))
     }
 
+    func testResolvesUVFromExplicitCandidatesBeforePATH() throws {
+        // GUI-launched apps get launchd's minimal PATH without Homebrew, so
+        // the client must find uv at its known install locations itself.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("voiceops-uv-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let fakeUV = dir.appendingPathComponent("uv")
+        FileManager.default.createFile(
+            atPath: fakeUV.path, contents: Data("#!/bin/sh\n".utf8),
+            attributes: [.posixPermissions: 0o755])
+
+        let resolved = SidecarClient.resolveUVExecutable(
+            candidates: [dir.appendingPathComponent("missing").path, fakeUV.path],
+            environmentPATH: "/usr/bin:/bin")
+        XCTAssertEqual(resolved, fakeUV.path)
+    }
+
+    func testResolveUVFallsBackToPATHThenNil() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("voiceops-uv-path-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let fakeUV = dir.appendingPathComponent("uv")
+        FileManager.default.createFile(
+            atPath: fakeUV.path, contents: Data("#!/bin/sh\n".utf8),
+            attributes: [.posixPermissions: 0o755])
+
+        XCTAssertEqual(
+            SidecarClient.resolveUVExecutable(candidates: [], environmentPATH: "/nope:\(dir.path)"),
+            fakeUV.path)
+        XCTAssertNil(
+            SidecarClient.resolveUVExecutable(candidates: [], environmentPATH: "/nope"))
+    }
+
     func testVoiceFinalYieldsPlanThenCompletion() async throws {
         try requireUV()
         let client = makeClient()

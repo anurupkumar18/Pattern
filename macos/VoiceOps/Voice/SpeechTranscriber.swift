@@ -10,6 +10,11 @@ private let log = Logger(subsystem: "com.voiceops.VoiceOps", category: "speech")
 /// session logic lives in VoiceOpsCore.VoiceSessionController and is tested
 /// against a fake; this file only bridges SFSpeechRecognizer + AVAudioEngine
 /// into the Transcriber protocol.
+///
+/// SFSpeechRecognizer finalizes on its own after short pauses. Those internal
+/// finals are treated as segment boundaries: the text is committed, a fresh
+/// recognition task continues listening, and partials always carry the full
+/// accumulated transcript. Only finish() produces the session-final update.
 public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
     private let lock = NSLock()
     private let audioEngine = AVAudioEngine()
@@ -17,6 +22,11 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var continuation: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation?
+    private var committedText = ""
+    private var committedSegments: [TranscriptSegment] = []
+    private var segmentOffsetMs = 0
+    private var finishRequested = false
+    private var restartCount = 0
 
     public init() {}
 
@@ -52,18 +62,15 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
             throw SpeechError.recognizerUnavailable
         }
 
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
         log.info("input format: \(format.sampleRate) Hz, \(format.channelCount) ch")
         guard format.sampleRate > 0, format.channelCount > 0 else {
-            log.error("no usable audio input (unsigned build or missing device?)")
+            log.error("no usable audio input")
             throw SpeechError.noAudioInput
         }
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-            request.append(buffer)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+            self?.lock.withLock { self?.request }?.append(buffer)
         }
         audioEngine.prepare()
         try audioEngine.start()
@@ -71,18 +78,19 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
         let (stream, continuation) = AsyncThrowingStream<TranscriptUpdate, Error>.makeStream()
         lock.withLock {
             self.recognizer = recognizer
-            self.request = request
             self.continuation = continuation
+            self.committedText = ""
+            self.committedSegments = []
+            self.segmentOffsetMs = 0
+            self.finishRequested = false
+            self.restartCount = 0
         }
-
-        let task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            self?.handle(result: result, error: error)
-        }
-        lock.withLock { self.task = task }
+        startRecognitionSegment()
         return stream
     }
 
     public func finish() async {
+        lock.withLock { finishRequested = true }
         stopAudio()
         // Recognizer delivers the final result after audio ends.
         lock.withLock { request }?.endAudio()
@@ -102,48 +110,96 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
         continuation?.finish()
     }
 
-    private func handle(result: SFSpeechRecognitionResult?, error: Error?) {
-        lock.lock()
-        guard let continuation else {
-            lock.unlock()
-            return
+    /// One recognizer task per speech segment; restarted after every internal final.
+    private func startRecognitionSegment() {
+        guard let recognizer = lock.withLock({ self.recognizer }) else { return }
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        lock.withLock { self.request = request }
+        let task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            self?.handle(result: result, error: error)
         }
+        lock.withLock { self.task = task }
+    }
+
+    private func handle(result: SFSpeechRecognitionResult?, error: Error?) {
         if let result {
-            log.debug("recognition update, final=\(result.isFinal)")
             let transcription = result.bestTranscription
+            let offset = lock.withLock { segmentOffsetMs }
             let segments = transcription.segments.map { segment in
                 TranscriptSegment(
                     text: segment.substring,
-                    startMs: Int(segment.timestamp * 1000),
-                    endMs: Int((segment.timestamp + segment.duration) * 1000),
+                    startMs: offset + Int(segment.timestamp * 1000),
+                    endMs: offset + Int((segment.timestamp + segment.duration) * 1000),
                     confidence: Double(segment.confidence))
             }
-            let averageConfidence = segments.isEmpty
-                ? 0 : segments.map(\.confidence).reduce(0, +) / Double(segments.count)
-            let update = TranscriptUpdate(
-                text: transcription.formattedString,
-                isFinal: result.isFinal,
-                confidence: result.isFinal ? averageConfidence : nil,
-                segments: result.isFinal ? segments : [])
-            continuation.yield(update)
-            if result.isFinal {
-                self.continuation = nil
-                self.task = nil
-                self.request = nil
-                lock.unlock()
+            let (continuation, joined, allSegments, isSessionFinal) = lock.withLock {
+                () -> (AsyncThrowingStream<TranscriptUpdate, Error>.Continuation?, String, [TranscriptSegment], Bool) in
+                let joined = [committedText, transcription.formattedString]
+                    .filter { !$0.isEmpty }.joined(separator: " ")
+                return (self.continuation, joined, committedSegments + segments, finishRequested && result.isFinal)
+            }
+            guard let continuation else { return }
+
+            if isSessionFinal {
+                log.info("session final: \(joined, privacy: .private)")
+                let confidence = allSegments.isEmpty
+                    ? 0 : allSegments.map(\.confidence).reduce(0, +) / Double(allSegments.count)
+                lock.withLock {
+                    self.continuation = nil
+                    self.task = nil
+                    self.request = nil
+                }
+                continuation.yield(TranscriptUpdate(
+                    text: joined, isFinal: true, confidence: confidence, segments: allSegments))
                 continuation.finish()
-                return
+            } else if result.isFinal {
+                // Internal pause boundary: commit and keep listening.
+                log.debug("segment committed, continuing to listen")
+                lock.withLock {
+                    committedText = joined
+                    committedSegments += segments
+                    segmentOffsetMs = committedSegments.last?.endMs ?? segmentOffsetMs
+                }
+                continuation.yield(TranscriptUpdate(
+                    text: joined, isFinal: false, confidence: nil, segments: []))
+                startRecognitionSegment()
+            } else {
+                continuation.yield(TranscriptUpdate(
+                    text: joined, isFinal: false, confidence: nil, segments: []))
             }
         } else if let error {
+            let (finishRequested, restarts) = lock.withLock {
+                restartCount += 1
+                return (self.finishRequested, restartCount)
+            }
+            // Silence and per-utterance hiccups are normal while listening;
+            // restart unless the session is ending or errors are runaway.
+            if !finishRequested && restarts <= 10 {
+                log.info("recognition segment error (restart \(restarts)): \(error.localizedDescription)")
+                startRecognitionSegment()
+                return
+            }
             log.error("recognition failed: \(error.localizedDescription)")
-            self.continuation = nil
-            self.task = nil
-            self.request = nil
-            lock.unlock()
-            continuation.finish(throwing: error)
-            return
+            let continuation = lock.withLock {
+                defer {
+                    self.continuation = nil
+                    self.task = nil
+                    self.request = nil
+                }
+                return self.continuation
+            }
+            // A failure after finish() with words already accumulated is a
+            // usable result, not an error — surface what we heard.
+            let committed = lock.withLock { (committedText, committedSegments) }
+            if finishRequested, !committed.0.isEmpty {
+                continuation?.yield(TranscriptUpdate(
+                    text: committed.0, isFinal: true, confidence: 0, segments: committed.1))
+                continuation?.finish()
+            } else {
+                continuation?.finish(throwing: error)
+            }
         }
-        lock.unlock()
     }
 
     private func stopAudio() {
