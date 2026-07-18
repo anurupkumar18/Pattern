@@ -97,9 +97,9 @@ struct VLMSettingsView: View {
             }
 
             Section("Privacy") {
-                Text("The API key is stored in your macOS login Keychain. It is used only by the live Realtime voice socket and per-task local sidecar; it is never saved in the repository, app bundle, screenshots, or logs.")
+                Text("The API key is stored in your macOS login Keychain. It is used only by the live Realtime voice socket, final transcription request, and per-task local sidecar; it is never saved in the repository, app bundle, screenshots, or logs.")
                     .font(.callout)
-                Text("When configured, microphone PCM is streamed only during an active hotkey capture. The active-window screenshot and pruned accessibility candidates are sent only during task grounding. Captures remain task-scoped and are deleted at the terminal state.")
+                Text("When configured, microphone PCM is streamed during active hotkey capture. On commit, up to 10 MiB of task-scoped, in-memory PCM may be sent once to the final transcription model, then released after finalization or cancellation. The active-window screenshot and pruned accessibility candidates are sent only during task grounding. Captures are deleted at the terminal state.")
                     .font(.callout)
             }
 

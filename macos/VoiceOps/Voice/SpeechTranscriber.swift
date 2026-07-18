@@ -410,7 +410,10 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
     }
 
     public func cancel() async {
-        lock.withLock { cancelled = true }
+        lock.withLock {
+            cancelled = true
+            recordedPCM.removeAll(keepingCapacity: false)
+        }
         stopAudio()
         let state = lock.withLock {
             defer {
@@ -548,6 +551,7 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
         }
         let continuation: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation? = lock.withLock {
             guard !cancelled else { return nil }
+            recordedPCM.removeAll(keepingCapacity: false)
             let value = outputContinuation
             outputContinuation = nil
             return value

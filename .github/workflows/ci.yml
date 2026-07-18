@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python:
     name: Python tests
@@ -41,3 +45,5 @@ jobs:
       - run: swift build --package-path macos
       - run: swift run -q --package-path macos voiceops-mock-client
       - run: cd agent && uv run voiceops-eval --repo-root .. --output-dir ../evals/reports --run-id ci-fixture
+      - name: Run the 20-case Order Rescue safety rehearsal
+        run: cd agent && uv run python -m voiceops_agent.evals.order_rescue --runs 20
