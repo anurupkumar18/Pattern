@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Northstar Kids — Order #1842 — Maya Chen</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211b;
+      --muted: #66736a;
+      --line: #dfe5e0;
+      --panel: #ffffff;
+      --canvas: #f4f6f4;
+      --green: #173f32;
+      --green-2: #24634e;
+      --mint: #dcefe6;
+      --amber: #9a5d00;
+      --amber-bg: #fff1d8;
+      --red: #a33b2e;
+      --shadow: 0 12px 35px rgba(22, 45, 34, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 1080px;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    button { font: inherit; }
+
+    .topbar {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 22px;
+      color: white;
+      background: var(--green);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 206px;
+      font-weight: 720;
+      letter-spacing: -.01em;
+    }
+
+    .brand-mark {
+      width: 31px;
+      height: 31px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      color: var(--green);
+      background: #c9f0dd;
+      font-weight: 850;
+    }
+
+    .search {
+      width: min(540px, 42vw);
+      padding: 9px 14px;
+      color: rgba(255, 255, 255, .78);
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 10px;
+    }
+
+    .top-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #e4b268;
+      color: #382300;
+      font-weight: 750;
+    }
+
+    .layout {
+      min-height: calc(100vh - 58px);
+      display: grid;
+      grid-template-columns: 218px 1fr;
+    }
+
+    nav {
+      padding: 18px 12px;
+      background: #edf1ed;
+      border-right: 1px solid #d8dfd9;
+    }
+
+    .nav-label {
+      margin: 18px 10px 7px;
+      color: #7a857d;
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 11px;
+      margin: 2px 0;
+      border-radius: 9px;
+      color: #425047;
+      font-weight: 580;
+    }
+
+    .nav-item.active { color: #12382d; background: #d8e8df; }
+    .nav-icon { width: 18px; text-align: center; }
+    .count { margin-left: auto; font-size: 12px; color: var(--muted); }
+
+    main { padding: 22px 26px 34px; overflow: hidden; }
+
+    .breadcrumb { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+
+    .order-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    h1 { margin: 0; font-size: 25px; line-height: 1.2; letter-spacing: -.025em; }
+    .subhead { margin-top: 6px; color: var(--muted); }
+
+    .pill-row { display: flex; gap: 7px; margin-left: 8px; flex-wrap: wrap; }
+    .pill {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #e4e9e5;
+      color: #46544a;
+      font-size: 12px;
+      font-weight: 680;
+    }
+    .pill.alert { color: var(--amber); background: var(--amber-bg); }
+
+    .primary-button {
+      margin-left: auto;
+      padding: 9px 13px;
+      color: white;
+      background: var(--green-2);
+      border: 0;
+      border-radius: 9px;
+      font-weight: 680;
+      box-shadow: 0 2px 6px rgba(25, 81, 62, .2);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(560px, 1fr) 330px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 16px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-header h2 { margin: 0; font-size: 14px; letter-spacing: -.01em; }
+    .card-body { padding: 16px; }
+
+    .ticket { border-left: 4px solid #d5842e; }
+    .ticket-meta { display: flex; gap: 8px; color: var(--muted); font-size: 12px; }
+    .ticket blockquote {
+      margin: 13px 0 10px;
+      padding: 0;
+      font-size: 18px;
+      line-height: 1.45;
+      letter-spacing: -.015em;
+      color: #222c25;
+    }
+
+    .deadline {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 9px;
+      color: var(--red);
+      background: #fff0ed;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .tracking-summary {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      padding: 15px 16px;
+      background: #f8faf8;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tracking-status { font-size: 16px; font-weight: 730; }
+    .tracking-number { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .stationary { color: var(--amber); font-size: 21px; font-weight: 780; text-align: right; }
+    .stationary small { display: block; font-size: 11px; font-weight: 650; }
+
+    .timeline { list-style: none; margin: 0; padding: 16px 18px 8px; }
+    .timeline li { position: relative; padding: 0 0 18px 24px; }
+    .timeline li::before {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #9aa59d;
+      box-shadow: 0 0 0 4px #eef1ee;
+    }
+    .timeline li:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 16px;
+      bottom: 2px;
+      width: 2px;
+      background: #e1e6e2;
+    }
+    .timeline strong { display: block; font-size: 13px; }
+    .timeline span { color: var(--muted); font-size: 12px; }
+
+    .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+    .fact { padding: 15px 16px; border-right: 1px solid var(--line); }
+    .fact:last-child { border-right: 0; }
+    .fact-label { color: var(--muted); font-size: 11px; font-weight: 690; text-transform: uppercase; letter-spacing: .05em; }
+    .fact-value { margin-top: 5px; font-weight: 720; }
+    .fact-note { margin-top: 3px; color: var(--muted); font-size: 11px; }
+
+    .customer-head { display: flex; align-items: center; gap: 11px; }
+    .customer-avatar {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      color: #41351b;
+      background: #f2d995;
+      border-radius: 50%;
+      font-weight: 780;
+    }
+    .customer-name { font-size: 16px; font-weight: 740; }
+    .customer-email { color: var(--muted); font-size: 12px; }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .metric:last-child { border-bottom: 0; }
+    .metric span { color: var(--muted); }
+    .metric strong { font-size: 15px; }
+    .vip { color: var(--green-2); }
+
+    .policy-rule {
+      padding: 11px 12px;
+      border: 1px solid #cfe1d7;
+      border-radius: 9px;
+      background: #f0f8f4;
+    }
+    .policy-rule strong { display: block; margin-bottom: 3px; color: var(--green-2); }
+    .policy-rule p { margin: 0; color: #435047; font-size: 12px; }
+    .policy-meta { margin-top: 10px; color: var(--muted); font-size: 11px; }
+
+    .empty-note {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .empty-dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd3cd; }
+
+    .source-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 12px;
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .source-chip {
+      padding: 4px 7px;
+      color: #526058;
+      background: #f1f4f1;
+      border: 1px solid #e1e6e2;
+      border-radius: 7px;
+      font-size: 11px;
+    }
+
+    @media (max-height: 780px) {
+      main { padding-top: 14px; }
+      .card-body { padding: 13px 15px; }
+      .timeline li { padding-bottom: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">N</span> Northstar Kids</div>
+    <div class="search" role="search">⌕ &nbsp; Search orders, customers, and products</div>
+    <div class="top-actions"><span>Support</span><span>Alerts</span><span class="avatar">AK</span></div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="Merchant navigation">
+      <div class="nav-item"><span class="nav-icon">⌂</span> Home</div>
+      <div class="nav-item active"><span class="nav-icon">▣</span> Orders <span class="count">18</span></div>
+      <div class="nav-item"><span class="nav-icon">◎</span> Customers</div>
+      <div class="nav-item"><span class="nav-icon">◇</span> Products</div>
+      <div class="nav-label">Operations</div>
+      <div class="nav-item"><span class="nav-icon">↗</span> Shipments <span class="count">3</span></div>
+      <div class="nav-item"><span class="nav-icon">!</span> Exceptions <span class="count">4</span></div>
+      <div class="nav-item"><span class="nav-icon">✦</span> Policies</div>
+      <div class="nav-label">Channels</div>
+      <div class="nav-item"><span class="nav-icon">✉</span> Support inbox <span class="count">7</span></div>
+      <div class="nav-item"><span class="nav-icon">#</span> Team updates</div>
+    </nav>
+
+    <main data-order-id="1842" data-customer-id="cus_maya_chen">
+      <div class="breadcrumb">Orders / Exceptions / Delayed shipment</div>
+      <section class="order-header" aria-labelledby="order-heading">
+        <div>
+          <h1 id="order-heading">Order #1842 · Maya Chen</h1>
+          <div class="subhead">Placed July 8, 2026 at 9:14 AM · $286.00 · 3 items</div>
+        </div>
+        <div class="pill-row" aria-label="Order status">
+          <span class="pill">Paid</span>
+          <span class="pill">Fulfilled</span>
+          <span class="pill alert">In transit — delayed</span>
+        </div>
+        <button class="primary-button" type="button">More actions</button>
+      </section>
+
+      <div class="grid">
+        <div class="stack">
+          <article class="card ticket" id="customer-message" aria-labelledby="ticket-title">
+            <div class="card-body">
+              <div class="ticket-meta"><strong id="ticket-title">Customer message</strong><span>·</span><span>Today, 9:57 AM</span><span>·</span><span>Support inbox</span></div>
+              <blockquote>“My order was supposed to arrive yesterday. I need it before my daughter’s birthday this Friday. Can you help?”</blockquote>
+              <span class="deadline">◷ Delivery needed by Friday, July 24</span>
+            </div>
+          </article>
+
+          <section class="card" id="tracking-summary" aria-labelledby="tracking-title" data-tracking-number="1Z999AA10123456784">
+            <div class="card-header"><h2 id="tracking-title">UPS shipment</h2><span class="pill alert">Exception</span></div>
+            <div class="tracking-summary">
+              <div>
+                <div class="tracking-status">In transit — delayed</div>
+                <div class="tracking-number">1Z999AA10123456784 · Promised July 17</div>
+              </div>
+              <div class="stationary">91 hours<small>without carrier movement</small></div>
+            </div>
+            <ol class="timeline" aria-label="Tracking history">
+              <li><strong>Departed UPS facility · Commerce City, CO</strong><span>July 14 at 8:42 PM · latest carrier scan</span></li>
+              <li><strong>Arrived at UPS facility · Commerce City, CO</strong><span>July 14 at 4:18 PM</span></li>
+              <li><strong>Shipment picked up</strong><span>July 12 at 7:05 PM</span></li>
+            </ol>
+          </section>
+
+          <section class="card" aria-labelledby="fulfillment-title">
+            <div class="card-header"><h2 id="fulfillment-title">Fulfillment evidence</h2></div>
+            <div class="facts">
+              <div class="fact"><div class="fact-label">Replacement SKU</div><div class="fact-value">BIRTHDAY-KIT-BLUE</div><div class="fact-note">Original address preserved</div></div>
+              <div class="fact"><div class="fact-label">Inventory</div><div class="fact-value">7 units available</div><div class="fact-note">Denver fulfillment center</div></div>
+              <div class="fact"><div class="fact-label">Expedited ETA</div><div class="fact-value">Thursday, July 23</div><div class="fact-note">Before customer deadline</div></div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="stack" aria-label="Customer and policy context">
+          <section class="card" id="customer-value" aria-labelledby="customer-title">
+            <div class="card-body">
+              <div class="customer-head">
+                <div class="customer-avatar">MC</div>
+                <div><div class="customer-name" id="customer-title">Maya Chen</div><div class="customer-email">maya@example.com</div></div>
+              </div>
+              <div style="margin-top: 13px">
+                <div class="metric"><span>Lifetime value</span><strong class="vip">$1,840</strong></div>
+                <div class="metric"><span>Orders</span><strong>12</strong></div>
+                <div class="metric"><span>Returns</span><strong>0</strong></div>
+                <div class="metric"><span>Customer tier</span><strong class="vip">VIP</strong></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="policy-title">
+            <div class="card-header"><h2 id="policy-title">Delayed shipment policy</h2><span class="pill">v2026.07</span></div>
+            <div class="card-body">
+              <div class="policy-rule"><strong>Proactive intervention eligible</strong><p>Escalate after 72 hours without movement. VIP threshold: $1,000 lifetime value.</p></div>
+              <div class="policy-meta">Current order: 91 stationary hours · $1,840 LTV</div>
+              <div class="source-strip" aria-label="Policy provenance"><span class="source-chip">Policy: delayed-shipment</span><span class="source-chip">Structured source</span></div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="notes-title">
+            <div class="card-header"><h2 id="notes-title">Order notes and tags</h2></div>
+            <div class="card-body"><div class="empty-note"><span class="empty-dot"></span>No exception note or Carrier Delay tag yet</div></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

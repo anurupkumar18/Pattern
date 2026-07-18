@@ -7,7 +7,10 @@ In under four minutes, prove all eligibility requirements and visibly map the pr
 ## 2. Pre-Demo Setup
 
 - Use a dedicated macOS user profile.
-- Keep the Order #1842 / Maya Chen support surface visible with the delayed-package message, tracking summary, lifetime value, and Friday deadline.
+- Run `scripts/seed_order_rescue_demo.sh` and keep the local Order #1842 / Maya
+  Chen workspace visible. It includes the delayed-package message, tracking
+  history, lifetime value, inventory, policy, and Friday deadline without any
+  external credentials or network requests.
 - Keep the exact initial request and correction below available only as presenter backup; speak naturally during the demo.
 - Open the evaluation dashboard on a secondary Space or tab.
 - Verify microphone, Screen Recording, and Accessibility permissions. Calendar,

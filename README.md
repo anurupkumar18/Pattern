@@ -66,7 +66,11 @@ scripts/run_app.sh            # builds with the CLI toolchain and launches — n
 
 ### Run the Order Rescue hero
 
-Keep a browser or support surface visible with **Order #1842** and **Maya Chen**, then press **⌃⌥V** and say:
+Open the complete local merchant workspace, then press **⌃⌥V** and say:
+
+```sh
+scripts/seed_order_rescue_demo.sh
+```
 
 > “Take care of this delayed order. Check whether it has moved recently. She looks like a valuable customer, so if it has been stuck for more than three days, prepare an expedited replacement, apologize to her, update the order, and remind me tomorrow to verify the new tracking.”
 
