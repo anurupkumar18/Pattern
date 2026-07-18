@@ -182,3 +182,36 @@ blockers for `cursor/voice-command-center`.
   `FleetCommandSchema` validation.
 - Baseline artifacts: `commandcenter/eval-report.json` and
   `commandcenter/eval-report.md` (generated `2026-07-18T07:56:36.516Z`).
+
+## 2026-07-18 (real-model tuning) - Gemma 4 plateau at 27/28
+
+- Retained configuration:
+  `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","gemma4","--nowordwrap","--think=false"]' npm run eval`.
+- Kept code changes: remove ANSI terminal sequences, extract the first balanced
+  JSON object from surrounding model text, preserve strict
+  `FleetCommandSchema` validation, and make routing boundaries explicit in the
+  prompt.
+- Measured one-change-at-a-time sequence:
+  - Robust JSON extraction: 0/28 -> 1/28. The one completed route took
+    13.18s; wrapped newlines inside JSON strings still broke most output.
+  - Add `--nowordwrap`: 1/28 -> 16/28. Clear 9/15, fuzzy 1/5, noise 4/6,
+    destructive 2/2; route p50 9.50s, p95 14.29s.
+  - Add `--think=false`: 16/28 -> 20/28. Clear 9/15, fuzzy 3/5, noise 6/6,
+    destructive 2/2; route p50 9.25s, p95 12.84s; all parser/timeouts cleared.
+  - Add explicit routing semantics: 20/28 -> 27/28. Clear 14/15, fuzzy 5/5,
+    noise 6/6, destructive 2/2; route p50 11.43s, p95 15.59s.
+  - Tell the model to omit unspoken optional spawn fields: regressed to 25/28
+    (clear 13/15, fuzzy 4/5, noise 6/6, destructive 2/2); reverted.
+  - Add one spawn few-shot example: regressed to 24/28 (clear 12/15, fuzzy
+    4/5, noise 6/6, destructive 2/2) and introduced three timeouts; reverted.
+- The last two changes did not improve the 27/28 best, so tuning stopped under
+  the two-change plateau rule.
+- Final confirmation on the retained configuration: 27/28 overall; clear
+  14/15, fuzzy 5/5, noise 6/6, destructive 2/2; 0% noise false-fire; 27/28
+  end-to-end verified. Route latency p50 is 10.46s and p95 is 13.19s.
+- The remaining miss is `spawn-clear-3`: Gemma supplies
+  `initialMessage: ""` when no initial message was spoken, and strict schema
+  validation correctly rejects it. No schema relaxation was accepted.
+- Final artifacts: `commandcenter/eval-report.json` contains each utterance's
+  expected/actual command and per-route latency; `commandcenter/eval-report.md`
+  contains the aggregate readout. Generated `2026-07-18T10:41:24.656Z`.

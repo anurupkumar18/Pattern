@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T07:56:36.516Z",
+  "generatedAt": "2026-07-18T10:41:24.656Z",
   "fixtureCount": 28,
   "caveat": "Gemma results came from the configured local runtime.",
   "routers": {
@@ -44,27 +44,27 @@
         },
         "route": {
           "samples": 28,
-          "mean": 0.7347812142856956,
-          "p50": 0.2571250000000873,
-          "p95": 3.640625
+          "mean": 0.18096578571428015,
+          "p50": 0.10587499999996908,
+          "p95": 0.6265000000000214
         },
         "act": {
           "samples": 28,
-          "mean": 0.11250589285715153,
-          "p50": 0.02941699999996672,
-          "p95": 0.32004200000005767
+          "mean": 0.024695071428577568,
+          "p50": 0.013041999999984455,
+          "p95": 0.0971670000000131
         },
         "verify": {
           "samples": 28,
-          "mean": 0.0699448571428515,
-          "p50": 0.027124999999841748,
-          "p95": 0.2929579999999987
+          "mean": 0.02264282142857001,
+          "p50": 0.013500000000021828,
+          "p95": 0.07150000000001455
         },
         "total": {
           "samples": 28,
-          "mean": 0.9172319642856986,
-          "p50": 0.38533299999994597,
-          "p95": 4.704958999999917
+          "mean": 0.22830367857142772,
+          "p50": 0.14791599999995242,
+          "p95": 0.795167000000049
         }
       },
       "results": [
@@ -85,10 +85,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 3.640625,
-            "act": 0.32004200000005767,
-            "verify": 0.7442919999998594,
-            "total": 4.704958999999917
+            "route": 1.034417000000019,
+            "act": 0.03649999999998954,
+            "verify": 0.15358299999996916,
+            "total": 1.2244999999999777
           }
         },
         {
@@ -108,10 +108,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 1.2702499999998054,
-            "act": 0.03249999999979991,
-            "verify": 0.09970799999996416,
-            "total": 1.4024579999995694
+            "route": 0.2515419999999722,
+            "act": 0.011167000000000371,
+            "verify": 0.01695799999998826,
+            "total": 0.2796669999999608
           }
         },
         {
@@ -131,10 +131,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.12929200000007768,
-            "act": 0.0035830000001624285,
-            "verify": 0.027124999999841748,
-            "total": 0.16000000000008185
+            "route": 0.05824999999998681,
+            "act": 0.0014170000000035543,
+            "verify": 0.014083000000027823,
+            "total": 0.07375000000001819
           }
         },
         {
@@ -158,10 +158,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 3.7390000000000327,
-            "act": 1.0737920000001395,
-            "verify": 0.04383300000017698,
-            "total": 4.856625000000349
+            "route": 0.5413330000000087,
+            "act": 0.13416699999999082,
+            "verify": 0.021957999999983713,
+            "total": 0.6974579999999833
           }
         },
         {
@@ -185,10 +185,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.677791999999954,
-            "act": 0.024791999999933978,
-            "verify": 0.021790999999893756,
-            "total": 0.7243749999997817
+            "route": 0.17345799999998235,
+            "act": 0.015084000000001652,
+            "verify": 0.012791999999990367,
+            "total": 0.20133399999997437
           }
         },
         {
@@ -212,10 +212,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.2571250000000873,
-            "act": 0.08887499999991633,
-            "verify": 0.03933299999994233,
-            "total": 0.38533299999994597
+            "route": 0.025959000000000287,
+            "act": 0.011374999999986812,
+            "verify": 0.012209000000041215,
+            "total": 0.049543000000028314
           }
         },
         {
@@ -239,10 +239,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.3376670000000104,
-            "act": 0.02712500000006912,
-            "verify": 0.022375000000010914,
-            "total": 0.3871670000000904
+            "route": 0.04208299999999099,
+            "act": 0.01079200000003766,
+            "verify": 0.02600000000001046,
+            "total": 0.07887500000003911
           }
         },
         {
@@ -268,10 +268,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.8991249999999127,
-            "act": 0.15362499999991996,
-            "verify": 0.04754099999991013,
-            "total": 1.1002909999997428
+            "route": 0.3383330000000342,
+            "act": 0.0422500000000241,
+            "verify": 0.023041000000034728,
+            "total": 0.403624000000093
           }
         },
         {
@@ -297,10 +297,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 1.1355000000000928,
-            "act": 0.12637500000005275,
-            "verify": 0.07087499999988722,
-            "total": 1.3327500000000327
+            "route": 0.17629199999998946,
+            "act": 0.014416999999980362,
+            "verify": 0.013500000000021828,
+            "total": 0.20420899999999165
           }
         },
         {
@@ -326,10 +326,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.3037500000000364,
-            "act": 0.22745800000006966,
-            "verify": 0.05029200000012679,
-            "total": 0.5815000000002328
+            "route": 0.10587499999996908,
+            "act": 0.01912499999997408,
+            "verify": 0.022916000000009262,
+            "total": 0.14791599999995242
           }
         },
         {
@@ -355,10 +355,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.1780830000000151,
-            "act": 0.028915999999981068,
-            "verify": 0.024666000000024724,
-            "total": 0.23166500000002088
+            "route": 0.028250000000014097,
+            "act": 0.017166000000031545,
+            "verify": 0.047333999999978005,
+            "total": 0.09275000000002365
           }
         },
         {
@@ -384,10 +384,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.2057079999999587,
-            "act": 0.02941699999996672,
-            "verify": 0.013709000000062588,
-            "total": 0.248833999999988
+            "route": 0.23283300000002782,
+            "act": 0.042208000000016455,
+            "verify": 0.023583000000030552,
+            "total": 0.29862400000007483
           }
         },
         {
@@ -413,10 +413,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 3.118750000000091,
-            "act": 0.2862920000000031,
-            "verify": 0.05029200000012679,
-            "total": 3.455334000000221
+            "route": 0.6265000000000214,
+            "act": 0.0971670000000131,
+            "verify": 0.07150000000001455,
+            "total": 0.795167000000049
           }
         },
         {
@@ -442,10 +442,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.7387080000000878,
-            "act": 0.09945799999991323,
-            "verify": 0.03824999999983447,
-            "total": 0.8764159999998355
+            "route": 0.1323749999999677,
+            "act": 0.01983300000000554,
+            "verify": 0.010084000000006199,
+            "total": 0.16229199999997945
           }
         },
         {
@@ -473,10 +473,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.3923339999998916,
-            "act": 0.2313329999999496,
-            "verify": 0.017124999999850843,
-            "total": 0.640791999999692
+            "route": 0.12712499999997817,
+            "act": 0.043083000000024185,
+            "verify": 0.015125000000011823,
+            "total": 0.18533300000001418
           }
         },
         {
@@ -504,10 +504,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.15124999999989086,
-            "act": 0.18933300000003328,
-            "verify": 0.03462500000000546,
-            "total": 0.3752079999999296
+            "route": 0.03849999999999909,
+            "act": 0.019042000000013104,
+            "verify": 0.009208999999998468,
+            "total": 0.06675100000001066
           }
         },
         {
@@ -531,10 +531,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.9990419999999176,
-            "act": 0.05029199999989942,
-            "verify": 0.03650000000016007,
-            "total": 1.085833999999977
+            "route": 0.3188339999999812,
+            "act": 0.08199999999999363,
+            "verify": 0.03274999999996453,
+            "total": 0.43358399999993935
           }
         },
         {
@@ -558,10 +558,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.06166699999994307,
-            "act": 0.015542000000095868,
-            "verify": 0.01974999999993088,
-            "total": 0.09695899999996982
+            "route": 0.03279199999997218,
+            "act": 0.012665999999967426,
+            "verify": 0.01583299999998644,
+            "total": 0.061290999999926044
           }
         },
         {
@@ -585,10 +585,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.20600000000013097,
-            "act": 0.06845799999996416,
-            "verify": 0.019874999999956344,
-            "total": 0.29433300000005147
+            "route": 0.15116699999998673,
+            "act": 0.027250000000037744,
+            "verify": 0.012708000000031916,
+            "total": 0.1911250000000564
           }
         },
         {
@@ -612,10 +612,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.021082999999862295,
-            "act": 0.00808299999994233,
-            "verify": 0.12100000000009459,
-            "total": 0.1501659999998992
+            "route": 0.019541000000003805,
+            "act": 0.005583000000001448,
+            "verify": 0.004457999999999629,
+            "total": 0.029582000000004882
           }
         },
         {
@@ -641,10 +641,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 1.601457999999866,
-            "act": 0.03600000000005821,
-            "verify": 0.02575000000001637,
-            "total": 1.6632079999999405
+            "route": 0.3049579999999992,
+            "act": 0.013041999999984455,
+            "verify": 0.012541999999996278,
+            "total": 0.3305419999999799
           }
         },
         {
@@ -670,10 +670,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.10149999999998727,
-            "act": 0.014125000000149157,
-            "verify": 0.01262500000007094,
-            "total": 0.12825000000020736
+            "route": 0.06466699999998582,
+            "act": 0.009999999999990905,
+            "verify": 0.00858299999998735,
+            "total": 0.08324999999996407
           }
         },
         {
@@ -695,10 +695,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.2599999999999909,
-            "act": 0.0049579999999878055,
-            "verify": 0.2929579999999987,
-            "total": 0.5579159999999774
+            "route": 0.15899999999999181,
+            "act": 0.0016669999999976426,
+            "verify": 0.02508299999999508,
+            "total": 0.18574999999998454
           }
         },
         {
@@ -720,10 +720,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.06554099999993923,
-            "act": 0.005791000000044733,
-            "verify": 0.03224999999997635,
-            "total": 0.10358199999996032
+            "route": 0.008958000000006905,
+            "act": 0.0012500000000272848,
+            "verify": 0.0049159999999801585,
+            "total": 0.015124000000014348
           }
         },
         {
@@ -745,10 +745,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.01795799999990777,
-            "act": 0.0008330000000569271,
-            "verify": 0.008583000000044194,
-            "total": 0.02737400000000889
+            "route": 0.00770799999997962,
+            "act": 0.0005840000000034706,
+            "verify": 0.004416999999989457,
+            "total": 0.012708999999972548
           }
         },
         {
@@ -770,10 +770,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.02804100000003018,
-            "act": 0.000875000000178261,
-            "verify": 0.02566700000011224,
-            "total": 0.05458300000032068
+            "route": 0.013249999999970896,
+            "act": 0.0005840000000034706,
+            "verify": 0.005374999999958163,
+            "total": 0.01920899999993253
           }
         },
         {
@@ -795,10 +795,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.021042000000079497,
-            "act": 0.0014999999998508429,
-            "verify": 0.009540999999899213,
-            "total": 0.03208299999982955
+            "route": 0.006750000000010914,
+            "act": 0.0004590000000348482,
+            "verify": 0.004291999999963991,
+            "total": 0.011501000000009753
           }
         },
         {
@@ -820,10 +820,10 @@
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.015582999999878666,
-            "act": 0.0007920000000467553,
-            "verify": 0.008125000000063665,
-            "total": 0.024499999999989086
+            "route": 0.046291999999994005,
+            "act": 0.0015840000000366672,
+            "verify": 0.009166999999990821,
+            "total": 0.05704300000002149
           }
         }
       ]
@@ -833,63 +833,63 @@
       "modelEvidence": true,
       "summary": {
         "cases": 28,
-        "correct": 0,
-        "accuracy": 0
+        "correct": 27,
+        "accuracy": 0.9642857142857143
       },
       "categories": {
         "clear": {
           "cases": 15,
-          "correct": 0,
-          "accuracy": 0
+          "correct": 14,
+          "accuracy": 0.9333333333333333
         },
         "fuzzy": {
           "cases": 5,
-          "correct": 0,
-          "accuracy": 0
+          "correct": 5,
+          "accuracy": 1
         },
         "noise": {
           "cases": 6,
-          "correct": 0,
-          "accuracy": 0
+          "correct": 6,
+          "accuracy": 1
         },
         "destructive": {
           "cases": 2,
-          "correct": 0,
-          "accuracy": 0
+          "correct": 2,
+          "accuracy": 1
         }
       },
       "falseFireRate": 0,
-      "endToEndSuccessRate": 0,
+      "endToEndSuccessRate": 0.9642857142857143,
       "latencyMs": {
         "stt": {
-          "samples": 0,
+          "samples": 27,
           "mean": 0,
           "p50": 0,
           "p95": 0
         },
         "route": {
-          "samples": 0,
-          "mean": 0,
-          "p50": 0,
-          "p95": 0
+          "samples": 27,
+          "mean": 11281.89254477778,
+          "p50": 10461.268332999985,
+          "p95": 13193.373
         },
         "act": {
-          "samples": 0,
-          "mean": 0,
-          "p50": 0,
-          "p95": 0
+          "samples": 27,
+          "mean": 1.0188302222214352,
+          "p50": 0.24295899999560788,
+          "p95": 4.15516700000444
         },
         "verify": {
-          "samples": 0,
-          "mean": 0,
-          "p50": 0,
-          "p95": 0
+          "samples": 27,
+          "mean": 0.9639461481520912,
+          "p50": 0.13208399999712128,
+          "p95": 7.0393330000006245
         },
         "total": {
-          "samples": 0,
-          "mean": 0,
-          "p50": 0,
-          "p95": 0
+          "samples": 27,
+          "mean": 11283.87532114815,
+          "p50": 10462.572541000001,
+          "p95": 13204.567500000005
         }
       },
       "results": [
@@ -901,11 +901,20 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "status",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10987.164583,
+            "act": 0.018667000000277767,
+            "verify": 0.41700000000128057,
+            "total": 10987.600250000001
+          }
         },
         {
           "id": "status-clear-2",
@@ -915,11 +924,20 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "status",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 8385.152084,
+            "act": 0.04537499999787542,
+            "verify": 0.15695900000355323,
+            "total": 8385.354418
+          }
         },
         {
           "id": "status-fuzzy-1",
@@ -929,11 +947,20 @@
             "resolvedTargetId": "migration",
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "status",
+            "resolvedTargetId": "migration",
+            "payload": {}
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9877.185083,
+            "act": 0.011167000000568805,
+            "verify": 0.12766600000031758,
+            "total": 9877.323916000001
+          }
         },
         {
           "id": "focus-clear-1",
@@ -945,11 +972,22 @@
               "agentId": "migration"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10909.994750000002,
+            "act": 0.4217500000013388,
+            "verify": 0.13620900000387337,
+            "total": 10910.552709000007
+          }
         },
         {
           "id": "focus-clear-2",
@@ -961,11 +999,22 @@
               "agentId": "tests"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10601.962042,
+            "act": 1.6085830000010901,
+            "verify": 0.09554199999547563,
+            "total": 10603.666166999996
+          }
         },
         {
           "id": "focus-fuzzy-1",
@@ -977,11 +1026,22 @@
               "agentId": "migration"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 13193.373,
+            "act": 4.15516700000444,
+            "verify": 7.0393330000006245,
+            "total": 13204.567500000005
+          }
         },
         {
           "id": "focus-fuzzy-2",
@@ -993,11 +1053,22 @@
               "agentId": "tests"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 12108.701292000005,
+            "act": 0.4330420000042068,
+            "verify": 0.07166699999652337,
+            "total": 12109.206001000006
+          }
         },
         {
           "id": "send-clear-1",
@@ -1010,11 +1081,23 @@
               "text": "rerun the auth suite"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "rerun the auth suite"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 12393.277541000003,
+            "act": 1.3006250000034925,
+            "verify": 0.8691669999971054,
+            "total": 12395.447333000004
+          }
         },
         {
           "id": "send-clear-2",
@@ -1027,11 +1110,23 @@
               "text": "use staging not production"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration",
+              "text": "use staging not production"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 12554.888208999997,
+            "act": 11.388415999987046,
+            "verify": 1.7306249999965075,
+            "total": 12568.00724999998
+          }
         },
         {
           "id": "send-clear-3",
@@ -1044,11 +1139,23 @@
               "text": "only make a plan"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "deploy",
+            "payload": {
+              "agentId": "deploy",
+              "text": "only make a plan"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 12425.031875,
+            "act": 0.41820800000277814,
+            "verify": 0.11533299999427982,
+            "total": 12425.565415999998
+          }
         },
         {
           "id": "send-fuzzy-1",
@@ -1061,11 +1168,23 @@
               "text": "use staging"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration",
+              "text": "use staging"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10904.731999999989,
+            "act": 0.6915420000004815,
+            "verify": 0.13208399999712128,
+            "total": 10905.555625999987
+          }
         },
         {
           "id": "send-fuzzy-2",
@@ -1078,11 +1197,23 @@
               "text": "continue"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "continue"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10302.190792000009,
+            "act": 0.24295899999560788,
+            "verify": 0.08945800000219606,
+            "total": 10302.523209000006
+          }
         },
         {
           "id": "spawn-clear-1",
@@ -1095,11 +1226,23 @@
               "cwd": "/repos/docs"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "codex",
+              "cwd": "/repos/docs"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 11524.522333,
+            "act": 3.7791660000220872,
+            "verify": 0.09212499999557622,
+            "total": 11528.393624000018
+          }
         },
         {
           "id": "spawn-clear-2",
@@ -1112,11 +1255,23 @@
               "cwd": "/repos/api"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "claude",
+              "cwd": "/repos/api"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10206.265249999997,
+            "act": 0.44074999997974373,
+            "verify": 0.19174999999813735,
+            "total": 10206.897749999975
+          }
         },
         {
           "id": "spawn-clear-3",
@@ -1134,7 +1289,7 @@
           "correct": false,
           "outcome": "ROUTER_ERROR",
           "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "error": "[\n  {\n    \"origin\": \"string\",\n    \"code\": \"too_small\",\n    \"minimum\": 1,\n    \"inclusive\": true,\n    \"path\": [\n      \"payload\",\n      \"initialMessage\"\n    ],\n    \"message\": \"Too small: expected string to have >=1 characters\"\n  }\n]"
         },
         {
           "id": "spawn-clear-4",
@@ -1148,11 +1303,25 @@
               "initialMessage": "inspect the build"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "claude",
+              "cwd": "/repos/web",
+              "name": "Web Inspector",
+              "initialMessage": "inspect the build"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 13189.078500000003,
+            "act": 0.44391600001836196,
+            "verify": 0.061625000002095476,
+            "total": 13189.584041000024
+          }
         },
         {
           "id": "interrupt-destructive-1",
@@ -1164,11 +1333,22 @@
               "agentId": "deploy"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "interrupt",
+            "resolvedTargetId": "deploy",
+            "payload": {
+              "agentId": "deploy"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10422.607415999984,
+            "act": 0.3706250000104774,
+            "verify": 0.08750000002328306,
+            "total": 10423.065541000018
+          }
         },
         {
           "id": "interrupt-destructive-2",
@@ -1180,11 +1360,22 @@
               "agentId": "migration"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "interrupt",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10008.186540999974,
+            "act": 0.11433300000499003,
+            "verify": 0.05483400000957772,
+            "total": 10008.355707999988
+          }
         },
         {
           "id": "listen-stop-1",
@@ -1196,11 +1387,22 @@
               "action": "stop"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "listen_ctl",
+            "resolvedTargetId": null,
+            "payload": {
+              "action": "stop"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9940.93862500001,
+            "act": 0.14295899998978712,
+            "verify": 0.03387499999371357,
+            "total": 9941.115458999993
+          }
         },
         {
           "id": "listen-start-1",
@@ -1212,11 +1414,22 @@
               "action": "start"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "listen_ctl",
+            "resolvedTargetId": null,
+            "payload": {
+              "action": "start"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9924.299457999994,
+            "act": 0.1946250000037253,
+            "verify": 0.06354199998895638,
+            "total": 9924.557624999987
+          }
         },
         {
           "id": "dictate-clear-1",
@@ -1229,11 +1442,23 @@
               "text": "check the failing assertion"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "dictate",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "check the failing assertion"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10461.268332999985,
+            "act": 0.8289579999982379,
+            "verify": 0.47525000001769513,
+            "total": 10462.572541000001
+          }
         },
         {
           "id": "dictate-clear-2",
@@ -1246,11 +1471,23 @@
               "text": "run npm test"
             }
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "dictate",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "run npm test"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10374.148291999998,
+            "act": 0.24154199997428805,
+            "verify": 0.0479580000101123,
+            "total": 10374.437791999982
+          }
         },
         {
           "id": "noise-1",
@@ -1260,11 +1497,22 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "out of scope"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9775.735834000021,
+            "act": 0.0284999999566935,
+            "verify": 0.12491700000828132,
+            "total": 9775.889250999986
+          }
         },
         {
           "id": "noise-2",
@@ -1274,11 +1522,22 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "unsupported"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9979.289208000002,
+            "act": 0.03495800000382587,
+            "verify": 8.881334000034258,
+            "total": 9988.20550000004
+          }
         },
         {
           "id": "noise-3",
@@ -1288,11 +1547,22 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "Unsupported ambient speech or general filler"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10779.323749999981,
+            "act": 0.029625000024680048,
+            "verify": 3.3526670000283048,
+            "total": 10782.706042000034
+          }
         },
         {
           "id": "noise-4",
@@ -1302,11 +1572,22 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "Unsupported request"
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9845.388292000047,
+            "act": 0.04208300000755116,
+            "verify": 0.7475420000264421,
+            "total": 9846.177917000081
+          }
         },
         {
           "id": "noise-5",
@@ -1316,11 +1597,22 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma command timed out after 30000ms"
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "No agents available to receive the command."
+            }
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 24205.508666999987,
+            "act": 0.04037499998230487,
+            "verify": 0.4571669999859296,
+            "total": 24206.006208999956
+          }
         },
         {
           "id": "noise-6",
@@ -1330,11 +1622,20 @@
             "resolvedTargetId": null,
             "payload": {}
           },
-          "actual": null,
-          "correct": false,
-          "outcome": "ROUTER_ERROR",
-          "latencyMs": null,
-          "error": "Gemma output was not strict JSON"
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9330.884958999988,
+            "act": 0.04050000000279397,
+            "verify": 0.3734169999952428,
+            "total": 9331.298875999986
+          }
         }
       ]
     }

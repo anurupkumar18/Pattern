@@ -8,6 +8,7 @@ import { DeterministicRouter } from "../src/router/deterministic-router.js";
 import {
   buildGemmaPrompt,
   GemmaRouter,
+  parseGemmaCommand,
 } from "../src/router/gemma-router.js";
 import type { GemmaTransport } from "../src/router/gemma-transport.js";
 
@@ -118,6 +119,25 @@ describe("GemmaRouter", () => {
     });
     expect(transport.prompts).toHaveLength(2);
     expect(transport.prompts[1]).toContain("failed strict validation");
+  });
+
+  it("extracts schema-validated JSON from terminal-formatted output", () => {
+    const output = [
+      "\u001B[?25lThinking...\u001B[?25h",
+      "\u001B[1G",
+      '{"ver\u001B[?25lb":"status","payload":{},',
+      '"confidence":0.9,"rawUtterance":"ignored",',
+      '"resolvedTargetId":null}',
+      "\u001B[2K",
+    ].join("");
+
+    expect(parseGemmaCommand(output, "fleet status")).toMatchObject({
+      verb: "status",
+      payload: {},
+      confidence: 0.9,
+      rawUtterance: "fleet status",
+      resolvedTargetId: null,
+    });
   });
 
   it("fails closed after one invalid retry", async () => {
