@@ -40,6 +40,28 @@ final class EnvelopeTests: XCTestCase {
         XCTAssertEqual(envelope, decodedAgain)
     }
 
+    func testRoundTripsVoicePartialPayload() throws {
+        let taskID = UUID(uuidString: "B3E9A1C2-6D4F-4A8B-9C0D-1E2F3A4B5C6D")!
+        let envelope = Envelope(
+            id: UUID(uuidString: "11111111-2222-4333-8444-555555555555")!,
+            type: .voicePartial,
+            taskID: taskID,
+            timestamp: Date(timeIntervalSince1970: 1_784_329_200),
+            payload: .voicePartial(TranscriptPartial(
+                transcript: "Check order eighteen forty-two",
+                confidence: 0.97,
+                locale: "en-US")))
+
+        let decoded = try Envelope.decode(from: envelope.encodeWire())
+        XCTAssertEqual(decoded, envelope)
+        guard case .voicePartial(let partial) = decoded.payload else {
+            return XCTFail("expected voicePartial payload")
+        }
+        XCTAssertEqual(partial.transcript, "Check order eighteen forty-two")
+        XCTAssertEqual(partial.confidence, 0.97)
+        XCTAssertEqual(partial.locale, "en-US")
+    }
+
     func testEncodesPythonCompatibleWireFormat() throws {
         let envelope = try Envelope.decode(from: fixtureData())
         let object = try XCTUnwrap(

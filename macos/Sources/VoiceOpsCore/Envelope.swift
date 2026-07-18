@@ -1,9 +1,8 @@
 import Foundation
 
 /// Swift mirror of the wire contract defined in agent/voiceops_agent/schemas.py
-/// (the source of truth — see docs/DECISIONS.md ADR-007). Phase 0 carries typed
-/// payloads for the mock exchange events; remaining event payloads land with
-/// the phases that first use them.
+/// (the source of truth — see docs/DECISIONS.md ADR-007). Every declared event
+/// has a typed payload on both sides of the process boundary.
 public enum EventType: String, Codable, Sendable, CaseIterable {
     case voicePartial = "voice.partial"
     case voiceFinal = "voice.final"
@@ -110,6 +109,18 @@ public struct TranscriptSegment: Codable, Equatable, Sendable {
         case startMs = "start_ms"
         case endMs = "end_ms"
         case confidence
+    }
+}
+
+public struct TranscriptPartial: Codable, Equatable, Sendable {
+    public let transcript: String
+    public let confidence: Double?
+    public let locale: String?
+
+    public init(transcript: String, confidence: Double? = nil, locale: String? = nil) {
+        self.transcript = transcript
+        self.confidence = confidence
+        self.locale = locale
     }
 }
 
@@ -463,6 +474,7 @@ public struct TaskCancelled: Codable, Equatable, Sendable {
 }
 
 public enum EventPayload: Equatable, Sendable {
+    case voicePartial(TranscriptPartial)
     case voiceFinal(VoiceRequest)
     case voiceCorrection(VoiceRequest)
     case observationReady(Observation)
@@ -534,6 +546,9 @@ extension Envelope: Codable {
         self.timestamp = date
 
         switch type {
+        case .voicePartial:
+            self.payload = .voicePartial(
+                try container.decode(TranscriptPartial.self, forKey: .payload))
         case .voiceFinal:
             self.payload = .voiceFinal(try container.decode(VoiceRequest.self, forKey: .payload))
         case .voiceCorrection:
@@ -569,10 +584,6 @@ extension Envelope: Codable {
             self.payload = .taskFailed(try container.decode(TaskFailure.self, forKey: .payload))
         case .taskCancelled:
             self.payload = .taskCancelled(try container.decode(TaskCancelled.self, forKey: .payload))
-        default:
-            throw DecodingError.dataCorruptedError(
-                forKey: .payload, in: container,
-                debugDescription: "payload for \(type.rawValue) is not implemented in Phase 0")
         }
     }
 
@@ -584,6 +595,7 @@ extension Envelope: Codable {
         try container.encode(taskID.uuidString.lowercased(), forKey: .taskID)
         try container.encode(WireDate.format(timestamp), forKey: .timestamp)
         switch payload {
+        case .voicePartial(let value): try container.encode(value, forKey: .payload)
         case .voiceFinal(let value): try container.encode(value, forKey: .payload)
         case .voiceCorrection(let value): try container.encode(value, forKey: .payload)
         case .observationReady(let value): try container.encode(value, forKey: .payload)
