@@ -31,6 +31,7 @@ from .grounding import (
 
 from .schemas import (
     ActionResult,
+    ConversationToolCall,
     Envelope,
     EventType,
     FailureCode,
@@ -132,6 +133,7 @@ class SidecarRuntime:
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
         self._order_rescue_fixture = order_rescue_fixture or load_order_rescue_fixture()
         self._order_rescue_tasks: dict[UUID, VersionedTaskSpec] = {}
+        self._conversation_grounded_tasks: set[UUID] = set()
         self._conversation = conversation_router or ConversationToolRouter(
             fixture=self._order_rescue_fixture,
             compiler=build_order_rescue_compiler(),
@@ -152,7 +154,9 @@ class SidecarRuntime:
             return []
 
         if envelope.type is EventType.CONVERSATION_TOOL_CALL:
-            events = self._conversation.handle(envelope.task_id, envelope.payload)
+            events = self._handle_conversation_tool_call(
+                envelope.task_id, envelope.payload
+            )
             for event in events:
                 if event.type is EventType.PLAN_READY:
                     self._plans[envelope.task_id] = event.payload
@@ -409,6 +413,81 @@ class SidecarRuntime:
         self._cleanup(task_id)
         return events
 
+    def _handle_conversation_tool_call(
+        self, task_id: UUID, call: ConversationToolCall
+    ) -> list[Envelope]:
+        if (
+            call.tool != "compile_task"
+            or task_id in self._conversation_grounded_tasks
+        ):
+            return self._conversation.handle(task_id, call)
+
+        transcript = call.arguments.get("transcript")
+        if not isinstance(transcript, str) or not transcript.strip():
+            return self._conversation.handle(task_id, call)
+
+        observation = self._observations.pop(task_id, None)
+        if observation is None:
+            return [self._conversation_grounding_failure(
+                task_id,
+                "A live screen observation is required before compiling an "
+                "Order Rescue conversation.",
+            )]
+
+        request = VoiceRequest(
+            transcript=transcript.strip(),
+            locale="en-US",
+            confidence=1,
+            segments=[],
+        )
+        try:
+            grounding = self._grounding_adapter.resolve(
+                GroundingInput(request=request, observation=observation)
+            )
+        except Exception as error:
+            return [self._conversation_grounding_failure(
+                task_id,
+                f"Screen grounding failed: {str(error)[:400]}",
+                code=FailureCode.MODEL_INVALID_OUTPUT,
+            )]
+
+        grounding_event = make_envelope(
+            EventType.GROUNDING_READY, task_id, grounding
+        )
+        if (
+            not grounding.references
+            or not self._is_order_rescue(request, observation)
+        ):
+            return [
+                grounding_event,
+                self._conversation_grounding_failure(
+                    task_id,
+                    "The visible screen is not the delayed Order #1842 workflow "
+                    "for Maya. No fixture-backed task was compiled.",
+                ),
+            ]
+
+        events = self._conversation.handle(task_id, call)
+        if any(event.type is EventType.TASK_SPEC_READY for event in events):
+            self._conversation_grounded_tasks.add(task_id)
+        return [grounding_event, *events]
+
+    @staticmethod
+    def _conversation_grounding_failure(
+        task_id: UUID,
+        message: str,
+        *,
+        code: FailureCode = FailureCode.TARGET_NOT_FOUND,
+    ) -> Envelope:
+        return make_envelope(
+            EventType.TASK_FAILED,
+            task_id,
+            TaskFailure(
+                error=StructuredError(code=code, message=message),
+                summary="Conversational Order Rescue failed closed before compilation",
+            ),
+        )
+
     def _handle_action_finished(
         self, task_id: UUID, action: ActionResult
     ) -> list[Envelope]:
@@ -556,6 +635,7 @@ class SidecarRuntime:
         self._actions.pop(task_id, None)
         self._verifications.pop(task_id, None)
         self._order_rescue_tasks.pop(task_id, None)
+        self._conversation_grounded_tasks.discard(task_id)
 
     @staticmethod
     def _is_screen_to_reminder(request: VoiceRequest) -> bool:
@@ -585,17 +665,30 @@ class SidecarRuntime:
         transcript = request.transcript.casefold()
         if "delayed order" not in transcript:
             return False
-        if any(token in transcript for token in ("#1842", "order 1842", "maya")):
-            return True
         if observation is None:
-            return False
+            return any(
+                token in transcript for token in ("#1842", "order 1842", "maya")
+            )
         visible = " ".join(
-            value
-            for element in observation.elements
-            for value in (element.label, element.value)
-            if value
+            [
+                observation.window.title,
+                *(
+                    value
+                    for element in observation.elements
+                    for value in (
+                        element.label,
+                        element.value,
+                        *element.stable_attributes.values(),
+                    )
+                    if value
+                ),
+            ]
         ).casefold()
-        return "#1842" in visible and "maya" in visible
+        return (
+            ("#1842" in visible or "order 1842" in visible)
+            and "maya" in visible
+            and ("delayed" in visible or "delay" in visible)
+        )
 
     @staticmethod
     def _is_customer_choice_correction(correction: VoiceRequest) -> bool:

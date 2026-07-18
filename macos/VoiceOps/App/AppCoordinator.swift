@@ -326,10 +326,31 @@ final class AppCoordinator: ObservableObject {
                 return
             }
 
+            let taskID = UUID()
+            let context: CollectedScreenContext
+            do {
+                recordTrace(.grounding, "Collecting live screen context before conversation")
+                context = try await screenContextCollector.collect()
+            } catch let error as ScreenContextError {
+                permissionSettingsURL = error.settingsURL
+                dispatch(.taskFailed(reason: error.localizedDescription))
+                return
+            } catch {
+                dispatch(.taskFailed(reason:
+                    "Could not collect the live screen before conversation: "
+                        + error.localizedDescription))
+                return
+            }
+            guard !Task.isCancelled, case .conversing = state else {
+                await screenContextCollector.cleanup(
+                    captureID: context.observation.captureID)
+                return
+            }
+            activeScreenContext = context
+
             let client = SidecarClient(
                 agentProjectURL: Self.agentProjectURL,
                 additionalEnvironment: sidecarEnvironment())
-            let taskID = UUID()
             let session = RealtimeConversationSession(
                 apiKey: apiKey,
                 taskID: taskID,
@@ -346,6 +367,10 @@ final class AppCoordinator: ObservableObject {
             conversationSession = session
             do {
                 let events = try await client.start()
+                try await client.send(Envelope(
+                    type: .observationReady,
+                    taskID: taskID,
+                    payload: .observationReady(context.observation)))
                 try await session.start()
                 voiceProvider = "OpenAI Realtime Conversation"
                 voiceModel = "gpt-realtime · marin · semantic VAD"
@@ -407,6 +432,14 @@ final class AppCoordinator: ObservableObject {
         _ envelope: Envelope, client: SidecarClient
     ) async -> Bool {
         switch envelope.payload {
+        case .groundingReady(let grounding):
+            guard let observation = activeScreenContext?.observation else {
+                dispatch(.taskFailed(reason:
+                    "Grounding evidence arrived without its live screen capture."))
+                await client.cancel()
+                return true
+            }
+            presentGrounding(grounding, observation: observation, transition: false)
         case .taskSpecReady(let task):
             activeTaskSpec = task
             recordTrace(.planning, "Compiled persistent Order Rescue task version \(task.version)")
@@ -454,6 +487,27 @@ final class AppCoordinator: ObservableObject {
             break
         }
         return false
+    }
+
+    private func presentGrounding(
+        _ grounding: GroundingResult,
+        observation: Observation,
+        transition: Bool
+    ) {
+        let chips = grounding.references.compactMap {
+            GroundingChip(reference: $0, candidates: observation.elements)
+        }
+        groundingChips = chips
+        groundingAdapter = grounding.adapter
+        groundingWarnings = grounding.warnings
+        recordTrace(
+            .grounding,
+            "Grounded \(chips.count) live screen reference"
+                + (chips.count == 1 ? "" : "s")
+                + " with \(grounding.adapter.rawValue)")
+        if transition {
+            dispatch(.groundingReady(chips))
+        }
     }
 
     private func handleConversationFailure(_ error: Error) {
@@ -794,15 +848,10 @@ final class AppCoordinator: ObservableObject {
                     guard envelope.taskID == taskID else { continue }
                     switch envelope.payload {
                     case .groundingReady(let grounding):
-                        let chips = grounding.references.compactMap {
-                            GroundingChip(
-                                reference: $0,
-                                candidates: context.observation.elements)
-                        }
-                        self?.groundingChips = chips
-                        self?.groundingAdapter = grounding.adapter
-                        self?.groundingWarnings = grounding.warnings
-                        self?.dispatch(.groundingReady(chips))
+                        self?.presentGrounding(
+                            grounding,
+                            observation: context.observation,
+                            transition: true)
                     case .planReady(let plan):
                         if let step = plan.steps.first, let self {
                             if step.requiresConfirmation {
