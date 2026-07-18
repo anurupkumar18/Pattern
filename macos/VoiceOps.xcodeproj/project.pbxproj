@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		08A3624C1EC44A9D02846F86 /* VLMSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79605DA9B33E6B42BB4365C1 /* VLMSettingsView.swift */; };
 		08B05F4CD2CE49C398827282 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */; };
+		21982D95CF204511B295DD9C /* PanicStopMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9BD5A242344182CAFDF5877 /* PanicStopMonitor.swift */; };
 		32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */; };
 		4390619FE71FEEC0D90ED7A0 /* ResearchFollowupWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05ED2D6C822EFCB6088F07 /* ResearchFollowupWorkflow.swift */; };
 		468B7C4A56E05E2AF136DC72 /* CompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CAD534278016288C56718C /* CompanionView.swift */; };
@@ -39,6 +40,7 @@
 		B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOpsApp.swift; sourceTree = "<group>"; };
 		B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriber.swift; sourceTree = "<group>"; };
 		B8EA48DF1165324115400FCD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
+		D9BD5A242344182CAFDF5877 /* PanicStopMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicStopMonitor.swift; sourceTree = "<group>"; };
 		EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -76,6 +78,7 @@
 				EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */,
 				B8EA48DF1165324115400FCD /* HotKeyManager.swift */,
 				6B3B9B96230658F4F9616021 /* Narrator.swift */,
+				D9BD5A242344182CAFDF5877 /* PanicStopMonitor.swift */,
 				B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */,
 			);
 			path = App;
@@ -235,6 +238,7 @@
 				F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */,
 				7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */,
 				B13BAE782EAC68EA8B01114D /* NativeScreenContextCollector.swift in Sources */,
+				21982D95CF204511B295DD9C /* PanicStopMonitor.swift in Sources */,
 				4390619FE71FEEC0D90ED7A0 /* ResearchFollowupWorkflow.swift in Sources */,
 				32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */,
 				B6CD6BDFD3C9099AE88EF474 /* VLMCredentialStore.swift in Sources */,

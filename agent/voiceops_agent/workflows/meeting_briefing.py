@@ -75,7 +75,7 @@ def build_meeting_briefing_plan(
         risk="reversible_write",
         requires_confirmation=False,
         fallback_tools=[],
-        max_attempts=1,
+        max_attempts=2,
         timeout_seconds=45,
         verifier=VerifierSpec(
             kind="composite",

@@ -6,17 +6,49 @@ import VoiceOpsCore
 /// alone (PRD accessibility requirement).
 struct CompanionView: View {
     @ObservedObject var coordinator: AppCoordinator
+    @State private var timelineExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
             content
+            if coordinator.state != .idle { taskTimeline }
             footer
         }
         .padding(16)
         .frame(width: 380, alignment: .leading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .animation(.easeInOut(duration: 0.15), value: coordinator.state)
+    }
+
+    private var taskTimeline: some View {
+        DisclosureGroup(isExpanded: $timelineExpanded) {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(Array(coordinator.taskTrace.entries.suffix(8))) { entry in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(String(format: "%.1fs", Double(entry.elapsedMilliseconds) / 1_000))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        Text(entry.message)
+                            .font(.caption2)
+                    }
+                }
+            }
+            .padding(.top, 4)
+        } label: {
+            HStack {
+                Label("Task timeline", systemImage: "clock.arrow.circlepath")
+                Spacer()
+                if coordinator.taskTrace.recoveryCount > 0 {
+                    Text("\(coordinator.taskTrace.recoveryCount) recovery")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.caption)
+        }
+        .onChange(of: coordinator.taskTrace.recoveryCount) { _, count in
+            if count > 0 { timelineExpanded = true }
+        }
     }
 
     // MARK: Header

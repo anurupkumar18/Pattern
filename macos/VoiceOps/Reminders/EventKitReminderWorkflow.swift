@@ -64,6 +64,19 @@ final class EventKitReminderWorkflow {
                 throw ReminderWorkflowError.noDefaultList
             }
 
+            if let existingID = await existingReminderIdentifier(
+                taskMarker: draft.taskMarker),
+               let existing = eventStore.calendarItem(
+                withIdentifier: existingID) as? EKReminder {
+                let reveal = await showReminder(
+                    identifier: existing.calendarItemIdentifier)
+                reminderLog.info("reused task-marked reminder instead of duplicating it")
+                return executedResult(
+                    draft: draft, reminder: existing, listTitle: existing.calendar.title,
+                    reveal: reveal, startedAt: startedAt, reusedExisting: true,
+                    step: step)
+            }
+
             let reminder = EKReminder(eventStore: eventStore)
             reminder.calendar = list
             reminder.title = draft.title
@@ -85,25 +98,10 @@ final class EventKitReminderWorkflow {
             let reveal = await showReminder(identifier: identifier)
             reminderLog.info(
                 "committed reminder through EventKit and requested visible reveal")
-            var rawResult: [String: JSONValue] = [
-                "calendar_item_id": .string(identifier),
-                "calendar_title": .string(list.title),
-                "title": .string(draft.title),
-                "due_date": .string(draft.dueDate.iso8601),
-                "ui_displayed": .bool(reveal.displayed),
-            ]
-            if let settingsURL = reveal.settingsURL {
-                rawResult["settings_url"] = .string(settingsURL)
-            }
-            return ActionResult(
-                stepId: draft.stepID,
-                status: .executed,
-                startedAt: startedAt,
-                endedAt: Date(),
-                channel: "eventkit",
-                targetProvenance: sourceProvenance(from: step),
-                rawResult: rawResult,
-                stateChangeHint: "EventKit committed one reminder")
+            return executedResult(
+                draft: draft, reminder: reminder, listTitle: list.title,
+                reveal: reveal, startedAt: startedAt, reusedExisting: false,
+                step: step)
         } catch {
             let workflowError = error as? ReminderWorkflowError
             reminderLog.error(
@@ -182,6 +180,53 @@ final class EventKitReminderWorkflow {
         @unknown default:
             throw ReminderWorkflowError.permissionDenied
         }
+    }
+
+    private func existingReminderIdentifier(taskMarker: String) async -> String? {
+        let calendars = eventStore.calendars(for: .reminder)
+        guard !calendars.isEmpty else { return nil }
+        let predicate = eventStore.predicateForReminders(in: calendars)
+        return await withCheckedContinuation { continuation in
+            eventStore.fetchReminders(matching: predicate) { reminders in
+                let identifier = reminders?.first {
+                    $0.notes?.contains(taskMarker) == true
+                }?.calendarItemIdentifier
+                continuation.resume(returning: identifier)
+            }
+        }
+    }
+
+    private func executedResult(
+        draft: ReminderDraft,
+        reminder: EKReminder,
+        listTitle: String,
+        reveal: ReminderRevealResult,
+        startedAt: Date,
+        reusedExisting: Bool,
+        step: TaskStep
+    ) -> ActionResult {
+        var rawResult: [String: JSONValue] = [
+            "calendar_item_id": .string(reminder.calendarItemIdentifier),
+            "calendar_title": .string(listTitle),
+            "title": .string(draft.title),
+            "due_date": .string(draft.dueDate.iso8601),
+            "ui_displayed": .bool(reveal.displayed),
+            "reused_existing": .bool(reusedExisting),
+        ]
+        if let settingsURL = reveal.settingsURL {
+            rawResult["settings_url"] = .string(settingsURL)
+        }
+        return ActionResult(
+            stepId: draft.stepID,
+            status: .executed,
+            startedAt: startedAt,
+            endedAt: Date(),
+            channel: "eventkit",
+            targetProvenance: sourceProvenance(from: step),
+            rawResult: rawResult,
+            stateChangeHint: reusedExisting
+                ? "Reused the existing task-marked reminder"
+                : "EventKit committed one reminder")
     }
 
     private func record(_ reminder: EKReminder) -> ReminderRecord {

@@ -13,9 +13,11 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var groundingAdapter: GroundingAdapterKind?
     @Published private(set) var groundingWarnings: [String] = []
     @Published private(set) var verificationResults: [VerificationResult] = []
+    @Published private(set) var taskTrace = TaskTrace()
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
+    private var panicStop: PanicStopMonitor?
     private var panel: CompanionPanelController?
     private var voiceSession: VoiceSessionController?
     private var sidecarClient: SidecarClient?
@@ -27,6 +29,9 @@ final class AppCoordinator: ObservableObject {
     private let meetingBriefingWorkflow = EventKitMeetingBriefingWorkflow()
     private let researchFollowupWorkflow = ResearchFollowupWorkflow()
     private var activeScreenContext: CollectedScreenContext?
+    private var attemptLedger = ActionAttemptLedger()
+    private var cachedActions: [String: ActionResult] = [:]
+    private var activeTaskID: UUID?
     private var permissionsGranted = false
 
     /// Dev builds run the sidecar straight from the repo checkout; packaged
@@ -45,6 +50,7 @@ final class AppCoordinator: ObservableObject {
 
     init() {
         hotKey = HotKeyManager { [weak self] in self?.dispatch(.hotkeyTapped) }
+        panicStop = PanicStopMonitor { [weak self] in self?.stop() }
         panel = CompanionPanelController(coordinator: self)
     }
 
@@ -77,6 +83,7 @@ final class AppCoordinator: ObservableObject {
         guard let next = SessionStateMachine.reduce(state, event) else { return }
         let previous = state
         state = next
+        panicStop?.setArmed(isTaskActive(next))
         runEffects(from: previous, event: event, to: next)
     }
 
@@ -93,6 +100,8 @@ final class AppCoordinator: ObservableObject {
             // an audio tap; otherwise every partial would start another
             // VoiceSessionController on the same AVAudioEngine input.
             guard case .idle = previous else { return }
+            taskTrace = TaskTrace()
+            recordTrace(.listening, "Voice capture started")
             permissionSettingsURL = nil
             groundingChips = []
             groundingAdapter = nil
@@ -104,24 +113,37 @@ final class AppCoordinator: ObservableObject {
             startCapture()
 
         case .grounding:
+            recordTrace(.grounding, "Collecting task-scoped screen context")
             if case .listening = previous {
                 narrator.say("Got it")
                 finishCaptureAndCollectContext()
             }
 
         case .planning:
+            recordTrace(.planning, "Grounded context sent to the typed planner")
             narrator.say("I found the visible context")
 
         case .awaitingApproval:
+            recordTrace(.approval, "Waiting for explicit schedule approval")
             narrator.say("Approval needed")
 
         case .acting:
+            recordTrace(.action, "Approved plan entered native execution")
             narrator.say("Working on it")
 
         case .verifying:
+            recordTrace(.verification, "Independent fetch-back verification started")
             narrator.say("Verifying")
 
         case .result(let result):
+            switch result {
+            case .completed(let taskState, _):
+                recordTrace(.outcome, "Task finished: \(taskState.rawValue)")
+            case .failed:
+                recordTrace(.outcome, "Task failed closed")
+            case .cancelled:
+                recordTrace(.outcome, "Panic stop cancelled remaining work")
+            }
             switch result {
             case .completed(let state, _):
                 switch state {
@@ -225,6 +247,7 @@ final class AppCoordinator: ObservableObject {
             additionalEnvironment: sidecarVLMEnvironment())
         sidecarClient = client
         let taskID = UUID()
+        activeTaskID = taskID
 
         sidecarTask = Task { [weak self] in
             do {
@@ -261,17 +284,9 @@ final class AppCoordinator: ObservableObject {
                             } else {
                                 dispatch(.planReady(summary: plan.summary))
                             }
-                            let action: ActionResult
-                            switch step.tool {
-                            case "reminders.create":
-                                action = await reminderWorkflow.execute(step: step)
-                            case "notes.create_meeting_brief":
-                                action = await meetingBriefingWorkflow.execute(step: step)
-                            case "research.create_note_and_followups":
-                                action = await researchFollowupWorkflow.execute(step: step)
-                            default:
-                                continue
-                            }
+                            guard let action = await executeNativeStep(
+                                step, taskID: taskID)
+                            else { continue }
                             if case .string(let rawURL)? = action.rawResult["settings_url"] {
                                 permissionSettingsURL = URL(string: rawURL)
                             }
@@ -329,12 +344,134 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
+    private func executeNativeStep(
+        _ step: TaskStep, taskID: UUID
+    ) async -> ActionResult? {
+        let cacheKey = "\(taskID.uuidString):\(step.id)"
+        while !Task.isCancelled {
+            let claim = attemptLedger.claim(
+                taskID: taskID, stepID: step.id,
+                maxAttempts: step.maxAttempts)
+            let attempt: Int
+            switch claim {
+            case .allowed(let value):
+                attempt = value
+            case .rejectedCompleted:
+                recordTrace(.recovery, "Duplicate completed action suppressed")
+                return cachedActions[cacheKey]
+            case .rejectedUncertain:
+                recordTrace(.recovery, "Duplicate uncertain action suppressed")
+                return cachedActions[cacheKey]
+            case .rejectedBudget:
+                recordTrace(.recovery, "Recovery budget exhausted before another write")
+                return cachedActions[cacheKey]
+            }
+
+            recordTrace(
+                .action,
+                "Attempt \(attempt)/\(max(1, step.maxAttempts)) via \(step.tool)")
+            guard let action = await performNativeStep(step) else { return nil }
+            attemptLedger.finish(
+                taskID: taskID, stepID: step.id, status: action.status)
+            cachedActions[cacheKey] = action
+            let duration = max(0, Int(
+                action.endedAt.timeIntervalSince(action.startedAt) * 1_000))
+            recordTrace(
+                .action,
+                "\(action.channel) returned \(action.status.rawValue) in \(duration) ms")
+
+            let recovery = RecoveryPolicy.decide(
+                status: action.status, error: action.error, risk: step.risk,
+                attempt: attempt, maxAttempts: step.maxAttempts)
+            switch recovery {
+            case .complete:
+                return action
+            case .requestPermission(let settingsURL):
+                if let settingsURL { permissionSettingsURL = URL(string: settingsURL) }
+                recordTrace(.recovery, "Permission recovery requires the user")
+                return action
+            case .verifyWithoutRetry(let reason):
+                recordTrace(.recovery, reason)
+                return action
+            case .stop(let reason):
+                recordTrace(.recovery, reason)
+                return action
+            case .retrySameTarget(let reason):
+                recordTrace(.recovery, reason)
+            case .reobserveAndRetry(let reason):
+                recordTrace(.recovery, reason)
+                await refreshContextForRecovery()
+            case .openAppAndRetry(let reason):
+                recordTrace(.recovery, reason)
+                await openRequiredApplication(for: step)
+                await refreshContextForRecovery()
+            }
+        }
+        return cachedActions[cacheKey]
+    }
+
+    private func performNativeStep(_ step: TaskStep) async -> ActionResult? {
+        switch step.tool {
+        case "reminders.create":
+            await reminderWorkflow.execute(step: step)
+        case "notes.create_meeting_brief":
+            await meetingBriefingWorkflow.execute(step: step)
+        case "research.create_note_and_followups":
+            await researchFollowupWorkflow.execute(step: step)
+        default:
+            nil
+        }
+    }
+
+    private func refreshContextForRecovery() async {
+        do {
+            let refreshed = try await screenContextCollector.collect()
+            recordTrace(
+                .recovery,
+                "Re-observed \(refreshed.observation.activeApp.name) before retry")
+            await screenContextCollector.cleanup(
+                captureID: refreshed.observation.captureID)
+        } catch {
+            recordTrace(.recovery, "Re-observation failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func openRequiredApplication(for step: TaskStep) async {
+        let bundleID: String?
+        switch step.tool {
+        case "reminders.create", "research.create_note_and_followups":
+            bundleID = "com.apple.reminders"
+        case "notes.create_meeting_brief":
+            bundleID = "com.apple.Notes"
+        default:
+            bundleID = nil
+        }
+        guard let bundleID,
+              let url = NSWorkspace.shared.urlForApplication(
+                withBundleIdentifier: bundleID)
+        else { return }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        await withCheckedContinuation {
+            (continuation: CheckedContinuation<Void, Never>) in
+            NSWorkspace.shared.openApplication(
+                at: url, configuration: configuration
+            ) { _, _ in continuation.resume() }
+        }
+    }
+
     private func cancelSidecar() {
         resolveApproval(false)
         sidecarTask?.cancel()
         sidecarTask = nil
         let client = sidecarClient
         sidecarClient = nil
+        if let taskID = activeTaskID {
+            attemptLedger.remove(taskID: taskID)
+            let prefix = taskID.uuidString + ":"
+            cachedActions = cachedActions.filter { !$0.key.hasPrefix(prefix) }
+        }
+        activeTaskID = nil
         Task { await client?.cancel() }
     }
 
@@ -348,6 +485,21 @@ final class AppCoordinator: ObservableObject {
         let continuation = approvalContinuation
         approvalContinuation = nil
         continuation?.resume(returning: approved)
+    }
+
+    private func recordTrace(_ stage: TaskTraceStage, _ message: String) {
+        var trace = taskTrace
+        trace.record(stage, message)
+        taskTrace = trace
+    }
+
+    private func isTaskActive(_ state: SessionState) -> Bool {
+        switch state {
+        case .listening, .grounding, .planning, .awaitingApproval, .acting, .verifying:
+            true
+        case .idle, .result:
+            false
+        }
     }
 
     private func cleanupScreenContext() {

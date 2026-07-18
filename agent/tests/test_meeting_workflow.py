@@ -30,7 +30,7 @@ def test_meeting_briefing_plan_is_one_reversible_verified_note_write():
     assert step.tool == "notes.create_meeting_brief"
     assert step.risk == "reversible_write"
     assert step.requires_confirmation is False
-    assert step.max_attempts == 1
+    assert step.max_attempts == 2
     assert step.arguments["task_marker"] == f"voiceops-task:{TASK_ID}"
     assert step.arguments["required_headings"] == [
         "Meeting",

@@ -59,6 +59,7 @@ def test_build_reminder_plan_extracts_due_date_context_and_all_predicates():
     assert step.tool == "reminders.create"
     assert step.risk == "reversible_write"
     assert step.requires_confirmation is False
+    assert step.max_attempts == 2
     assert step.arguments["title"] == "Hackathon deadline details"
     assert step.arguments["deadline_date"] == "2026-07-31"
     assert step.arguments["due_date"] == "2026-07-29"

@@ -71,12 +71,31 @@ final class EventKitMeetingBriefingWorkflow {
             let draft = try MeetingBriefingDraft(step: step)
             try await requireCalendarAccess()
             let meeting = try nextMeeting()
+            if let noteID = try findNoteIdentifier(containing: draft.taskMarker) {
+                let reveal = revealNote(identifier: noteID)
+                var raw = encode(meeting: meeting)
+                raw["note_id"] = .string(noteID)
+                raw["ui_displayed"] = .bool(reveal.displayed)
+                raw["reused_existing"] = .bool(true)
+                if let settingsURL = reveal.settingsURL {
+                    raw["settings_url"] = .string(settingsURL)
+                }
+                meetingLog.info("reused task-marked briefing note instead of duplicating it")
+                return ActionResult(
+                    stepId: draft.stepID, status: .executed,
+                    startedAt: startedAt, endedAt: Date(),
+                    channel: "eventkit+notes_applescript",
+                    targetProvenance: sourceProvenance(from: step),
+                    rawResult: raw,
+                    stateChangeHint: "Reused the existing task-marked briefing note")
+            }
             let html = MeetingBriefingHTMLBuilder.build(draft: draft, meeting: meeting)
             let noteID = try createNote(html: html)
             let reveal = revealNote(identifier: noteID)
             var raw = encode(meeting: meeting)
             raw["note_id"] = .string(noteID)
             raw["ui_displayed"] = .bool(reveal.displayed)
+            raw["reused_existing"] = .bool(false)
             if let settingsURL = reveal.settingsURL {
                 raw["settings_url"] = .string(settingsURL)
             }
@@ -225,6 +244,27 @@ final class EventKitMeetingBriefingWorkflow {
             throw MeetingWorkflowError.noteScript(scriptMessage(errorInfo))
         }
         return result
+    }
+
+    private func findNoteIdentifier(containing taskMarker: String) throws -> String? {
+        let source = """
+        tell application id "com.apple.Notes"
+            set matchingNotes to every note whose body contains "\(appleScriptEscape(taskMarker))"
+            if (count of matchingNotes) is 0 then return ""
+            return id of item 1 of matchingNotes
+        end tell
+        """
+        var errorInfo: NSDictionary?
+        guard let script = NSAppleScript(source: source) else { return nil }
+        let descriptor = script.executeAndReturnError(&errorInfo)
+        if let errorInfo {
+            if isAuthorizationError(errorInfo) {
+                throw MeetingWorkflowError.automationDenied
+            }
+            throw MeetingWorkflowError.noteScript(scriptMessage(errorInfo))
+        }
+        guard let value = descriptor.stringValue, !value.isEmpty else { return nil }
+        return value
     }
 
     private func revealNote(identifier: String) -> NoteRevealResult {

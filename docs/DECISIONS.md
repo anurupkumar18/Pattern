@@ -46,8 +46,8 @@ swapped in later without touching session logic. Matches the demo runbook's
 
 **Decision:** The global hotkey is ⌃⌥V (press to start listening, press again
 to finish), registered with Carbon `RegisterEventHotKey`. Escape cancels when
-the companion panel has keyboard focus; the always-on global Escape ("panic
-stop at a lower level than the model loop", ARD §8) arrives with Phase 6
+the companion panel has keyboard focus; the global Escape panic stop at a lower
+level than the model loop is implemented by ADR-017 in Phase 6
 hardening because it needs an event tap and Accessibility permission.
 
 **Reason:** Carbon hotkeys need no Accessibility permission, so first-run
@@ -135,9 +135,10 @@ seven-day EventKit window, then creates one structured Apple Note using Notes’
 documented scripting interface. The note contains five required sections,
 EventKit meeting identity, task provenance, and task-scoped active-screen
 context. All observed and EventKit strings are HTML-escaped before entering the
-note. The action uses one attempt; the verifier resets EventKit, refetches the
-event by identifier, refetches the note by identifier, compares title, start
-time, headings, marker, and visibility, and returns five predicate results.
+note. The action uses the bounded, idempotent policy in ADR-017; the verifier
+resets EventKit, refetches the event by identifier, refetches the note by
+identifier, compares title, start time, headings, marker, and visibility, and
+returns five predicate results.
 
 **Reason:** EventKit and the Notes object model provide semantic, auditable
 channels for the hero workflow. Separating note creation from its UI reveal
@@ -173,3 +174,35 @@ bounded, while calendar/reminder scheduling must remain a human decision. The
 approval state makes that boundary visible and testable. Semantic store
 fetch-back prevents an executor response, UI click, network failure, or stale
 artifact from becoming a false success.
+
+## ADR-017: Lower-level panic stop, idempotent retry, and visible traces
+
+**Date:** 2026-07-18 · **Phase:** 6
+
+**Decision:** While VoiceOps is in any active task state, Escape is registered
+through a session-level `CGEvent` tap below the sidecar/model loop and consumed
+as a panic stop. If macOS has not yet granted event-tap access, a non-consuming
+global monitor plus the panel shortcut provides fallback coverage; the CGEvent
+tap is installed again after Accessibility permission becomes available. Stop
+cancels voice capture, resolves any approval continuation as denied, terminates
+the child sidecar, clears queued attempts, and removes the task-scoped capture.
+
+A pure recovery policy maps the ARD failure taxonomy to deterministic actions.
+Permissions always stop at an exact settings path. Reversible
+`NO_STATE_CHANGE`, `TIMEOUT`, stale-target, and app-not-running failures may use
+only the plan’s bounded budget. Meeting Briefing and Screen-to-Reminder allow a
+maximum of two attempts; before either write, the native adapter searches for
+the unique task marker and reuses the existing artifact. Research scheduling
+remains one attempt. Consequential, destructive, completed, and uncertain
+actions are rejected by the task-scoped attempt ledger and never repeated.
+
+The macOS shell also records an in-memory, privacy-minimal timeline of stages,
+native channels, action durations, recovery decisions, verification, and final
+outcome. The companion exposes the last entries and automatically expands the
+timeline when recovery occurs.
+
+**Reason:** Recovery improves reliability only if it cannot create duplicate
+side effects. A hard lower-level interrupt, deterministic budgets, semantic
+task markers, and a user-visible trace keep recovery bounded, auditable, and
+independent of model judgment. The in-memory trace provides immediate evidence
+without retaining raw screen or speech content.

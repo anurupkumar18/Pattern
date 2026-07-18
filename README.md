@@ -8,6 +8,8 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
+Phase 6 — Recovery and hardening is implemented. During every active state, a CGEvent-level global Escape panic stop cancels the sidecar and queued work even when the companion is not focused (with the panel shortcut as a fallback). A deterministic recovery policy classifies permissions, stale targets, closed apps, no-op/timeouts, ambiguous state, and uncertain writes; reversible reminder/briefing actions receive at most one retry, while consequential, destructive, or uncertain actions never retry. Task-marker lookups make those retries idempotent, and the expandable task timeline exposes action channels, durations, recoveries, verification, and final outcome.
+
 Phase 5 — Research-to-Follow-Up is implemented. VoiceOps extracts at most eight visible public-web company links, rejects local/private targets, researches with at most four concurrent bounded reads, ranks exactly three recommendations, and previews three next-week dates. Nothing is written until the user selects **Approve Schedule**. It then creates one escaped, cited Notes comparison and exactly three EventKit reminders, refetches both stores, and requires all five predicates before reporting success. A denied approval produces no writes; an uncertain partial write is never retried automatically.
 
 Phase 4 — Meeting Briefing is implemented as the hero workflow. VoiceOps selects the next upcoming non-all-day event through EventKit, creates a structured Apple Note with Meeting, Participants, Context, Open Questions, and Sources sections, escapes all untrusted screen content before it enters Notes HTML, reveals the exact note, then refetches both the event and note for five independent checks. A moved event, stale note, missing section, or failed UI reveal cannot produce success.
@@ -16,7 +18,7 @@ Phase 3 — Screen-to-Reminder is implemented. From the grounded Mail deadline, 
 
 Phase 2 — screen context and grounding is complete. The app captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, and shows grounded-reference chips with native provenance. OpenAI vision grounding uses strict structured output with a Keychain-backed credential; deterministic grounding remains the offline and provider-failure fallback.
 
-Phase 1’s voice shell remains intact: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, stop/Escape cancellation, and spoken progress. See `docs/` for the full spec:
+Phase 1’s voice shell remains intact: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, global stop/Escape cancellation, and spoken progress. See `docs/` for the full spec:
 
 | Doc | Contents |
 |---|---|
@@ -52,7 +54,7 @@ scripts/run_app.sh            # builds with the CLI toolchain and launches — n
 
 1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
 2. Press **⌃⌥V** again (or pause) to finish. VoiceOps captures the active window, shows any grounded reference chips, and then walks through planning → acting → result with spoken progress.
-3. **Stop** (or Escape while the companion has focus) cancels capture and any running task.
+3. **Stop** or **Escape from any app** cancels capture and any running task. The global panic stop becomes available with Accessibility permission; the focused companion shortcut remains a fallback.
 
 ### Run the Screen-to-Reminder slice
 
