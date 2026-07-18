@@ -1,0 +1,6 @@
+models/*.bin
+samples/*.wav
+tmp/
+logs/
+vendor/whisper.cpp/
+*.pid
