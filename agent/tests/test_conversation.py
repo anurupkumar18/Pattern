@@ -146,6 +146,106 @@ class TestRouterCompileAndPatch:
         assert events[-1].payload.result["events"] == []
 
 
+def compiled_and_patched_router() -> ConversationToolRouter:
+    r = router()
+    r.handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+    r.handle(TASK_ID, call("apply_patch", transcript=CORRECTION))
+    return r
+
+
+class TestApprovalAndExecution:
+    def test_request_approval_returns_read_back_and_emits_ui_event(self):
+        r = compiled_and_patched_router()
+        events = r.handle(TASK_ID, call("request_approval"))
+        assert [e.type for e in events] == [
+            EventType.APPROVAL_REQUESTED,
+            EventType.CONVERSATION_TOOL_RESULT,
+        ]
+        result = events[-1].payload
+        assert result.status == "ok"
+        assert len(result.result["binding_hash"]) == 64
+        assert "confirm" in result.result["read_back"].casefold()
+        assert result.result["action_ids"] == [
+            "ask_customer_preference",
+            "issue_store_credit",
+            "notify_operations",
+        ]
+
+    def test_execute_without_confirmed_approval_is_rejected(self):
+        r = compiled_and_patched_router()
+        r.handle(TASK_ID, call("request_approval"))
+        events = r.handle(TASK_ID, call("execute_plan"))
+        assert events[-1].payload.status == "rejected"
+
+    def test_mishear_cannot_authorize(self):
+        r = compiled_and_patched_router()
+        binding = r.handle(TASK_ID, call("request_approval"))[-1].payload.result
+        events = r.handle(TASK_ID, call(
+            "confirm_approval",
+            binding_hash=binding["binding_hash"],
+            utterance="yeah maybe fine",
+        ))
+        assert events[-1].payload.status == "rejected"
+        assert r.handle(TASK_ID, call("execute_plan"))[-1].payload.status == "rejected"
+
+    def test_corrupted_hash_is_rejected(self):
+        r = compiled_and_patched_router()
+        r.handle(TASK_ID, call("request_approval"))
+        events = r.handle(TASK_ID, call(
+            "confirm_approval", binding_hash="0" * 64, utterance="yes"
+        ))
+        assert events[-1].payload.status == "rejected"
+
+    def test_patch_after_read_back_invalidates_the_binding(self):
+        r = router()
+        r.handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+        stale = r.handle(TASK_ID, call("request_approval"))[-1].payload.result
+        r.handle(TASK_ID, call("apply_patch", transcript=CORRECTION))
+        events = r.handle(TASK_ID, call(
+            "confirm_approval",
+            binding_hash=stale["binding_hash"],
+            utterance="yes",
+        ))
+        assert events[-1].payload.status == "rejected"
+
+    def test_confirmed_approval_allows_execution_and_verifier_owns_success(self):
+        r = compiled_and_patched_router()
+        binding = r.handle(TASK_ID, call("request_approval"))[-1].payload.result
+        confirm = r.handle(TASK_ID, call(
+            "confirm_approval",
+            binding_hash=binding["binding_hash"],
+            utterance="Yes, go ahead.",
+        ))
+        assert confirm[-1].payload.status == "ok"
+        events = r.handle(TASK_ID, call("execute_plan"))
+        types = [e.type for e in events]
+        assert types[-1] == EventType.CONVERSATION_TOOL_RESULT
+        assert EventType.TASK_COMPLETED in types
+        assert EventType.LEDGER_EVENT in types
+        completed = next(e for e in events if e.type == EventType.TASK_COMPLETED)
+        assert completed.payload.state == "succeeded"
+        result = events[-1].payload
+        assert result.result["checks_passed"] == 5
+        assert result.result["confirmed_not_performed"] == [
+            "no-refund-issued",
+            "no-replacement-created",
+        ]
+        ledger = r.handle(TASK_ID, call("get_ledger"))[-1].payload
+        assert ledger.result["events"]
+
+    def test_execute_twice_is_rejected_not_duplicated(self):
+        r = compiled_and_patched_router()
+        binding = r.handle(TASK_ID, call("request_approval"))[-1].payload.result
+        r.handle(TASK_ID, call(
+            "confirm_approval",
+            binding_hash=binding["binding_hash"],
+            utterance="yes",
+        ))
+        first = r.handle(TASK_ID, call("execute_plan"))
+        assert first[-1].payload.status == "ok"
+        assert r.handle(TASK_ID, call("execute_plan"))[-1].payload.status == "rejected"
+
+
 class TestAffirmativeGate:
     @pytest.mark.parametrize(
         "utterance",

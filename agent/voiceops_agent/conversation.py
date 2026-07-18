@@ -16,6 +16,7 @@ from uuid import UUID
 
 from .schemas import (
     ApprovalBinding,
+    ApprovalRequest,
     ConversationToolCall,
     ConversationToolResult,
     Envelope,
@@ -23,6 +24,7 @@ from .schemas import (
     ExecutionLedgerEvent,
     FailureCode,
     StructuredError,
+    TaskCompleted,
     VersionedTaskSpec,
     make_envelope,
 )
@@ -32,6 +34,11 @@ from .workflows.order_rescue import (
     apply_plan_patch,
     build_customer_choice_patch,
     compile_order_rescue_task,
+)
+from .workflows.order_rescue_execution import (
+    FixtureOrderRescueExecutor,
+    OrderRescueExecutionError,
+    verify_order_rescue,
 )
 
 
@@ -124,7 +131,11 @@ class ConversationToolRouter:
         handler = getattr(self, f"_tool_{call.tool}")
         try:
             return handler(task_id, call)
-        except (OrderRescuePlanningError, ConversationError) as error:
+        except (
+            OrderRescuePlanningError,
+            OrderRescueExecutionError,
+            ConversationError,
+        ) as error:
             return [self._result(
                 task_id, call, "rejected",
                 error=StructuredError(
@@ -216,6 +227,106 @@ class ConversationToolRouter:
                 for event in events
             ],
         })]
+
+    def _tool_request_approval(
+        self, task_id: UUID, call: ConversationToolCall
+    ) -> list[Envelope]:
+        state = self._require_spec(task_id)
+        binding = approval_binding_for(state.spec)
+        state.binding = binding
+        state.confirmed_hash = None
+        request = ApprovalRequest(
+            step_id="conversation-approval",
+            description=binding.read_back,
+            risk="consequential",
+            data_preview={
+                "action_ids": binding.action_ids,
+                "binding_hash": binding.binding_hash,
+            },
+        )
+        return [
+            make_envelope(EventType.APPROVAL_REQUESTED, task_id, request),
+            self._result(task_id, call, "ok", result={
+                "binding_hash": binding.binding_hash,
+                "read_back": binding.read_back,
+                "action_ids": binding.action_ids,
+            }),
+        ]
+
+    def _tool_confirm_approval(
+        self, task_id: UUID, call: ConversationToolCall
+    ) -> list[Envelope]:
+        state = self._require_spec(task_id)
+        provided = self._required_str(call, "binding_hash")
+        utterance = self._required_str(call, "utterance")
+        if state.binding is None:
+            raise ConversationError(
+                "no approval is pending; the plan may have changed — request approval again"
+            )
+        current = approval_binding_for(state.spec)
+        if provided != state.binding.binding_hash or provided != current.binding_hash:
+            state.binding = None
+            raise ConversationError(
+                "approval hash is stale: the plan changed after the read-back; "
+                "request approval again"
+            )
+        if not classify_affirmative(utterance):
+            raise ConversationError(
+                f"utterance {utterance!r} is not an unambiguous approval; "
+                "nothing was authorized"
+            )
+        state.confirmed_hash = provided
+        return [self._result(task_id, call, "ok", result={
+            "approved_action_ids": state.binding.action_ids,
+            "speech_summary": "Approved. Executing now.",
+        })]
+
+    def _tool_execute_plan(
+        self, task_id: UUID, call: ConversationToolCall
+    ) -> list[Envelope]:
+        state = self._require_spec(task_id)
+        if state.completed:
+            raise ConversationError(
+                "this task already executed; a replay cannot be authorized"
+            )
+        current = approval_binding_for(state.spec)
+        if state.confirmed_hash is None or state.confirmed_hash != current.binding_hash:
+            raise ConversationError(
+                "execution requires a confirmed, current approval"
+            )
+        execution = FixtureOrderRescueExecutor().execute(
+            state.spec,
+            self._fixture,
+            approved_action_ids=set(state.binding.action_ids),
+        )
+        report = verify_order_rescue(state.spec, self._fixture, execution)
+        state.ledger = report.ledger
+        state.completed = True
+        events = [
+            make_envelope(EventType.LEDGER_EVENT, task_id, item)
+            for item in report.ledger
+        ]
+        events.append(make_envelope(
+            EventType.TASK_COMPLETED,
+            task_id,
+            TaskCompleted(
+                state=report.state,
+                summary=report.headline,
+                verification=report.core_checks + report.negative_checks,
+            ),
+        ))
+        events.append(self._result(task_id, call, "ok", result={
+            "headline": report.headline,
+            "state": report.state,
+            "checks_passed": sum(check.passed for check in report.core_checks),
+            "checks_total": len(report.core_checks),
+            "confirmed_not_performed": [
+                check.predicate_id
+                for check in report.negative_checks
+                if check.passed
+            ],
+        }))
+        return events
 
     # -- helpers -------------------------------------------------------------
 
