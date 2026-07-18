@@ -43,6 +43,7 @@ struct CompanionView: View {
         case .listening: "mic.fill"
         case .grounding: "viewfinder.circle"
         case .planning: "brain"
+        case .awaitingApproval: "hand.raised.fill"
         case .acting: "gearshape.2.fill"
         case .verifying: "checklist"
         case .result(.completed(let state, _)):
@@ -63,6 +64,7 @@ struct CompanionView: View {
         case .listening: "Listening…"
         case .grounding: "Grounding"
         case .planning: "Planning"
+        case .awaitingApproval: "Approval needed"
         case .acting: "Acting"
         case .verifying: "Verifying"
         case .result(.completed(let state, _)): state == .succeeded ? "Done" : "Finished: \(state.rawValue)"
@@ -105,6 +107,19 @@ struct CompanionView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+        case .awaitingApproval(let description, let chips):
+            VStack(alignment: .leading, spacing: 8) {
+                groundingChips(chips)
+                groundingMethod
+                Label("Review before VoiceOps writes to Notes and Reminders", systemImage: "calendar.badge.clock")
+                    .font(.callout.weight(.semibold))
+                Text(description)
+                    .font(.callout)
+                Text("Nothing will be created until you approve these dates.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
         case .acting(let description, let chips):
@@ -207,6 +222,11 @@ struct CompanionView: View {
         case "brief-headings": "Required sections present"
         case "brief-meeting-identity": "Meeting title and time match"
         case "brief-visible": "Visible in Notes"
+        case "research-note-exists": "Comparison note fetched back"
+        case "research-exactly-three": "Exactly three recommendations"
+        case "research-citations": "Sources and rationale retained"
+        case "research-followups": "Three approved follow-ups match"
+        case "research-visible": "Research note visible in Notes"
         default: predicateID.replacingOccurrences(of: "-", with: " ").capitalized
         }
     }
@@ -258,6 +278,13 @@ struct CompanionView: View {
     @ViewBuilder
     private var footer: some View {
         switch coordinator.state {
+        case .awaitingApproval:
+            HStack {
+                Button("Cancel") { coordinator.denyPendingAction() }
+                Spacer()
+                Button("Approve Schedule") { coordinator.approvePendingAction() }
+                    .buttonStyle(.borderedProminent)
+            }
         case .listening, .grounding, .planning, .acting, .verifying:
             HStack {
                 Spacer()

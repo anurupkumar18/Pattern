@@ -105,7 +105,10 @@ Use the smaller supported model for intent/grounding while retaining the main mo
 
 ### Research network failure
 
-Run Meeting Briefing using already open local sources. Do not pretend web research succeeded.
+VoiceOps labels the affected source as unavailable and ranks from the invoked
+visible context with reduced evidence. Do not describe an unavailable source as
+successfully fetched. If the comparison would not be useful, cancel at the
+approval gate and run Meeting Briefing using already open local sources.
 
 ### Notes scripting failure
 

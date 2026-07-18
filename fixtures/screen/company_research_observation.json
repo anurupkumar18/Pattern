@@ -1,0 +1,65 @@
+{
+  "capture_id": "f343d526-8a9c-4a94-92f5-553b997745a1",
+  "timestamp": "2026-07-18T17:00:00Z",
+  "active_app": {
+    "bundle_id": "com.apple.Safari",
+    "name": "Safari"
+  },
+  "window": {
+    "title": "AI Infrastructure Companies",
+    "bounds": [100.0, 80.0, 1100.0, 760.0]
+  },
+  "focused_element_id": "company-acme",
+  "pointer": [430.0, 250.0],
+  "elements": [
+    {
+      "id": "company-acme",
+      "role": "AXLink",
+      "label": "Acme Robotics",
+      "value": "https://example.com/acme-robotics",
+      "bounds": [260.0, 210.0, 260.0, 30.0],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": ["AXPress"],
+      "app_bundle_id": "com.apple.Safari",
+      "stable_attributes": {"AXIdentifier": "company-acme"}
+    },
+    {
+      "id": "company-beacon",
+      "role": "AXLink",
+      "label": "Beacon Data",
+      "value": "https://example.com/beacon-data",
+      "bounds": [260.0, 260.0, 260.0, 30.0],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": ["AXPress"],
+      "app_bundle_id": "com.apple.Safari",
+      "stable_attributes": {"AXIdentifier": "company-beacon"}
+    },
+    {
+      "id": "company-cascade",
+      "role": "AXLink",
+      "label": "Cascade AI",
+      "value": "https://example.com/cascade-ai",
+      "bounds": [260.0, 310.0, 260.0, 30.0],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": ["AXPress"],
+      "app_bundle_id": "com.apple.Safari",
+      "stable_attributes": {"AXIdentifier": "company-cascade"}
+    },
+    {
+      "id": "company-delta",
+      "role": "AXLink",
+      "label": "Delta Systems",
+      "value": "https://example.com/delta-systems",
+      "bounds": [260.0, 360.0, 260.0, 30.0],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": ["AXPress"],
+      "app_bundle_id": "com.apple.Safari",
+      "stable_attributes": {"AXIdentifier": "company-delta"}
+    }
+  ],
+  "screenshot_path": "file:///tmp/voiceops-company-fixture.png"
+}

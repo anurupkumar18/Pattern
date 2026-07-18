@@ -41,6 +41,26 @@ SCREEN_FIXTURE_PATH = (
     / "screen"
     / "mail_deadline_observation.json"
 )
+RESEARCH_FIXTURE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "fixtures"
+    / "screen"
+    / "company_research_observation.json"
+)
+
+
+class FixtureResearchAdapter:
+    def research(self, candidates):
+        return [
+            {
+                "name": candidate.name,
+                "url": candidate.url,
+                "source_title": f"{candidate.name} official source",
+                "summary": f"{candidate.name} has relevant AI infrastructure capabilities.",
+                "research_status": "fetched",
+            }
+            for candidate in candidates
+        ]
 
 
 def fixture_line() -> str:
@@ -231,6 +251,34 @@ class TestHandleLine:
             EventType.GROUNDING_READY, EventType.PLAN_READY,
         ]
         assert events[-1].payload.steps[0].tool == "notes.create_meeting_brief"
+
+    def test_research_observation_yields_approval_gated_plan_without_mock_success(self):
+        runtime = SidecarRuntime(research_adapter=FixtureResearchAdapter())
+        task_id = uuid4()
+        observation = Observation.model_validate_json(RESEARCH_FIXTURE_PATH.read_text())
+        voice = VoiceRequest(
+            transcript=(
+                "Research the companies on this page, put the best three in Notes, "
+                "and schedule follow-ups next week."
+            ),
+            locale="en-US", confidence=1, segments=[],
+        )
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, task_id, observation
+        ).to_ndjson())
+
+        events = runtime.handle_line(make_envelope(
+            EventType.VOICE_FINAL, task_id, voice
+        ).to_ndjson())
+
+        assert [event.type for event in events] == [
+            EventType.GROUNDING_READY, EventType.PLAN_READY,
+        ]
+        step = events[-1].payload.steps[0]
+        assert step.tool == "research.create_note_and_followups"
+        assert step.requires_confirmation is True
+        assert len(step.arguments["recommendations"]) == 3
+        assert len(step.arguments["followups"]) == 3
 
     def test_grounding_adapter_failure_becomes_typed_task_failure(self):
         class BrokenAdapter:

@@ -42,6 +42,11 @@ from .schemas import (
 )
 from .workflows.reminders import ReminderPlanningError, build_reminder_plan
 from .workflows.meeting_briefing import build_meeting_briefing_plan
+from .workflows.research_followup import (
+    CompanyResearchAdapter,
+    ResearchPlanningError,
+    build_research_followup_plan,
+)
 
 
 def build_mock_plan(request: VoiceRequest) -> TaskPlan:
@@ -95,9 +100,11 @@ class SidecarRuntime:
     def __init__(
         self,
         grounding_adapter: MultimodalGroundingAdapter | None = None,
+        research_adapter: CompanyResearchAdapter | None = None,
     ) -> None:
         self._observations: dict[UUID, Observation] = {}
         self._grounding_adapter = grounding_adapter or build_grounding_adapter()
+        self._research_adapter = research_adapter
         self._plans: dict[UUID, TaskPlan] = {}
         self._actions: dict[UUID, ActionResult] = {}
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
@@ -180,6 +187,32 @@ class SidecarRuntime:
                     envelope.payload,
                     observation,
                 )
+                self._plans[envelope.task_id] = plan
+                self._verifications[envelope.task_id] = {}
+                return events + [
+                    make_envelope(EventType.PLAN_READY, envelope.task_id, plan)
+                ]
+
+            if self._is_research_followup(envelope.payload):
+                try:
+                    plan = build_research_followup_plan(
+                        envelope.task_id,
+                        envelope.payload,
+                        observation,
+                        adapter=self._research_adapter,
+                    )
+                except ResearchPlanningError as error:
+                    return events + [make_envelope(
+                        EventType.TASK_FAILED,
+                        envelope.task_id,
+                        TaskFailure(
+                            error=StructuredError(
+                                code=FailureCode.TARGET_NOT_FOUND,
+                                message=str(error),
+                            ),
+                            summary="The visible company set could not be researched safely",
+                        ),
+                    )]
                 self._plans[envelope.task_id] = plan
                 self._verifications[envelope.task_id] = {}
                 return events + [
@@ -331,6 +364,15 @@ class SidecarRuntime:
         transcript = request.transcript.casefold()
         return "meeting" in transcript and any(
             verb in transcript for verb in ("prepare", "brief", "prep")
+        )
+
+    @staticmethod
+    def _is_research_followup(request: VoiceRequest) -> bool:
+        transcript = request.transcript.casefold()
+        return (
+            "research" in transcript
+            and "compan" in transcript
+            and "follow" in transcript
         )
 
 

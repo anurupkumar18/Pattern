@@ -21,9 +21,11 @@ final class AppCoordinator: ObservableObject {
     private var sidecarClient: SidecarClient?
     private var sidecarTask: Task<Void, Never>?
     private var contextTask: Task<Void, Never>?
+    private var approvalContinuation: CheckedContinuation<Bool, Never>?
     private let screenContextCollector: any ScreenContextCollecting = NativeScreenContextCollector()
     private let reminderWorkflow = EventKitReminderWorkflow()
     private let meetingBriefingWorkflow = EventKitMeetingBriefingWorkflow()
+    private let researchFollowupWorkflow = ResearchFollowupWorkflow()
     private var activeScreenContext: CollectedScreenContext?
     private var permissionsGranted = false
 
@@ -47,7 +49,24 @@ final class AppCoordinator: ObservableObject {
     }
 
     func toggle() { dispatch(.hotkeyTapped) }
-    func stop() { dispatch(.stopRequested) }
+    func stop() {
+        resolveApproval(false)
+        dispatch(.stopRequested)
+    }
+    func approvePendingAction() {
+        guard case .awaitingApproval = state else { return }
+        let continuation = approvalContinuation
+        approvalContinuation = nil
+        dispatch(.approvalGranted)
+        continuation?.resume(returning: true)
+    }
+    func denyPendingAction() {
+        guard case .awaitingApproval = state else { return }
+        let continuation = approvalContinuation
+        approvalContinuation = nil
+        continuation?.resume(returning: false)
+        dispatch(.approvalDenied)
+    }
     func dismiss() { dispatch(.dismissResult) }
     func openPermissionSettings() {
         guard let permissionSettingsURL else { return }
@@ -87,6 +106,9 @@ final class AppCoordinator: ObservableObject {
 
         case .planning:
             narrator.say("I found the visible context")
+
+        case .awaitingApproval:
+            narrator.say("Approval needed")
 
         case .acting:
             narrator.say("Working on it")
@@ -223,14 +245,25 @@ final class AppCoordinator: ObservableObject {
                         self?.groundingWarnings = grounding.warnings
                         self?.dispatch(.groundingReady(chips))
                     case .planReady(let plan):
-                        self?.dispatch(.planReady(summary: plan.summary))
                         if let step = plan.steps.first, let self {
+                            if step.requiresConfirmation {
+                                dispatch(.approvalRequested(description: step.description))
+                                let approved = await waitForApproval()
+                                guard approved, !Task.isCancelled else {
+                                    await client.cancel()
+                                    return
+                                }
+                            } else {
+                                dispatch(.planReady(summary: plan.summary))
+                            }
                             let action: ActionResult
                             switch step.tool {
                             case "reminders.create":
                                 action = await reminderWorkflow.execute(step: step)
                             case "notes.create_meeting_brief":
                                 action = await meetingBriefingWorkflow.execute(step: step)
+                            case "research.create_note_and_followups":
+                                action = await researchFollowupWorkflow.execute(step: step)
                             default:
                                 continue
                             }
@@ -250,6 +283,9 @@ final class AppCoordinator: ObservableObject {
                                         step: step, action: action)
                                 case "notes.create_meeting_brief":
                                     verifications = meetingBriefingWorkflow.verify(
+                                        step: step, action: action)
+                                case "research.create_note_and_followups":
+                                    verifications = researchFollowupWorkflow.verify(
                                         step: step, action: action)
                                 default:
                                     verifications = []
@@ -289,11 +325,24 @@ final class AppCoordinator: ObservableObject {
     }
 
     private func cancelSidecar() {
+        resolveApproval(false)
         sidecarTask?.cancel()
         sidecarTask = nil
         let client = sidecarClient
         sidecarClient = nil
         Task { await client?.cancel() }
+    }
+
+    private func waitForApproval() async -> Bool {
+        await withCheckedContinuation { continuation in
+            approvalContinuation = continuation
+        }
+    }
+
+    private func resolveApproval(_ approved: Bool) {
+        let continuation = approvalContinuation
+        approvalContinuation = nil
+        continuation?.resume(returning: approved)
     }
 
     private func cleanupScreenContext() {

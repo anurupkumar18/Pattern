@@ -13,9 +13,9 @@ tell application "Mail"
 end tell
 
 tell application "Reminders"
-    repeat with demoReminder in (every reminder whose name is "Hackathon deadline details")
+    repeat with demoReminder in every reminder
         try
-            if body of demoReminder contains "voiceops-task:" then delete demoReminder
+            if (name of demoReminder is "Hackathon deadline details" or name of demoReminder starts with "Follow up with ") and body of demoReminder contains "voiceops-task:" then delete demoReminder
         end try
     end repeat
 end tell
@@ -31,12 +31,12 @@ tell application "Calendar"
 end tell
 
 tell application "Notes"
-    repeat with demoNote in (every note whose name starts with "VoiceOps Brief")
+    repeat with demoNote in every note
         try
-            if body of demoNote contains "voiceops-task:" then delete demoNote
+            if (name of demoNote starts with "VoiceOps Brief" or name of demoNote starts with "VoiceOps Research") and body of demoNote contains "voiceops-task:" then delete demoNote
         end try
     end repeat
 end tell
 APPLESCRIPT
 
-echo "reset_demo_state: removed matching VoiceOps Phase 3 demo artifacts"
+echo "reset_demo_state: removed matching VoiceOps reminder, meeting, and research artifacts"

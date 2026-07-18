@@ -145,3 +145,31 @@ lets a reveal/Automation failure report `partial` without hiding a successfully
 created note or retrying the write. The deterministic template keeps offline
 operation and prompt-injection boundaries testable while preserving the model
 adapter seam for later synthesis.
+
+## ADR-016: Bounded research with an approval-gated multi-app write
+
+**Date:** 2026-07-18 · **Phase:** 5
+
+**Decision:** Research-to-Follow-Up extracts at most eight HTTP(S) links from
+the task-scoped Accessibility observation and runs at most four concurrent
+reads. Each live request revalidates DNS and every redirect, rejects local,
+private, reserved, and otherwise non-global addresses, enforces a five-second
+timeout, accepts only HTML, and buffers at most 256 KB. Per-source failures are
+retained as visible unavailable evidence instead of being treated as fetched.
+The planner deterministically ranks exactly three results and proposes the next
+Monday, Wednesday, and Friday, but sets `requires_confirmation` before any
+write. Only an explicit **Approve Schedule** transition allows the macOS shell
+to create one escaped Notes comparison and exactly three EventKit reminders.
+
+After execution, the verifier resets EventKit, refetches all reminder IDs,
+refetches the note through Notes Automation, and evaluates five predicates for
+marker, exact recommendation count, citations/rationales, exact follow-up count
+and dates, and visible note state. Action failures roll back both the task-marked
+note and reminders. If a rollback cannot be proven, the action becomes
+`uncertain` and is not retried.
+
+**Reason:** Public-web research is useful only when its scope and provenance are
+bounded, while calendar/reminder scheduling must remain a human decision. The
+approval state makes that boundary visible and testable. Semantic store
+fetch-back prevents an executor response, UI click, network failure, or stale
+artifact from becoming a false success.

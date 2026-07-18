@@ -66,6 +66,34 @@ final class SessionStateMachineTests: XCTestCase {
             .verifying)
     }
 
+    func testApprovalGateRequiresExplicitGrantBeforeActing() {
+        let chips = [GroundingChip(
+            phrase: "companies on this page", resolvedText: "4 public links",
+            source: .accessibility, confidence: 1)]
+        let planning = SessionState.planning(transcript: "research", groundingChips: chips)
+        let awaiting = SessionStateMachine.reduce(
+            planning,
+            .approvalRequested(description: "Create 3 follow-ups next week"))
+        XCTAssertEqual(
+            awaiting,
+            .awaitingApproval(
+                description: "Create 3 follow-ups next week", groundingChips: chips))
+        XCTAssertEqual(
+            SessionStateMachine.reduce(awaiting!, .approvalGranted),
+            .acting(description: "Create 3 follow-ups next week", groundingChips: chips))
+    }
+
+    func testApprovalDenialCancelsWithoutActing() {
+        let awaiting = SessionState.awaitingApproval(
+            description: "Create follow-ups", groundingChips: [])
+        XCTAssertEqual(
+            SessionStateMachine.reduce(awaiting, .approvalDenied),
+            .result(.cancelled))
+        XCTAssertEqual(
+            SessionStateMachine.reduce(awaiting, .stopRequested),
+            .result(.cancelled))
+    }
+
     func testTaskCompletedShowsResultFromVerifying() {
         XCTAssertEqual(
             SessionStateMachine.reduce(.verifying, .taskCompleted(state: .succeeded, summary: "done")),
@@ -99,6 +127,7 @@ final class SessionStateMachineTests: XCTestCase {
         for state: SessionState in [
             .grounding(transcript: "t"),
             .planning(transcript: "t", groundingChips: []),
+            .awaitingApproval(description: "approve", groundingChips: []),
             .acting(description: "d", groundingChips: []),
             .verifying,
         ] {
@@ -117,6 +146,7 @@ final class SessionStateMachineTests: XCTestCase {
         for state: SessionState in [
             .listening(transcript: ""), .grounding(transcript: "t"),
             .planning(transcript: "t", groundingChips: []),
+            .awaitingApproval(description: "approve", groundingChips: []),
             .acting(description: "d", groundingChips: []), .verifying,
         ] {
             XCTAssertEqual(

@@ -10,6 +10,7 @@
 		08A3624C1EC44A9D02846F86 /* VLMSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79605DA9B33E6B42BB4365C1 /* VLMSettingsView.swift */; };
 		08B05F4CD2CE49C398827282 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */; };
 		32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */; };
+		4390619FE71FEEC0D90ED7A0 /* ResearchFollowupWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05ED2D6C822EFCB6088F07 /* ResearchFollowupWorkflow.swift */; };
 		468B7C4A56E05E2AF136DC72 /* CompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CAD534278016288C56718C /* CompanionView.swift */; };
 		735DC6FB5A89A97461561CED /* VoiceOpsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */; };
 		7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3B9B96230658F4F9616021 /* Narrator.swift */; };
@@ -34,6 +35,7 @@
 		7FB862D7D6AF55B8C141B364 /* EventKitMeetingBriefingWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitMeetingBriefingWorkflow.swift; sourceTree = "<group>"; };
 		81BA61A11E1CCE43E977DE22 /* EventKitReminderWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitReminderWorkflow.swift; sourceTree = "<group>"; };
 		95471A0FBE9BA112F119067F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AA05ED2D6C822EFCB6088F07 /* ResearchFollowupWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResearchFollowupWorkflow.swift; sourceTree = "<group>"; };
 		B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOpsApp.swift; sourceTree = "<group>"; };
 		B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriber.swift; sourceTree = "<group>"; };
 		B8EA48DF1165324115400FCD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
@@ -58,6 +60,14 @@
 				81BA61A11E1CCE43E977DE22 /* EventKitReminderWorkflow.swift */,
 			);
 			path = Reminders;
+			sourceTree = "<group>";
+		};
+		1944B3D2B64DD23452015A4B /* Research */ = {
+			isa = PBXGroup;
+			children = (
+				AA05ED2D6C822EFCB6088F07 /* ResearchFollowupWorkflow.swift */,
+			);
+			path = Research;
 			sourceTree = "<group>";
 		};
 		2D8A49214243D9F5269B8E2B /* App */ = {
@@ -112,6 +122,7 @@
 				9DC461A2E211876C7BD0B6DB /* Credentials */,
 				4A0830FCBE3A491561EBBC7E /* Meeting */,
 				02198090152D4D3D2570D0DD /* Reminders */,
+				1944B3D2B64DD23452015A4B /* Research */,
 				334D10AE65A84C15407B73B3 /* Screen */,
 				DEB7C9AD022142A32D8FFE98 /* UI */,
 				998B9219220454E6BE15B29A /* Voice */,
@@ -224,6 +235,7 @@
 				F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */,
 				7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */,
 				B13BAE782EAC68EA8B01114D /* NativeScreenContextCollector.swift in Sources */,
+				4390619FE71FEEC0D90ED7A0 /* ResearchFollowupWorkflow.swift in Sources */,
 				32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */,
 				B6CD6BDFD3C9099AE88EF474 /* VLMCredentialStore.swift in Sources */,
 				08A3624C1EC44A9D02846F86 /* VLMSettingsView.swift in Sources */,

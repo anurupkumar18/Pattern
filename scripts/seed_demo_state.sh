@@ -1,7 +1,9 @@
 #!/bin/bash
-# Seed the Phase 3 active-Mail fixture. This creates one unsent local compose
-# window only; it never sends mail or changes a remote account.
+# Seed the reversible Mail, Calendar, and browser demo inputs. This creates one
+# unsent local compose window and one local event; it never sends mail.
 set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 /usr/bin/osascript <<'APPLESCRIPT'
 tell application "Mail"
@@ -21,6 +23,9 @@ tell application "Calendar"
 end tell
 APPLESCRIPT
 
-echo "seed_demo_state: opened one unsent Mail fixture and one upcoming Calendar meeting"
+open -a Safari "$ROOT/fixtures/web/company_research.html"
+
+echo "seed_demo_state: opened Mail, Calendar, and the local research fixture"
 echo "Speak: Using this email, remind me two days before the deadline and include the important details."
 echo "Or: Prepare me for my next meeting using what's already open."
+echo "Or, with Safari active: Research the companies on this page, put the best three in Notes, and schedule follow-ups next week."

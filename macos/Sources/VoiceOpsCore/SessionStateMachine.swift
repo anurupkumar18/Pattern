@@ -6,6 +6,7 @@ public enum SessionState: Equatable, Sendable {
     case listening(transcript: String)
     case grounding(transcript: String)
     case planning(transcript: String, groundingChips: [GroundingChip])
+    case awaitingApproval(description: String, groundingChips: [GroundingChip])
     case acting(description: String, groundingChips: [GroundingChip])
     case verifying
     case result(SessionResult)
@@ -23,6 +24,9 @@ public enum SessionEvent: Equatable, Sendable {
     case finalTranscript(String)
     case groundingReady([GroundingChip])
     case planReady(summary: String)
+    case approvalRequested(description: String)
+    case approvalGranted
+    case approvalDenied
     case verificationStarted
     case taskCompleted(state: TaskState, summary: String)
     case taskFailed(reason: String)
@@ -54,6 +58,12 @@ public enum SessionStateMachine {
             return .planning(transcript: transcript, groundingChips: chips)
         case (.planning(_, let chips), .planReady(let summary)):
             return .acting(description: summary, groundingChips: chips)
+        case (.planning(_, let chips), .approvalRequested(let description)):
+            return .awaitingApproval(description: description, groundingChips: chips)
+        case (.awaitingApproval(let description, let chips), .approvalGranted):
+            return .acting(description: description, groundingChips: chips)
+        case (.awaitingApproval, .approvalDenied):
+            return .result(.cancelled)
 
         case (.acting, .verificationStarted):
             return .verifying
@@ -64,6 +74,7 @@ public enum SessionStateMachine {
 
         case (.listening, .taskFailed(let reason)),
              (.planning, .taskFailed(let reason)),
+             (.awaitingApproval, .taskFailed(let reason)),
              (.grounding, .taskFailed(let reason)),
              (.acting, .taskFailed(let reason)),
              (.verifying, .taskFailed(let reason)):
@@ -71,6 +82,7 @@ public enum SessionStateMachine {
 
         case (.grounding, .stopRequested),
              (.planning, .stopRequested),
+             (.awaitingApproval, .stopRequested),
              (.acting, .stopRequested),
              (.verifying, .stopRequested):
             return .result(.cancelled)

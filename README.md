@@ -8,6 +8,8 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
+Phase 5 — Research-to-Follow-Up is implemented. VoiceOps extracts at most eight visible public-web company links, rejects local/private targets, researches with at most four concurrent bounded reads, ranks exactly three recommendations, and previews three next-week dates. Nothing is written until the user selects **Approve Schedule**. It then creates one escaped, cited Notes comparison and exactly three EventKit reminders, refetches both stores, and requires all five predicates before reporting success. A denied approval produces no writes; an uncertain partial write is never retried automatically.
+
 Phase 4 — Meeting Briefing is implemented as the hero workflow. VoiceOps selects the next upcoming non-all-day event through EventKit, creates a structured Apple Note with Meeting, Participants, Context, Open Questions, and Sources sections, escapes all untrusted screen content before it enters Notes HTML, reveals the exact note, then refetches both the event and note for five independent checks. A moved event, stale note, missing section, or failed UI reveal cannot produce success.
 
 Phase 3 — Screen-to-Reminder is implemented. From the grounded Mail deadline, the sidecar extracts a typed reminder plan, the macOS app performs one reversible EventKit write, opens the exact reminder through Reminders’ scripting interface, fetches the committed item back, and reports five visible predicate checks. An executor result can never complete the task; only unanimous verifier evidence produces `succeeded`. The deterministic fixture, cross-runtime protocol, wrong-date/hidden-UI failures, and app build are automated; a first permissioned live run is still required on each Mac.
@@ -62,6 +64,8 @@ scripts/seed_demo_state.sh
 With the seeded Mail compose window active, press **⌃⌥V** and say: “Using this email, remind me two days before the deadline and include the important details.” Press **⌃⌥V** again. VoiceOps should reveal the created reminder due July 29, 2026 and show five passing checks. Run `scripts/reset_demo_state.sh` afterward to remove only the exact demo artifacts.
 
 For the Meeting Briefing hero, keep the seeded Calendar event active and say: “Prepare me for my next meeting using what’s already open.” VoiceOps should reveal a `VoiceOps Brief — …` note with all five required sections and five passing checks. The seed script schedules the demo meeting 15 minutes ahead, so reseed immediately before a demo.
+
+For Research-to-Follow-Up, keep the seeded Safari page active and say: “Research the companies on this page, put the best three in Notes, and schedule follow-ups next week.” Review the proposed Monday/Wednesday/Friday dates and select **Approve Schedule**. VoiceOps should reveal a `VoiceOps Research — Top 3 Companies` note and show five passing checks for the marked note, exactly three cited recommendations, exactly three matching reminders, and the visible note. Select **Cancel** at the approval gate to verify that no Notes or Reminders writes occur. Live source failures are labeled in the recommendation rationale; they are never presented as successful research.
 
 ### Optional live vision grounding
 
