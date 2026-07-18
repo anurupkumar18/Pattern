@@ -45,7 +45,13 @@ struct CompanionView: View {
         case .planning: "brain"
         case .acting: "gearshape.2.fill"
         case .verifying: "checklist"
-        case .result(.completed): "checkmark.seal.fill"
+        case .result(.completed(let state, _)):
+            switch state {
+            case .succeeded: "checkmark.seal.fill"
+            case .partial: "exclamationmark.circle.fill"
+            case .failed: "xmark.octagon.fill"
+            case .needsUser: "questionmark.circle.fill"
+            }
         case .result(.failed): "exclamationmark.triangle.fill"
         case .result(.cancelled): "stop.circle.fill"
         }
@@ -135,6 +141,12 @@ struct CompanionView: View {
                 groundingChips(coordinator.groundingChips)
                 groundingMethod
                 Text(summary).font(.callout)
+                verificationChecklist
+                if coordinator.permissionSettingsURL != nil {
+                    Button("Open Privacy Settings") {
+                        coordinator.openPermissionSettings()
+                    }
+                }
             }
         case .failed(let reason):
             VStack(alignment: .leading, spacing: 8) {
@@ -149,6 +161,48 @@ struct CompanionView: View {
             Text("Cancelled. Nothing else will run.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var verificationChecklist: some View {
+        if !coordinator.verificationResults.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Verification evidence")
+                    .font(.caption.weight(.semibold))
+                ForEach(coordinator.verificationResults, id: \.predicateId) { result in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Image(systemName: result.passed
+                            ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(verificationLabel(result.predicateId))
+                                .font(.caption)
+                            if let reason = result.failureReason {
+                                Text(reason)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "\(verificationLabel(result.predicateId)): "
+                        + (result.passed ? "passed" : "failed"))
+                }
+            }
+            .padding(8)
+            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    private func verificationLabel(_ predicateID: String) -> String {
+        switch predicateID {
+        case "reminder-exists": "Reminder fetched back"
+        case "reminder-title": "Title matches commitment"
+        case "reminder-due-date": "Due date matches"
+        case "reminder-notes": "Source notes retained"
+        case "reminder-visible": "Visible in Reminders"
+        default: predicateID.replacingOccurrences(of: "-", with: " ").capitalized
         }
     }
 

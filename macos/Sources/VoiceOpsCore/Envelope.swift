@@ -161,6 +161,26 @@ public struct VerificationResult: Codable, Equatable, Sendable {
     public let evidenceIds: [String]
     public let failureReason: String?
 
+    public init(
+        predicateId: String,
+        passed: Bool,
+        method: String,
+        confidence: Double,
+        expected: [String: JSONValue],
+        observed: [String: JSONValue],
+        evidenceIds: [String],
+        failureReason: String?
+    ) {
+        self.predicateId = predicateId
+        self.passed = passed
+        self.method = method
+        self.confidence = confidence
+        self.expected = expected
+        self.observed = observed
+        self.evidenceIds = evidenceIds
+        self.failureReason = failureReason
+    }
+
     enum CodingKeys: String, CodingKey {
         case passed, method, confidence, expected, observed
         case predicateId = "predicate_id"
@@ -179,6 +199,112 @@ public struct StructuredError: Codable, Equatable, Sendable {
     public let code: String
     public let message: String
     public let details: [String: JSONValue]
+
+    public init(code: String, message: String, details: [String: JSONValue] = [:]) {
+        self.code = code
+        self.message = message
+        self.details = details
+    }
+}
+
+public enum ActionStatus: String, Codable, Equatable, Sendable {
+    case executed, noOp = "no_op", failed, uncertain
+}
+
+public struct ActionStarted: Codable, Equatable, Sendable {
+    public let stepId: String
+    public let tool: String
+    public let channel: String
+
+    enum CodingKeys: String, CodingKey {
+        case tool, channel
+        case stepId = "step_id"
+    }
+}
+
+public struct ActionResult: Equatable, Sendable {
+    public let stepId: String
+    public let status: ActionStatus
+    public let startedAt: Date
+    public let endedAt: Date
+    public let channel: String
+    public let targetProvenance: [String: JSONValue]
+    public let rawResult: [String: JSONValue]
+    public let stateChangeHint: String?
+    public let error: StructuredError?
+
+    public init(
+        stepId: String,
+        status: ActionStatus,
+        startedAt: Date,
+        endedAt: Date,
+        channel: String,
+        targetProvenance: [String: JSONValue] = [:],
+        rawResult: [String: JSONValue] = [:],
+        stateChangeHint: String? = nil,
+        error: StructuredError? = nil
+    ) {
+        self.stepId = stepId
+        self.status = status
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.channel = channel
+        self.targetProvenance = targetProvenance
+        self.rawResult = rawResult
+        self.stateChangeHint = stateChangeHint
+        self.error = error
+    }
+}
+
+extension ActionResult: Codable {
+    enum CodingKeys: String, CodingKey {
+        case status, channel, error
+        case stepId = "step_id"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+        case targetProvenance = "target_provenance"
+        case rawResult = "raw_result"
+        case stateChangeHint = "state_change_hint"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        stepId = try container.decode(String.self, forKey: .stepId)
+        status = try container.decode(ActionStatus.self, forKey: .status)
+        startedAt = try Self.decodeDate(container, key: .startedAt)
+        endedAt = try Self.decodeDate(container, key: .endedAt)
+        channel = try container.decode(String.self, forKey: .channel)
+        targetProvenance = try container.decode(
+            [String: JSONValue].self, forKey: .targetProvenance)
+        rawResult = try container.decode([String: JSONValue].self, forKey: .rawResult)
+        stateChangeHint = try container.decodeIfPresent(String.self, forKey: .stateChangeHint)
+        error = try container.decodeIfPresent(StructuredError.self, forKey: .error)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(stepId, forKey: .stepId)
+        try container.encode(status, forKey: .status)
+        try container.encode(WireDate.format(startedAt), forKey: .startedAt)
+        try container.encode(WireDate.format(endedAt), forKey: .endedAt)
+        try container.encode(channel, forKey: .channel)
+        try container.encode(targetProvenance, forKey: .targetProvenance)
+        try container.encode(rawResult, forKey: .rawResult)
+        try container.encodeIfPresent(stateChangeHint, forKey: .stateChangeHint)
+        try container.encodeIfPresent(error, forKey: .error)
+    }
+
+    private static func decodeDate(
+        _ container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys
+    ) throws -> Date {
+        let raw = try container.decode(String.self, forKey: key)
+        guard let value = WireDate.parse(raw) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: key, in: container,
+                debugDescription: "action timestamp is not ISO-8601: \(raw)")
+        }
+        return value
+    }
 }
 
 public struct TaskFailure: Codable, Equatable, Sendable {
@@ -195,6 +321,9 @@ public enum EventPayload: Equatable, Sendable {
     case observationReady(Observation)
     case groundingReady(GroundingResult)
     case planReady(TaskPlan)
+    case actionStarted(ActionStarted)
+    case actionFinished(ActionResult)
+    case verificationFinished(VerificationResult)
     case taskCompleted(TaskCompleted)
     case taskFailed(TaskFailure)
     case taskCancelled(TaskCancelled)
@@ -262,6 +391,13 @@ extension Envelope: Codable {
             self.payload = .groundingReady(try container.decode(GroundingResult.self, forKey: .payload))
         case .planReady:
             self.payload = .planReady(try container.decode(TaskPlan.self, forKey: .payload))
+        case .actionStarted:
+            self.payload = .actionStarted(try container.decode(ActionStarted.self, forKey: .payload))
+        case .actionFinished:
+            self.payload = .actionFinished(try container.decode(ActionResult.self, forKey: .payload))
+        case .verificationFinished:
+            self.payload = .verificationFinished(
+                try container.decode(VerificationResult.self, forKey: .payload))
         case .taskCompleted:
             self.payload = .taskCompleted(try container.decode(TaskCompleted.self, forKey: .payload))
         case .taskFailed:
@@ -287,6 +423,9 @@ extension Envelope: Codable {
         case .observationReady(let value): try container.encode(value, forKey: .payload)
         case .groundingReady(let value): try container.encode(value, forKey: .payload)
         case .planReady(let value): try container.encode(value, forKey: .payload)
+        case .actionStarted(let value): try container.encode(value, forKey: .payload)
+        case .actionFinished(let value): try container.encode(value, forKey: .payload)
+        case .verificationFinished(let value): try container.encode(value, forKey: .payload)
         case .taskCompleted(let value): try container.encode(value, forKey: .payload)
         case .taskFailed(let value): try container.encode(value, forKey: .payload)
         case .taskCancelled(let value): try container.encode(value, forKey: .payload)

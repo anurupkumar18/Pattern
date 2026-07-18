@@ -8,7 +8,9 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
-Phase 2 — screen context and grounding is complete. The app captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, sends a typed task-scoped observation to the sidecar, and shows grounded-reference chips with native provenance before planning. OpenAI vision grounding uses strict structured output and validates every model-selected candidate locally. Golden Mail/deadline grounding remains deterministic and offline-safe, and automatically takes over if no credential is configured or the live provider is unavailable.
+Phase 3 — Screen-to-Reminder is implemented. From the grounded Mail deadline, the sidecar extracts a typed reminder plan, the macOS app performs one reversible EventKit write, opens the exact reminder through Reminders’ scripting interface, fetches the committed item back, and reports five visible predicate checks. An executor result can never complete the task; only unanimous verifier evidence produces `succeeded`. The deterministic fixture, cross-runtime protocol, wrong-date/hidden-UI failures, and app build are automated; a first permissioned live run is still required on each Mac.
+
+Phase 2 — screen context and grounding is complete. The app captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, and shows grounded-reference chips with native provenance. OpenAI vision grounding uses strict structured output with a Keychain-backed credential; deterministic grounding remains the offline and provider-failure fallback.
 
 Phase 1’s voice shell remains intact: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, stop/Escape cancellation, and spoken progress. See `docs/` for the full spec:
 
@@ -42,11 +44,20 @@ cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 scripts/run_app.sh            # builds with the CLI toolchain and launches — no Xcode IDE needed
 ```
 
-(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone, Speech Recognition, Screen Recording, and Accessibility prompts. Then:
+(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone, Speech Recognition, Screen Recording, Accessibility, Reminders, and Automation prompts. Then:
 
 1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
 2. Press **⌃⌥V** again (or pause) to finish. VoiceOps captures the active window, shows any grounded reference chips, and then walks through planning → acting → result with spoken progress.
 3. **Stop** (or Escape while the companion has focus) cancels capture and any running task.
+
+### Run the Screen-to-Reminder slice
+
+```sh
+scripts/reset_demo_state.sh
+scripts/seed_demo_state.sh
+```
+
+With the seeded Mail compose window active, press **⌃⌥V** and say: “Using this email, remind me two days before the deadline and include the important details.” Press **⌃⌥V** again. VoiceOps should reveal the created reminder due July 29, 2026 and show five passing checks. Run `scripts/reset_demo_state.sh` afterward to remove only the exact demo artifacts.
 
 ### Optional live vision grounding
 

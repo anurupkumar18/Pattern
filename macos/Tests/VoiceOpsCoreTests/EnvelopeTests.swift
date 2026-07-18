@@ -133,4 +133,32 @@ final class EnvelopeTests: XCTestCase {
         XCTAssertEqual(
             try Envelope.decode(from: groundingEnvelope.encodeWire()), groundingEnvelope)
     }
+
+    func testRoundTripsNativeActionAndVerificationPayloads() throws {
+        let taskID = UUID(uuidString: "B3E9A1C2-6D4F-4A8B-9C0D-1E2F3A4B5C6D")!
+        let action = ActionResult(
+            stepId: "create-screen-reminder", status: .executed,
+            startedAt: Date(timeIntervalSince1970: 1_784_329_201),
+            endedAt: Date(timeIntervalSince1970: 1_784_329_202),
+            channel: "eventkit",
+            targetProvenance: ["capture_id": .string("capture")],
+            rawResult: ["calendar_item_id": .string("created-id")],
+            stateChangeHint: "Reminder committed", error: nil)
+        let actionEnvelope = Envelope(
+            type: .actionFinished, taskID: taskID, payload: .actionFinished(action))
+        XCTAssertEqual(
+            try Envelope.decode(from: actionEnvelope.encodeWire()), actionEnvelope)
+
+        let verification = VerificationResult(
+            predicateId: "reminder-exists", passed: true,
+            method: "eventkit_fetch_back", confidence: 1,
+            expected: ["task_marker": .string("voiceops-task:123")],
+            observed: ["calendar_item_id": .string("created-id")],
+            evidenceIds: ["eventkit:created-id"], failureReason: nil)
+        let verificationEnvelope = Envelope(
+            type: .verificationFinished, taskID: taskID,
+            payload: .verificationFinished(verification))
+        XCTAssertEqual(
+            try Envelope.decode(from: verificationEnvelope.encodeWire()), verificationEnvelope)
+    }
 }

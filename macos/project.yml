@@ -31,6 +31,12 @@ targets:
         NSSpeechRecognitionUsageDescription: >-
           VoiceOps transcribes your spoken request so it can plan, perform, and
           verify the work you asked for.
+        NSRemindersFullAccessUsageDescription: >-
+          VoiceOps creates the reminder you request and fetches it back to verify
+          the title, due date, and source notes.
+        NSAppleEventsUsageDescription: >-
+          VoiceOps asks Reminders to visibly show the reminder it just created so
+          you can inspect the verified result.
     settings:
       base:
         SWIFT_VERSION: "6.0"

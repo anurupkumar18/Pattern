@@ -18,6 +18,7 @@ from voiceops_agent.grounding import (
 )
 from voiceops_agent.main import SidecarRuntime, build_grounding_adapter, handle_line
 from voiceops_agent.schemas import (
+    ActionResult,
     AppRef,
     EventType,
     FailureCode,
@@ -25,6 +26,7 @@ from voiceops_agent.schemas import (
     TaskCompleted,
     TaskFailure,
     TaskPlan,
+    VerificationResult,
     UIElementCandidate,
     WindowRef,
     make_envelope,
@@ -108,19 +110,7 @@ class TestHandleLine:
     def test_observation_then_voice_yields_grounding_before_plan(self):
         runtime = SidecarRuntime()
         voice = parse_envelope(fixture_line())
-        observation = Observation(
-            capture_id=uuid4(),
-            timestamp=datetime.now(UTC),
-            active_app=AppRef(bundle_id="com.apple.mail", name="Mail"),
-            window=WindowRef(title="Hackathon email", bounds=(0, 0, 900, 700)),
-            focused_element_id="subject",
-            elements=[UIElementCandidate(
-                id="subject", role="AXStaticText", label="Hackathon deadline",
-                value=None, bounds=(10, 10, 200, 20), source="accessibility",
-                confidence=1, actions=[], app_bundle_id="com.apple.mail",
-            )],
-            screenshot_path="file:///tmp/capture.png",
-        )
+        observation = Observation.model_validate_json(SCREEN_FIXTURE_PATH.read_text())
         observation_envelope = make_envelope(
             EventType.OBSERVATION_READY, voice.task_id, observation
         )
@@ -131,9 +121,88 @@ class TestHandleLine:
         assert [event.type for event in events] == [
             EventType.GROUNDING_READY,
             EventType.PLAN_READY,
-            EventType.TASK_COMPLETED,
         ]
         assert events[0].payload.references[0].phrase == "this email"
+
+    def test_reminder_cannot_complete_until_action_and_all_verifiers_finish(self):
+        runtime = SidecarRuntime()
+        voice = parse_envelope(fixture_line())
+        observation = Observation.model_validate_json(SCREEN_FIXTURE_PATH.read_text())
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, voice.task_id, observation
+        ).to_ndjson())
+        planned = runtime.handle_line(fixture_line())
+        plan = planned[-1].payload
+        step = plan.steps[0]
+
+        action = ActionResult(
+            step_id=step.id,
+            status="executed",
+            started_at=datetime.now(UTC),
+            ended_at=datetime.now(UTC),
+            channel="eventkit",
+            raw_result={"calendar_item_id": "created-id"},
+        )
+        assert runtime.handle_line(make_envelope(
+            EventType.ACTION_FINISHED, voice.task_id, action
+        ).to_ndjson()) == []
+
+        emitted = []
+        for predicate in step.postconditions:
+            verification = VerificationResult(
+                predicate_id=predicate.id,
+                passed=True,
+                method="eventkit_fetch_back",
+                confidence=1,
+                expected=predicate.expected,
+                observed={"verified": True},
+            )
+            emitted.extend(runtime.handle_line(make_envelope(
+                EventType.VERIFICATION_FINISHED, voice.task_id, verification
+            ).to_ndjson()))
+
+        assert [event.type for event in emitted] == [EventType.TASK_COMPLETED]
+        assert emitted[0].payload.state == "succeeded"
+        assert len(emitted[0].payload.verification) == len(step.postconditions)
+
+    def test_failed_reminder_predicate_finishes_partial_not_success(self):
+        runtime = SidecarRuntime()
+        voice = parse_envelope(fixture_line())
+        observation = Observation.model_validate_json(SCREEN_FIXTURE_PATH.read_text())
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, voice.task_id, observation
+        ).to_ndjson())
+        plan = runtime.handle_line(fixture_line())[-1].payload
+        step = plan.steps[0]
+        action = ActionResult(
+            step_id=step.id, status="executed",
+            started_at=datetime.now(UTC), ended_at=datetime.now(UTC),
+            channel="eventkit", raw_result={"calendar_item_id": "created-id"},
+        )
+        runtime.handle_line(make_envelope(
+            EventType.ACTION_FINISHED, voice.task_id, action
+        ).to_ndjson())
+
+        emitted = []
+        for index, predicate in enumerate(step.postconditions):
+            verification = VerificationResult(
+                predicate_id=predicate.id,
+                passed=index != len(step.postconditions) - 1,
+                method="eventkit_fetch_back",
+                confidence=1,
+                expected=predicate.expected,
+                observed={"verified": index != len(step.postconditions) - 1},
+                failure_reason=(
+                    None if index != len(step.postconditions) - 1
+                    else "Reminder could not be shown"
+                ),
+            )
+            emitted.extend(runtime.handle_line(make_envelope(
+                EventType.VERIFICATION_FINISHED, voice.task_id, verification
+            ).to_ndjson()))
+
+        assert emitted[0].payload.state == "partial"
+        assert not all(result.passed for result in emitted[0].payload.verification)
 
     def test_grounding_adapter_failure_becomes_typed_task_failure(self):
         class BrokenAdapter:
@@ -188,7 +257,6 @@ class TestSidecarProcess:
         assert [envelope.type for envelope in envelopes] == [
             EventType.GROUNDING_READY,
             EventType.PLAN_READY,
-            EventType.TASK_COMPLETED,
         ]
         assert [reference.phrase for reference in envelopes[0].payload.references] == [
             "this email",

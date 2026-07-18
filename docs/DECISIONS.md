@@ -105,3 +105,23 @@ the native observation. Provenance is always rebuilt locally.
 output validation prevents the model from inventing native identities or audit
 evidence. A settings UI gives the user direct control over the credential and
 model without putting secrets in source, the app bundle, defaults, or logs.
+
+## ADR-014: Native reminder execution, independent fetch-back verification
+
+**Date:** 2026-07-18 · **Phase:** 3
+
+**Decision:** A grounded Screen-to-Reminder request produces one reversible
+`reminders.create` step with five postconditions: existence, title, due date,
+source notes, and visible presentation. The Swift app executes the write through
+one long-lived `EKEventStore`, sends an `action.finished` envelope, resets the
+store’s in-memory state, fetches the committed reminder by identifier, compares
+the normalized fields in a pure verifier, reveals the exact reminder through
+Reminders’ documented scripting dictionary, and sends one
+`verification.finished` envelope per predicate. The Python sidecar waits for
+the action plus all five verifier messages before it may emit `task.completed`.
+
+**Reason:** EventKit is the most reliable semantic action channel on macOS, and
+the separate fetch-back path enforces the executor-never-declares-success
+invariant across the IPC boundary. A failed visual reveal yields `partial`, not
+success, even when the reminder itself was committed correctly. Reminder and
+Automation permission failures surface an exact System Settings destination.

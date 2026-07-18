@@ -258,7 +258,14 @@ class OpenAIMultimodalGroundingAdapter:
                         candidate,
                         grounding_input.observation,
                         confidence=reference.confidence,
-                        resolved_text=reference.resolved_text,
+                        # Native visible text wins over model-authored text. The
+                        # model selects/reads; it cannot overwrite structured
+                        # screen facts that are already available.
+                        resolved_text=(
+                            candidate.value
+                            or candidate.label
+                            or reference.resolved_text
+                        ),
                     )
                 )
             return GroundingResult(

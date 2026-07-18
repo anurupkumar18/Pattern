@@ -22,8 +22,12 @@
 	<string>1</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>VoiceOps asks Reminders to visibly show the reminder it just created so you can inspect the verified result.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>VoiceOps captures audio only during an active hotkey session to hear your spoken request.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>VoiceOps creates the reminder you request and fetches it back to verify the title, due date, and source notes.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>VoiceOps transcribes your spoken request so it can plan, perform, and verify the work you asked for.</string>
 </dict>

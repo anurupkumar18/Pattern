@@ -93,7 +93,7 @@ def test_openai_adapter_sends_pixels_and_candidates_and_rebuilds_provenance(tmp_
                         "references": [{
                             "phrase": "that deadline",
                             "candidate_id": "deadline-date",
-                            "resolved_text": "July 31, 2026",
+                            "resolved_text": "August 99, 2099",
                             "confidence": 0.94,
                         }]
                     }),
@@ -118,6 +118,7 @@ def test_openai_adapter_sends_pixels_and_candidates_and_rebuilds_provenance(tmp_
     assert result.adapter == "openai"
     assert result.references[0].provenance["candidate_id"] == "deadline-date"
     assert result.references[0].provenance["source"] == "accessibility"
+    assert result.references[0].resolved_text == "July 31, 2026"
 
 
 def test_openai_adapter_rejects_model_invented_candidate(tmp_path):

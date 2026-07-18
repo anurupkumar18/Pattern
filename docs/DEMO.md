@@ -12,7 +12,7 @@ In under four minutes, prove all eligibility requirements and visibly map the pr
 - Create a visible email containing a deadline for the short workflow.
 - Open the evaluation dashboard on a secondary Space or tab.
 - Verify microphone, Screen Recording, Accessibility, Calendar, and Reminders permissions.
-- Run `scripts/reset_demo_state.sh` immediately before presenting.
+- Run `scripts/reset_demo_state.sh`, then `scripts/seed_demo_state.sh`, immediately before presenting.
 - Keep the network backup hotspot available.
 
 ## 3. Opening (20 seconds)
@@ -51,6 +51,12 @@ Say:
 VoiceOps should open the needed app or reground after the changed state. Narrate:
 
 “The first expected state changed. VoiceOps re-observed the computer, selected another valid path, and then verified the reminder through EventKit and the visible app.”
+
+For the deterministic short workflow, keep the seeded Mail compose window active and say:
+
+> “Using this email, remind me two days before the deadline and include the important details.”
+
+Point out the July 29, 2026 due date and all five verifier rows. If Reminders or Automation access is denied, use the result card’s Privacy Settings button, grant access, and retry; do not describe the denied run as successful.
 
 ## 6. Safety Moment (20 seconds)
 

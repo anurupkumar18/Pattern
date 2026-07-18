@@ -12,6 +12,7 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var groundingChips: [GroundingChip] = []
     @Published private(set) var groundingAdapter: GroundingAdapterKind?
     @Published private(set) var groundingWarnings: [String] = []
+    @Published private(set) var verificationResults: [VerificationResult] = []
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
@@ -21,6 +22,7 @@ final class AppCoordinator: ObservableObject {
     private var sidecarTask: Task<Void, Never>?
     private var contextTask: Task<Void, Never>?
     private let screenContextCollector: any ScreenContextCollecting = NativeScreenContextCollector()
+    private let reminderWorkflow = EventKitReminderWorkflow()
     private var activeScreenContext: CollectedScreenContext?
     private var permissionsGranted = false
 
@@ -70,6 +72,7 @@ final class AppCoordinator: ObservableObject {
             groundingChips = []
             groundingAdapter = nil
             groundingWarnings = []
+            verificationResults = []
             cleanupScreenContext()
             panel?.show()
             narrator.say("Listening")
@@ -92,7 +95,13 @@ final class AppCoordinator: ObservableObject {
 
         case .result(let result):
             switch result {
-            case .completed: narrator.say("Done")
+            case .completed(let state, _):
+                switch state {
+                case .succeeded: narrator.say("Done")
+                case .partial: narrator.say("Partially completed")
+                case .failed: narrator.say("Verification failed")
+                case .needsUser: narrator.say("I need one detail")
+                }
             case .failed: narrator.say("That didn't work")
             case .cancelled: narrator.say("Stopped")
             }
@@ -214,11 +223,38 @@ final class AppCoordinator: ObservableObject {
                         self?.dispatch(.groundingReady(chips))
                     case .planReady(let plan):
                         self?.dispatch(.planReady(summary: plan.summary))
+                        if let step = plan.steps.first,
+                           step.tool == "reminders.create",
+                           let self {
+                            let action = await reminderWorkflow.execute(step: step)
+                            if case .string(let rawURL)? = action.rawResult["settings_url"] {
+                                permissionSettingsURL = URL(string: rawURL)
+                            }
+                            try await client.send(Envelope(
+                                type: .actionFinished,
+                                taskID: taskID,
+                                payload: .actionFinished(action)))
+                            if action.status == .executed {
+                                dispatch(.verificationStarted)
+                                for verification in reminderWorkflow.verify(
+                                    step: step, action: action
+                                ) {
+                                    try await client.send(Envelope(
+                                        type: .verificationFinished,
+                                        taskID: taskID,
+                                        payload: .verificationFinished(verification)))
+                                }
+                            }
+                        }
                     case .taskCompleted(let completed):
+                        self?.verificationResults = completed.verification
                         self?.dispatch(.taskCompleted(state: completed.state, summary: completed.summary))
                         await client.cancel()
                         return
                     case .taskFailed(let failure):
+                        if case .string(let rawURL)? = failure.error.details["settings_url"] {
+                            self?.permissionSettingsURL = URL(string: rawURL)
+                        }
                         self?.dispatch(.taskFailed(reason: failure.error.message))
                         await client.cancel()
                         return

@@ -91,7 +91,7 @@ final class SidecarClientTests: XCTestCase {
         await client.cancel()
     }
 
-    func testObservationThenVoiceYieldsGroundingBeforePlan() async throws {
+    func testGroundedReminderWaitsForNativeActionAndVerification() async throws {
         try requireUV()
         let voice = try fixtureEnvelope()
         let observationURL = Self.repoRoot
@@ -106,19 +106,49 @@ final class SidecarClientTests: XCTestCase {
             payload: .observationReady(observation)))
         try await client.send(voice)
 
-        var received: [Envelope] = []
-        for try await envelope in events {
-            received.append(envelope)
-            if received.count == 3 { break }
-        }
-
-        XCTAssertEqual(received.map(\.type), [
-            .groundingReady, .planReady, .taskCompleted,
+        var iterator = events.makeAsyncIterator()
+        let first = try await iterator.next()
+        let second = try await iterator.next()
+        let groundingEnvelope = try XCTUnwrap(first)
+        let planEnvelope = try XCTUnwrap(second)
+        XCTAssertEqual([groundingEnvelope.type, planEnvelope.type], [
+            .groundingReady, .planReady,
         ])
-        guard case .groundingReady(let grounding) = received.first?.payload else {
+        guard case .groundingReady(let grounding) = groundingEnvelope.payload else {
             return XCTFail("expected grounding.ready first")
         }
         XCTAssertEqual(grounding.references.map(\.phrase), ["this email", "the deadline"])
+        guard case .planReady(let plan) = planEnvelope.payload,
+              let step = plan.steps.first
+        else { return XCTFail("expected reminder plan second") }
+
+        let action = ActionResult(
+            stepId: step.id, status: .executed,
+            startedAt: Date(), endedAt: Date(), channel: "eventkit",
+            rawResult: ["calendar_item_id": .string("test-id")],
+            stateChangeHint: "fixture action executed")
+        try await client.send(Envelope(
+            type: .actionFinished, taskID: voice.taskID,
+            payload: .actionFinished(action)))
+        for predicate in step.postconditions {
+            try await client.send(Envelope(
+                type: .verificationFinished,
+                taskID: voice.taskID,
+                payload: .verificationFinished(VerificationResult(
+                    predicateId: predicate.id, passed: true,
+                    method: "fixture_verifier", confidence: 1,
+                    expected: predicate.expected,
+                    observed: ["verified": .bool(true)],
+                    evidenceIds: ["fixture:test-id"], failureReason: nil))))
+        }
+
+        let final = try await iterator.next()
+        let completedEnvelope = try XCTUnwrap(final)
+        guard case .taskCompleted(let completed) = completedEnvelope.payload else {
+            return XCTFail("expected task.completed after all verification")
+        }
+        XCTAssertEqual(completed.state, .succeeded)
+        XCTAssertEqual(completed.verification.count, step.postconditions.count)
         await client.cancel()
     }
 
