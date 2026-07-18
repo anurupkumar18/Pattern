@@ -8,6 +8,8 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
+Phase 4 — Meeting Briefing is implemented as the hero workflow. VoiceOps selects the next upcoming non-all-day event through EventKit, creates a structured Apple Note with Meeting, Participants, Context, Open Questions, and Sources sections, escapes all untrusted screen content before it enters Notes HTML, reveals the exact note, then refetches both the event and note for five independent checks. A moved event, stale note, missing section, or failed UI reveal cannot produce success.
+
 Phase 3 — Screen-to-Reminder is implemented. From the grounded Mail deadline, the sidecar extracts a typed reminder plan, the macOS app performs one reversible EventKit write, opens the exact reminder through Reminders’ scripting interface, fetches the committed item back, and reports five visible predicate checks. An executor result can never complete the task; only unanimous verifier evidence produces `succeeded`. The deterministic fixture, cross-runtime protocol, wrong-date/hidden-UI failures, and app build are automated; a first permissioned live run is still required on each Mac.
 
 Phase 2 — screen context and grounding is complete. The app captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, and shows grounded-reference chips with native provenance. OpenAI vision grounding uses strict structured output with a Keychain-backed credential; deterministic grounding remains the offline and provider-failure fallback.
@@ -44,7 +46,7 @@ cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 scripts/run_app.sh            # builds with the CLI toolchain and launches — no Xcode IDE needed
 ```
 
-(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone, Speech Recognition, Screen Recording, Accessibility, Reminders, and Automation prompts. Then:
+(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone, Speech Recognition, Screen Recording, Accessibility, Calendars, Reminders, and Automation prompts. Then:
 
 1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
 2. Press **⌃⌥V** again (or pause) to finish. VoiceOps captures the active window, shows any grounded reference chips, and then walks through planning → acting → result with spoken progress.
@@ -58,6 +60,8 @@ scripts/seed_demo_state.sh
 ```
 
 With the seeded Mail compose window active, press **⌃⌥V** and say: “Using this email, remind me two days before the deadline and include the important details.” Press **⌃⌥V** again. VoiceOps should reveal the created reminder due July 29, 2026 and show five passing checks. Run `scripts/reset_demo_state.sh` afterward to remove only the exact demo artifacts.
+
+For the Meeting Briefing hero, keep the seeded Calendar event active and say: “Prepare me for my next meeting using what’s already open.” VoiceOps should reveal a `VoiceOps Brief — …` note with all five required sections and five passing checks. The seed script schedules the demo meeting 15 minutes ahead, so reseed immediately before a demo.
 
 ### Optional live vision grounding
 

@@ -35,8 +35,11 @@ targets:
           VoiceOps creates the reminder you request and fetches it back to verify
           the title, due date, and source notes.
         NSAppleEventsUsageDescription: >-
-          VoiceOps asks Reminders to visibly show the reminder it just created so
-          you can inspect the verified result.
+          VoiceOps asks Reminders and Notes to visibly show the local artifact it
+          just created so you can inspect the verified result.
+        NSCalendarsFullAccessUsageDescription: >-
+          VoiceOps reads your next meeting through EventKit to create and verify
+          the meeting briefing you requested.
     settings:
       base:
         SWIFT_VERSION: "6.0"

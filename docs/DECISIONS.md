@@ -125,3 +125,23 @@ the separate fetch-back path enforces the executor-never-declares-success
 invariant across the IPC boundary. A failed visual reveal yields `partial`, not
 success, even when the reminder itself was committed correctly. Reminder and
 Automation permission failures surface an exact System Settings destination.
+
+## ADR-015: EventKit-to-Notes Meeting Briefing hero
+
+**Date:** 2026-07-18 · **Phase:** 4
+
+**Decision:** Meeting Briefing selects the next upcoming non-all-day event in a
+seven-day EventKit window, then creates one structured Apple Note using Notes’
+documented scripting interface. The note contains five required sections,
+EventKit meeting identity, task provenance, and task-scoped active-screen
+context. All observed and EventKit strings are HTML-escaped before entering the
+note. The action uses one attempt; the verifier resets EventKit, refetches the
+event by identifier, refetches the note by identifier, compares title, start
+time, headings, marker, and visibility, and returns five predicate results.
+
+**Reason:** EventKit and the Notes object model provide semantic, auditable
+channels for the hero workflow. Separating note creation from its UI reveal
+lets a reveal/Automation failure report `partial` without hiding a successfully
+created note or retrying the write. The deterministic template keeps offline
+operation and prompt-injection boundaries testable while preserving the model
+adapter seam for later synthesis.

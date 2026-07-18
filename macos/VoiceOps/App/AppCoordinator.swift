@@ -23,6 +23,7 @@ final class AppCoordinator: ObservableObject {
     private var contextTask: Task<Void, Never>?
     private let screenContextCollector: any ScreenContextCollecting = NativeScreenContextCollector()
     private let reminderWorkflow = EventKitReminderWorkflow()
+    private let meetingBriefingWorkflow = EventKitMeetingBriefingWorkflow()
     private var activeScreenContext: CollectedScreenContext?
     private var permissionsGranted = false
 
@@ -223,10 +224,16 @@ final class AppCoordinator: ObservableObject {
                         self?.dispatch(.groundingReady(chips))
                     case .planReady(let plan):
                         self?.dispatch(.planReady(summary: plan.summary))
-                        if let step = plan.steps.first,
-                           step.tool == "reminders.create",
-                           let self {
-                            let action = await reminderWorkflow.execute(step: step)
+                        if let step = plan.steps.first, let self {
+                            let action: ActionResult
+                            switch step.tool {
+                            case "reminders.create":
+                                action = await reminderWorkflow.execute(step: step)
+                            case "notes.create_meeting_brief":
+                                action = await meetingBriefingWorkflow.execute(step: step)
+                            default:
+                                continue
+                            }
                             if case .string(let rawURL)? = action.rawResult["settings_url"] {
                                 permissionSettingsURL = URL(string: rawURL)
                             }
@@ -236,9 +243,18 @@ final class AppCoordinator: ObservableObject {
                                 payload: .actionFinished(action)))
                             if action.status == .executed {
                                 dispatch(.verificationStarted)
-                                for verification in reminderWorkflow.verify(
-                                    step: step, action: action
-                                ) {
+                                let verifications: [VerificationResult]
+                                switch step.tool {
+                                case "reminders.create":
+                                    verifications = reminderWorkflow.verify(
+                                        step: step, action: action)
+                                case "notes.create_meeting_brief":
+                                    verifications = meetingBriefingWorkflow.verify(
+                                        step: step, action: action)
+                                default:
+                                    verifications = []
+                                }
+                                for verification in verifications {
                                     try await client.send(Envelope(
                                         type: .verificationFinished,
                                         taskID: taskID,

@@ -1,0 +1,45 @@
+{
+  "capture_id": "3d54194f-f6f7-4c48-80f9-5c4bc89162ac",
+  "timestamp": "2026-07-18T15:00:00Z",
+  "active_app": {
+    "bundle_id": "com.apple.iCal",
+    "name": "Calendar"
+  },
+  "window": {
+    "title": "Work — Day View",
+    "bounds": [80.0, 70.0, 1100.0, 780.0]
+  },
+  "focused_element_id": "next-meeting",
+  "pointer": [540.0, 310.0],
+  "elements": [
+    {
+      "id": "next-meeting",
+      "role": "AXButton",
+      "label": "VoiceOps Product Review",
+      "value": "10:30 AM–11:00 AM",
+      "bounds": [420.0, 260.0, 300.0, 90.0],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": ["AXPress"],
+      "app_bundle_id": "com.apple.iCal",
+      "stable_attributes": {
+        "AXIdentifier": "event-voiceops-product-review"
+      }
+    },
+    {
+      "id": "meeting-link",
+      "role": "AXLink",
+      "label": "Join video meeting",
+      "value": "https://meet.example.com/voiceops-review",
+      "bounds": [440.0, 320.0, 250.0, 24.0],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": ["AXPress"],
+      "app_bundle_id": "com.apple.iCal",
+      "stable_attributes": {
+        "AXIdentifier": "event-url"
+      }
+    }
+  ],
+  "screenshot_path": "file:///tmp/voiceops-calendar-fixture.png"
+}

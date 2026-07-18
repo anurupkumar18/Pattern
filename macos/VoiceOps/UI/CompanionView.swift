@@ -202,6 +202,11 @@ struct CompanionView: View {
         case "reminder-due-date": "Due date matches"
         case "reminder-notes": "Source notes retained"
         case "reminder-visible": "Visible in Reminders"
+        case "meeting-selected": "Next meeting confirmed"
+        case "brief-exists": "Briefing note fetched back"
+        case "brief-headings": "Required sections present"
+        case "brief-meeting-identity": "Meeting title and time match"
+        case "brief-visible": "Visible in Notes"
         default: predicateID.replacingOccurrences(of: "-", with: " ").capitalized
         }
     }

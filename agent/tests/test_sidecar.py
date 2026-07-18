@@ -28,6 +28,7 @@ from voiceops_agent.schemas import (
     TaskPlan,
     VerificationResult,
     UIElementCandidate,
+    VoiceRequest,
     WindowRef,
     make_envelope,
     parse_envelope,
@@ -203,6 +204,33 @@ class TestHandleLine:
 
         assert emitted[0].payload.state == "partial"
         assert not all(result.passed for result in emitted[0].payload.verification)
+
+    def test_meeting_briefing_observation_yields_real_plan_without_mock_success(self):
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+        observation_path = (
+            Path(__file__).resolve().parents[2]
+            / "fixtures"
+            / "screen"
+            / "calendar_next_meeting_observation.json"
+        )
+        observation = Observation.model_validate_json(observation_path.read_text())
+        voice = VoiceRequest(
+            transcript="Prepare me for my next meeting using what's already open.",
+            locale="en-US", confidence=1, segments=[],
+        )
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, task_id, observation
+        ).to_ndjson())
+
+        events = runtime.handle_line(make_envelope(
+            EventType.VOICE_FINAL, task_id, voice
+        ).to_ndjson())
+
+        assert [event.type for event in events] == [
+            EventType.GROUNDING_READY, EventType.PLAN_READY,
+        ]
+        assert events[-1].payload.steps[0].tool == "notes.create_meeting_brief"
 
     def test_grounding_adapter_failure_becomes_typed_task_failure(self):
         class BrokenAdapter:

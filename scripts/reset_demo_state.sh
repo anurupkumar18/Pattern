@@ -19,6 +19,24 @@ tell application "Reminders"
         end try
     end repeat
 end tell
+
+tell application "Calendar"
+    repeat with targetCalendar in calendars
+        repeat with demoEvent in (every event of targetCalendar whose description is "voiceops-demo-event")
+            try
+                delete demoEvent
+            end try
+        end repeat
+    end repeat
+end tell
+
+tell application "Notes"
+    repeat with demoNote in (every note whose name starts with "VoiceOps Brief")
+        try
+            if body of demoNote contains "voiceops-task:" then delete demoNote
+        end try
+    end repeat
+end tell
 APPLESCRIPT
 
 echo "reset_demo_state: removed matching VoiceOps Phase 3 demo artifacts"

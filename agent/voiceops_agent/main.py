@@ -41,6 +41,7 @@ from .schemas import (
     parse_envelope,
 )
 from .workflows.reminders import ReminderPlanningError, build_reminder_plan
+from .workflows.meeting_briefing import build_meeting_briefing_plan
 
 
 def build_mock_plan(request: VoiceRequest) -> TaskPlan:
@@ -167,6 +168,18 @@ class SidecarRuntime:
                             EventType.TASK_FAILED, envelope.task_id, failure
                         )
                     ]
+                self._plans[envelope.task_id] = plan
+                self._verifications[envelope.task_id] = {}
+                return events + [
+                    make_envelope(EventType.PLAN_READY, envelope.task_id, plan)
+                ]
+
+            if self._is_meeting_briefing(envelope.payload):
+                plan = build_meeting_briefing_plan(
+                    envelope.task_id,
+                    envelope.payload,
+                    observation,
+                )
                 self._plans[envelope.task_id] = plan
                 self._verifications[envelope.task_id] = {}
                 return events + [
@@ -312,6 +325,13 @@ class SidecarRuntime:
     def _is_screen_to_reminder(request: VoiceRequest) -> bool:
         transcript = request.transcript.casefold()
         return "remind" in transcript and "deadline" in transcript
+
+    @staticmethod
+    def _is_meeting_briefing(request: VoiceRequest) -> bool:
+        transcript = request.transcript.casefold()
+        return "meeting" in transcript and any(
+            verb in transcript for verb in ("prepare", "brief", "prep")
+        )
 
 
 def handle_line(line: str) -> list[Envelope]:

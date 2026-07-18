@@ -23,7 +23,9 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>VoiceOps asks Reminders to visibly show the reminder it just created so you can inspect the verified result.</string>
+	<string>VoiceOps asks Reminders and Notes to visibly show the local artifact it just created so you can inspect the verified result.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>VoiceOps reads your next meeting through EventKit to create and verify the meeting briefing you requested.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>VoiceOps captures audio only during an active hotkey session to hear your spoken request.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
