@@ -95,3 +95,20 @@ Refinements (third voice fragment, same day):
 - Router stack: deterministic + Gemma cascade at 28/28 on fixtures; Cactus
   runtime integrated (hackathon requirement satisfied).
 - Herdr adapter validated against real Herdr (spawn/send/focus/interrupt).
+
+## Conversation history and live sync (required, clarified 2026-07-18)
+
+- The current "Message history stays in Cursor" detail view is a temporary
+  protocol placeholder, not the product direction.
+- Selecting any Cursor, Claude Code, or Codex chat must show its real message
+  history inside Dictator.
+- Cursor messages are stored locally in `state.vscdb` bubble records; Claude
+  Code and Codex messages are available in their JSONL session files. All
+  readers remain local and read-only.
+- New messages written in any source app must update the selected Dictator
+  conversation automatically. Metadata polling alone is insufficient; add a
+  `chat.messages` protocol surface and per-source incremental message readers.
+- Distinguish source-to-Dictator sync from sending through Dictator. Reading
+  and live-refreshing source messages is required first; writing a message
+  back into an existing source session requires a supported resume/send
+  control path and must not be faked by editing source storage directly.
