@@ -113,7 +113,7 @@ function isStatus(value: string): boolean {
 }
 
 function isFocus(value: string): boolean {
-  return /\b(focus|switch to|show me)\b/.test(value);
+  return /\b(focus|switch to|move to|show me)\b/.test(value);
 }
 
 function isSend(value: string): boolean {

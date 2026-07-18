@@ -44,6 +44,40 @@ place, wrapped in a genuinely polished interface, driven by voice.
   composed message, interrupting an agent, creating a new chat, and an
   attention query ("what needs me").
 
+## The verb-chip HUD (added 2026-07-18, second voice fragment)
+
+Cole's core interaction idea: the voice grammar must be **visible and reactive**
+in the chrome, as small rounded-rectangle chips in the sidebar (e.g. "Move",
+"Send").
+
+- Chips are the documentation: they passively teach what can be said.
+- Chips are the acknowledgment: when the router matches a verb, that chip
+  pulses — the invoked affordance physically responds.
+- Two-sided feedback: verb chip pulses AND the argument (e.g. the target chat
+  row) glows as the parse resolves. "Move to evals" lights up Move and the
+  evals row.
+- Parse before act: a short staged beat showing what was understood
+  ("Move → evals") before execution; longer hold for Send with cancel window
+  (the confirm loop rendered as physics, not dialogs).
+- Keyboard parity: each chip carries both the spoken word and a keystroke
+  ("Move · ⌘K"). One grammar, two input methods, one visual home.
+- Chips double as voice-loop state (pulsing Move = listening for a target).
+
+Refinements (third voice fragment, same day):
+
+- Placement: **top right of the screen** — a glanceable place to remember the
+  terminology.
+- Hover a chip: the pill expands in place to explain what the command does.
+- Hover the containing box: expands to reveal the less-used commands
+  (progressive disclosure of the full grammar; common verbs always visible).
+- Target resolution is AI-fuzzy (the existing deterministic + Gemma cascade):
+  no exact-match requirement, "the evals one" should resolve.
+- Failure feedback: if the target cannot be resolved, the chip does a quick
+  left-right **shake** (macOS wrong-password gesture) — "heard you, couldn't
+  do it," no words needed.
+- This interaction philosophy (visible grammar, reactive physics, graceful
+  failure) applies to the whole product, not just these chips.
+
 ## Operating model for the build
 
 - Fable (main chat) architects, plans, judges. All execution and research runs

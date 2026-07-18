@@ -1,438 +1,568 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type {
-  CommandOutcome,
-  FleetCommand,
-  FleetSnapshot,
-} from "../../src/contracts.js";
-import type { CommandLoopEvent } from "../../src/loop/command-loop.js";
+import type { CommandOutcome } from "../../src/contracts.js";
+import { ChatSwitcher } from "./components/ChatSwitcher.js";
+import { CommandBar, type StagedCommand } from "./components/CommandBar.js";
+import { MainPane } from "./components/MainPane.js";
+import { Sidebar } from "./components/Sidebar.js";
+import { ToastViewport, type Toast } from "./components/Toasts.js";
+import { VerbChips, type ChipFx } from "./components/VerbChips.js";
+import { SourceGlyph } from "./components/icons.js";
+import {
+  chipForVerb,
+  isCancelWord,
+  isSendWord,
+  previewParse,
+  type ChipId,
+} from "./grammar.js";
+import {
+  attentionItems,
+  buildRows,
+  groupRows,
+  loadObservedAt,
+  loadSeen,
+  persistObservedAt,
+  persistSeen,
+  type HistoryRow,
+} from "./model.js";
+import { useProtocol, type RoutedEvent } from "./useProtocol.js";
 import { useSpeechRecognition } from "./useSpeechRecognition.js";
 
-interface ChatEntry {
-  id: string;
-  source: "cursor" | "claude" | "codex";
-  name: string;
-  status: string;
-  generating: boolean;
-  lastUpdatedAt: number;
-}
-
-type ServerEvent =
-  | CommandLoopEvent
-  | { type: "server.error"; message: string }
-  | { type: "cursor.chats"; chats: ChatEntry[] };
-
-// Herdr's spinner frames (src/ui.rs), advanced at ~8fps.
-const SPINNERS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-type AgentStatus = "working" | "blocked" | "done" | "idle" | string;
-
-// Local chat status → herdr state idiom.
-function chatState(chat: ChatEntry): {
-  status: AgentStatus;
-  label: string;
-} {
-  if (chat.generating) return { status: "working", label: "working" };
-  if (chat.status === "aborted") return { status: "blocked", label: "aborted" };
-  if (
-    chat.status === "completed" ||
-    chat.status === "finished" ||
-    chat.status === "done"
-  ) {
-    return { status: "idle", label: "done" };
-  }
-  return { status: "unknown", label: "idle" };
-}
-
-function relativeTime(timestamp: number): string {
-  const deltaSeconds = Math.max(0, (Date.now() - timestamp) / 1000);
-  if (deltaSeconds < 60) return "now";
-  if (deltaSeconds < 3600) return `${Math.floor(deltaSeconds / 60)}m ago`;
-  return `${Math.floor(deltaSeconds / 3600)}h ago`;
-}
-
-function stateIcon(status: AgentStatus, tick: number): string {
-  // Mirrors herdr agent_icon (src/ui/status.rs).
-  switch (status) {
-    case "blocked":
-      return "◉";
-    case "working":
-      return SPINNERS[tick % SPINNERS.length];
-    case "done":
-      return "●";
-    case "idle":
-      return "✓";
-    default:
-      return "○";
-  }
+interface StagedState extends StagedCommand {
+  chip: ChipId | null;
+  targetRowId: string | null;
 }
 
 export function App() {
-  const socketRef = useRef<WebSocket | null>(null);
-  const [connection, setConnection] = useState<
-    "connecting" | "open" | "closed"
-  >("connecting");
-  const [snapshot, setSnapshot] = useState<FleetSnapshot | null>(null);
-  const [routed, setRouted] = useState<{
-    command: FleetCommand;
-    latencyMs: number;
-  } | null>(null);
-  const [outcomes, setOutcomes] = useState<CommandOutcome[]>([]);
-  const [pending, setPending] = useState<CommandOutcome | null>(null);
-  const [lastUtterance, setLastUtterance] = useState("");
-  const [text, setText] = useState("");
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [spinnerTick, setSpinnerTick] = useState(0);
-  const [chats, setChats] = useState<ChatEntry[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [seen, setSeen] = useState<Record<string, number>>(loadSeen);
+  const sessionOpenedAt = useRef(Date.now());
+  const [observedAt] = useState(() => loadObservedAt(sessionOpenedAt.current));
+  const [chipFx, setChipFx] = useState<ChipFx>({ pulseAt: {}, shakeAt: {} });
+  const [armedChip, setArmedChip] = useState<ChipId | null>(null);
+  const [staged, setStaged] = useState<StagedState | null>(null);
+  const [captureTarget, setCaptureTarget] = useState<string | null>(null);
+  const [rowGlow, setRowGlow] = useState<{ id: string; key: number } | null>(
+    null,
+  );
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const send = useCallback((message: unknown) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(message));
-    }
+  const searchRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const stagedRef = useRef<StagedState | null>(null);
+  const dispatchTimer = useRef<number | undefined>(undefined);
+  const rowsRef = useRef<HistoryRow[]>([]);
+  stagedRef.current = staged;
+
+  const pulseChip = useCallback((chip: ChipId) => {
+    setChipFx((current) => ({
+      ...current,
+      pulseAt: { ...current.pulseAt, [chip]: Date.now() },
+    }));
   }, []);
 
-  const submitUtterance = useCallback(
-    (utterance: string) => {
-      const trimmed = utterance.trim();
-      if (!trimmed) return;
-      setLastUtterance(trimmed);
-      setServerError(null);
-      send({ type: "utterance", text: trimmed, sttMs: 0 });
+  const shakeChip = useCallback((chip: ChipId) => {
+    setChipFx((current) => ({
+      ...current,
+      shakeAt: { ...current.shakeAt, [chip]: Date.now() },
+    }));
+  }, []);
+
+  const glowRow = useCallback((id: string) => {
+    setRowGlow({ id, key: Date.now() });
+  }, []);
+
+  const onRouted = useCallback(
+    (event: RoutedEvent) => {
+      const chip = chipForVerb(event.command.verb);
+      if (chip) {
+        pulseChip(chip);
+        if (event.command.resolvedTargetId) {
+          glowRow(event.command.resolvedTargetId);
+        } else if (
+          event.command.verb === "focus" ||
+          event.command.verb === "send" ||
+          event.command.verb === "dictate" ||
+          event.command.verb === "interrupt"
+        ) {
+          // Verb matched but the router could not resolve a target.
+          shakeChip(chip);
+        }
+      } else {
+        // Router returned noise. If we were verb-armed (or our own preview
+        // matched a verb), that is a "heard you, couldn't do it" signal.
+        const guess =
+          armedChip ??
+          previewParse(event.command.rawUtterance, rowsRef.current).chip;
+        if (guess) shakeChip(guess);
+      }
+      setArmedChip(null);
     },
-    [send],
+    [armedChip, glowRow, pulseChip, shakeChip],
   );
 
-  const speech = useSpeechRecognition(submitUtterance);
+  const onOutcome = useCallback(
+    (outcome: CommandOutcome) => {
+      if (outcome.state === "FAILED") {
+        const chip = chipForVerb(outcome.command.verb);
+        if (chip) shakeChip(chip);
+        pushToast({
+          id: `fail-${outcome.id}`,
+          source: null,
+          title: "Command failed",
+          body: outcome.executor?.error ?? outcome.command.rawUtterance,
+          kind: "failed",
+        });
+      }
+      if (
+        outcome.state === "SUCCEEDED" &&
+        outcome.command.verb === "focus" &&
+        outcome.command.resolvedTargetId
+      ) {
+        setSelectedId(outcome.command.resolvedTargetId);
+      }
+    },
+    [shakeChip],
+  );
 
-  const anyWorking =
-    (snapshot?.agents.some((agent) => agent.status === "working") ?? false) ||
-    chats.some((chat) => chat.generating);
+  const protocol = useProtocol({ onRouted, onOutcome });
+  const {
+    connection,
+    snapshot,
+    chats,
+    outcomes,
+    pending,
+    serverError,
+    submitUtterance,
+    confirm,
+    dismissPending,
+  } = protocol;
+
+  const rows = useMemo(
+    () => buildRows(snapshot, chats, seen, Date.now(), observedAt),
+    [snapshot, chats, seen, observedAt],
+  );
+  rowsRef.current = rows;
 
   useEffect(() => {
-    if (!anyWorking) return;
-    const timer = window.setInterval(
-      () => setSpinnerTick((tick) => tick + 1),
-      125,
-    );
-    return () => window.clearInterval(timer);
-  }, [anyWorking]);
+    if (chats.length > 0) persistObservedAt(sessionOpenedAt.current);
+  }, [chats.length]);
 
-  useEffect(() => {
-    let disposed = false;
-    let reconnectTimer: number | undefined;
+  const filteredRows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return rows;
+    return rows.filter((row) => row.title.toLowerCase().includes(needle));
+  }, [rows, query]);
 
-    const connect = () => {
-      setConnection("connecting");
-      const protocol = location.protocol === "https:" ? "wss" : "ws";
-      const socket = new WebSocket(`${protocol}://${location.host}/ws`);
-      socketRef.current = socket;
-      socket.onopen = () => {
-        setConnection("open");
-        socket.send(JSON.stringify({ type: "snapshot.request" }));
-      };
-      socket.onmessage = (message) => {
-        const event = JSON.parse(message.data as string) as ServerEvent;
-        if (event.type === "fleet.snapshot") {
-          setSnapshot(event.snapshot);
-        } else if (event.type === "command.routed") {
-          setRouted({
-            command: event.command,
-            latencyMs: event.latencyMs,
-          });
-        } else if (event.type === "command.outcome") {
-          setOutcomes((current) => [
-            event.outcome,
-            ...current.filter(({ id }) => id !== event.outcome.id),
-          ].slice(0, 30));
-          if (event.outcome.state === "AWAITING_CONFIRMATION") {
-            setPending(event.outcome);
-          } else {
-            setPending((current) =>
-              current?.id === event.outcome.id ? null : current,
-            );
-          }
-        } else if (event.type === "cursor.chats") {
-          setChats(event.chats);
-        } else if (event.type === "server.error") {
-          setServerError(event.message);
-        }
-      };
-      socket.onclose = () => {
-        setConnection("closed");
-        if (!disposed) reconnectTimer = window.setTimeout(connect, 1_000);
-      };
-      socket.onerror = () => setConnection("closed");
-    };
+  const sections = useMemo(() => groupRows(filteredRows), [filteredRows]);
+  const attention = useMemo(() => attentionItems(rows), [rows]);
+  const selected =
+    rows.find((row) => row.id === selectedId) ??
+    rows.find((row) => row.focused) ??
+    null;
+  const focusedAgent =
+    snapshot?.agents.find((agent) => agent.id === snapshot.focusedAgentId) ??
+    null;
 
-    connect();
-    return () => {
-      disposed = true;
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
-      socketRef.current?.close();
-    };
-  }, []);
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    submitUtterance(text);
-    setText("");
+  function pushToast(toast: Toast) {
+    setToasts((current) => [toast, ...current].slice(0, 2));
   }
 
+  const dismissToast = useCallback((id: string) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  // Toast when an agent newly needs input (delayed per spec; suppressed when
+  // that row is already selected).
+  const priorNeedsInput = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const now = new Set(
+      rows.filter((row) => row.needsInput).map((row) => row.id),
+    );
+    for (const id of now) {
+      if (!priorNeedsInput.current.has(id) && id !== selectedId) {
+        const row = rows.find((candidate) => candidate.id === id);
+        if (row) {
+          const timer = window.setTimeout(() => {
+            pushToast({
+              id: `attn-${id}-${Date.now()}`,
+              source: row.source,
+              title: row.title,
+              body: row.subtitle ?? "Waiting on you",
+              kind: "needs-input",
+              onOpen: () => selectRow(row),
+            });
+          }, 900);
+          window.setTimeout(() => window.clearTimeout(timer), 950);
+        }
+      }
+    }
+    priorNeedsInput.current = now;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, selectedId]);
+
+  const selectRow = useCallback(
+    (row: HistoryRow) => {
+      setSelectedId(row.id);
+      setSwitcherOpen(false);
+      if (row.doneUnseen) {
+        setSeen((current) => {
+          const next = { ...current, [row.id]: Date.now() };
+          persistSeen(next);
+          return next;
+        });
+      }
+      if (row.kind === "agent") {
+        submitUtterance(`focus ${row.spokenName}`);
+      }
+    },
+    [submitUtterance],
+  );
+
+  const cancelStaged = useCallback(() => {
+    window.clearTimeout(dispatchTimer.current);
+    setStaged(null);
+  }, []);
+
+  const dispatchStaged = useCallback(() => {
+    const current = stagedRef.current;
+    if (!current) return;
+    window.clearTimeout(dispatchTimer.current);
+    setStaged(null);
+    submitUtterance(current.utterance);
+  }, [submitUtterance]);
+
+  /** Parse-before-act: preview the parse, hold, then dispatch. */
+  const stageUtterance = useCallback(
+    (utterance: string) => {
+      const parse = previewParse(utterance, rowsRef.current);
+      if (!parse.chip || parse.holdMs === 0) {
+        submitUtterance(utterance);
+        return;
+      }
+      window.clearTimeout(dispatchTimer.current);
+      if (parse.targetRowId) glowRow(parse.targetRowId);
+      setArmedChip(null);
+      setStaged({
+        utterance,
+        preview: parse.preview,
+        targetName: parse.targetName,
+        targetRowId: parse.targetRowId,
+        holdMs: parse.holdMs,
+        chip: parse.chip,
+        key: Date.now(),
+      });
+      dispatchTimer.current = window.setTimeout(() => {
+        dispatchStaged();
+      }, parse.holdMs);
+    },
+    [dispatchStaged, glowRow, submitUtterance],
+  );
+
+  const onFinalSpeech = useCallback(
+    (text: string) => {
+      if (stagedRef.current) {
+        if (isCancelWord(text)) {
+          cancelStaged();
+          return;
+        }
+        if (isSendWord(text)) {
+          dispatchStaged();
+          return;
+        }
+      }
+      if (isCancelWord(text)) return;
+      stageUtterance(text);
+    },
+    [cancelStaged, dispatchStaged, stageUtterance],
+  );
+
+  const speech = useSpeechRecognition(onFinalSpeech);
+
+  // Lock the message target when voice capture begins. Moving the visual
+  // selection while listening cannot silently redirect the transcript.
+  useEffect(() => {
+    if (speech.listening) {
+      setCaptureTarget(
+        (current) => current ?? selected?.title ?? focusedAgent?.name ?? null,
+      );
+    } else {
+      setCaptureTarget(null);
+    }
+  }, [
+    focusedAgent?.name,
+    selected?.id,
+    selected?.title,
+    speech.listening,
+  ]);
+
+  // Interim speech drives the verb-armed (listening-for-target) chip state.
+  useEffect(() => {
+    if (!speech.interim) {
+      if (!stagedRef.current) setArmedChip(null);
+      return;
+    }
+    const parse = previewParse(speech.interim, rowsRef.current);
+    setArmedChip(parse.chip && !parse.targetRowId ? parse.chip : null);
+  }, [speech.interim]);
+
+  const activateChip = useCallback(
+    (chip: ChipId) => {
+      pulseChip(chip);
+      switch (chip) {
+        case "move":
+          setSwitcherOpen(true);
+          break;
+        case "send":
+          if (stagedRef.current) dispatchStaged();
+          else composerRef.current?.focus();
+          break;
+        case "attention": {
+          const first = attentionItems(rowsRef.current)[0];
+          if (first) selectRow(first.row);
+          break;
+        }
+        case "interrupt": {
+          const target =
+            rowsRef.current.find((row) => row.id === selectedId) ??
+            rowsRef.current.find((row) => row.focused) ??
+            null;
+          if (target?.kind === "agent") {
+            submitUtterance(`interrupt ${target.spokenName}`);
+          }
+          break;
+        }
+        case "new":
+          stageUtterance("start a claude chat");
+          break;
+        case "voice":
+          if (speech.listening) speech.stop();
+          else speech.start();
+          break;
+      }
+    },
+    [
+      dispatchStaged,
+      pulseChip,
+      selectRow,
+      selectedId,
+      speech,
+      stageUtterance,
+      submitUtterance,
+    ],
+  );
+
+  const composerSubmit = useCallback(
+    (text: string) => {
+      const parse = previewParse(text, rowsRef.current);
+      if (parse.chip) {
+        stageUtterance(text);
+        return;
+      }
+      const target = rowsRef.current.find((row) => row.id === selectedId);
+      if (target?.kind === "agent") {
+        stageUtterance(`send ${target.spokenName} ${text}`);
+      } else {
+        submitUtterance(text);
+      }
+    },
+    [selectedId, stageUtterance, submitUtterance],
+  );
+
+  // Keyboard layer: one grammar, two input methods.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const inField =
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement;
+      if (event.key === "Escape") {
+        if (stagedRef.current) {
+          event.preventDefault();
+          cancelStaged();
+        } else if (switcherOpen) {
+          setSwitcherOpen(false);
+        } else if (pending) {
+          dismissPending();
+        }
+        return;
+      }
+      if (event.metaKey && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        pulseChip("move");
+        setSwitcherOpen((value) => !value);
+        return;
+      }
+      if (event.altKey && event.code === "Space") {
+        event.preventDefault();
+        activateChip("voice");
+        return;
+      }
+      if (event.metaKey && event.key === "Enter") {
+        event.preventDefault();
+        pulseChip("send");
+        if (stagedRef.current) {
+          dispatchStaged();
+        } else {
+          composerRef.current?.form?.requestSubmit();
+        }
+        return;
+      }
+      if (event.metaKey && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        activateChip("new");
+        return;
+      }
+      if (event.metaKey && event.key === ".") {
+        event.preventDefault();
+        activateChip("interrupt");
+        return;
+      }
+      if (inField || event.metaKey || event.altKey || event.ctrlKey) return;
+      if (event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        activateChip("attention");
+      } else if (event.key === "j" || event.key === "ArrowDown") {
+        event.preventDefault();
+        moveSelection(1);
+      } else if (event.key === "k" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveSelection(-1);
+      } else if (event.key === "/") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    function moveSelection(delta: number) {
+      const flat = rowsRef.current;
+      if (flat.length === 0) return;
+      const currentIndex = flat.findIndex((row) => row.id === selectedId);
+      const nextIndex = Math.min(
+        Math.max(currentIndex + delta, 0),
+        flat.length - 1,
+      );
+      const next = flat[nextIndex];
+      if (next) selectRow(next);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    activateChip,
+    cancelStaged,
+    dismissPending,
+    dispatchStaged,
+    pending,
+    pulseChip,
+    selectRow,
+    selectedId,
+    switcherOpen,
+  ]);
+
+  useEffect(() => () => window.clearTimeout(dispatchTimer.current), []);
+
+  const stagedChip =
+    staged?.chip && staged.preview
+      ? { chip: staged.chip, preview: staged.preview }
+      : null;
+
   return (
-    <div className="term">
-      <aside className="sidebar">
-        <div className="panel-header">
-          <span>agents</span>
-          <span className="panel-toggle">all</span>
-        </div>
+    <div className="app-shell">
+      <Sidebar
+        sections={sections}
+        attention={attention}
+        selectedId={selected?.id ?? null}
+        glowRowId={rowGlow?.id ?? null}
+        glowKey={rowGlow?.key ?? 0}
+        query={query}
+        onQueryChange={setQuery}
+        onSelect={selectRow}
+        onNewChat={() => activateChip("new")}
+        onAttention={() => activateChip("attention")}
+        voice={{
+          supported: speech.supported,
+          listening: speech.listening,
+          error: speech.error,
+          toggle: () =>
+            speech.listening ? speech.stop() : speech.start(),
+        }}
+        searchRef={searchRef}
+      />
 
-        <div className="agent-list">
-          {snapshot?.agents.map((agent) => {
-            const focused = agent.id === snapshot.focusedAgentId;
-            return (
-              <button
-                type="button"
-                className={focused ? "agent-entry focused" : "agent-entry"}
-                key={agent.id}
-                onClick={() => submitUtterance(`focus ${agent.name}`)}
-                title={`${agent.harness} · ${agent.cwd}`}
-              >
-                <span className="entry-row">
-                  <span className={`state-icon ${agent.status}`}>
-                    {stateIcon(agent.status, spinnerTick)}
-                  </span>
-                  <span className="entry-name">{agent.name}</span>
-                </span>
-                <span className="entry-row sub">
-                  <span className={`state-label ${agent.status}`}>
-                    {agent.status}
-                  </span>
-                  <span className="dot-sep">·</span>
-                  <span className="entry-agent">{agent.harness}</span>
-                </span>
-              </button>
-            );
-          })}
-          {(!snapshot || snapshot.agents.length === 0) && (
-            <div className="agent-empty">no agents</div>
-          )}
-        </div>
-
-        {chats.length > 0 && (
-          <>
-            <div className="panel-divider" />
-            <div className="panel-header">
-              <span>chats</span>
-              <span className="panel-toggle">24h</span>
-            </div>
-            <div className="chat-list">
-              {chats.map((chat) => {
-                const state = chatState(chat);
-                return (
-                  <div className="agent-entry" key={chat.id} title={chat.id}>
-                    <span className="entry-row">
-                      <span className={`state-icon ${state.status}`}>
-                        {stateIcon(state.status, spinnerTick)}
-                      </span>
-                      <span className="entry-name">{chat.name}</span>
-                    </span>
-                    <span className="entry-row sub">
-                      <span className={`state-label ${state.status}`}>
-                        {state.label}
-                      </span>
-                      <span className="dot-sep">·</span>
-                      <span className="entry-agent">{chat.source}</span>
-                      <span className="dot-sep">·</span>
-                      <span className="entry-agent">
-                        {relativeTime(chat.lastUpdatedAt)}
-                      </span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        <button
-          type="button"
-          className={speech.listening ? "voice-toggle on" : "voice-toggle"}
-          onClick={speech.listening ? speech.stop : speech.start}
-          disabled={!speech.supported}
-        >
-          <span className="vt-icon">{speech.listening ? "●" : "○"}</span>
-          <span className="vt-label">
-            {speech.supported
-              ? `voice ${speech.listening ? "on" : "off"}`
-              : "voice unavailable"}
-          </span>
-        </button>
-      </aside>
-
-      <main className="pane">
-        <div className="pane-tabbar">
-          <span className="tab active">1 command-center</span>
-          <span className="pane-status">
-            <span className={`conn-dot ${connection}`}>●</span>
-            <span>{connection === "open" ? "server live" : connection}</span>
-            <span className="dot-sep">·</span>
-            <span>{snapshot?.agents.length ?? 0} agents</span>
-          </span>
-        </div>
-
-        <div className="heard-row">
-          <span className="heard-label">heard</span>
-          <span className="heard-text">
-            {speech.interim ||
-              lastUtterance ||
-              "say a fleet command or type below"}
-          </span>
-        </div>
-
-        <form className="prompt" onSubmit={onSubmit}>
-          <span className="prompt-mark">❯</span>
-          <input
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="tell the blocked one to use staging"
-            spellCheck={false}
+      <main className="main-pane">
+        <header className="main-topbar">
+          <div className="topbar-title">
+            {selected ? (
+              <>
+                <SourceGlyph source={selected.source} />
+                <span className="topbar-name">{selected.title}</span>
+                {selected.subtitle && !selected.needsInput && (
+                  <span className="topbar-path">{selected.subtitle}</span>
+                )}
+              </>
+            ) : (
+              <span className="topbar-name muted">Dictator</span>
+            )}
+          </div>
+          <VerbChips
+            fx={chipFx}
+            armed={armedChip}
+            staged={stagedChip}
+            listening={speech.listening}
+            onActivate={activateChip}
           />
-          <button type="submit" disabled={connection !== "open"}>
-            route
-          </button>
-        </form>
+        </header>
 
-        {(speech.error || serverError) && (
-          <div className="error-row">{speech.error ?? serverError}</div>
-        )}
+        <MainPane
+          selected={selected}
+          connection={connection}
+          outcomes={outcomes}
+          snapshot={snapshot}
+          pending={pending}
+          listening={speech.listening}
+          onConfirm={confirm}
+          onCancelPending={dismissPending}
+          onComposerSubmit={composerSubmit}
+          onInterrupt={(row) => {
+            if (row.kind === "agent") {
+              submitUtterance(`interrupt ${row.spokenName}`);
+            }
+          }}
+          onToggleVoice={() =>
+            speech.listening ? speech.stop() : speech.start()
+          }
+          composerRef={composerRef}
+        />
 
-        {routed && (
-          <div className="route-row">
-            <span>
-              <span className="k">resolved</span>{" "}
-              <strong>{routed.command.verb}</strong>
-            </span>
-            <span className="dot-sep">·</span>
-            <span>
-              <span className="k">target</span>{" "}
-              <strong>
-                {targetName(routed.command.resolvedTargetId, snapshot)}
-              </strong>
-            </span>
-            <span className="dot-sep">·</span>
-            <span>
-              <span className="k">confidence</span>{" "}
-              <strong>{Math.round(routed.command.confidence * 100)}%</strong>
-            </span>
-            <span className="dot-sep">·</span>
-            <span>
-              <span className="k">route</span>{" "}
-              <strong>{formatMs(routed.latencyMs)}</strong>
-            </span>
-          </div>
-        )}
-
-        {pending && (
-          <div className="confirmation">
-            <span>
-              <span className="confirm-dot">●</span>{" "}
-              <strong>
-                confirm {pending.command.verb}{" "}
-                {targetName(pending.command.resolvedTargetId, snapshot)}
-              </strong>{" "}
-              <span className="k">
-                destructive and low-confidence commands stop before acting
-              </span>
-            </span>
-            <button
-              type="button"
-              onClick={() => send({ type: "confirm", outcomeId: pending.id })}
-            >
-              confirm
-            </button>
-          </div>
-        )}
-
-        <div className="log" aria-live="polite">
-          {outcomes.length === 0 ? (
-            <div className="log-empty">
-              no commands yet. try “what needs me right now”.
-            </div>
-          ) : (
-            outcomes.map((outcome) => (
-              <OutcomeRow
-                key={outcome.id}
-                outcome={outcome}
-                snapshot={snapshot}
-              />
-            ))
-          )}
-        </div>
+        <CommandBar
+          interim={speech.interim}
+          staged={staged}
+          focusedName={
+            captureTarget ?? selected?.title ?? focusedAgent?.name ?? null
+          }
+          onCancel={cancelStaged}
+          onSendNow={dispatchStaged}
+        />
       </main>
+
+      {switcherOpen && (
+        <ChatSwitcher
+          rows={filteredRows}
+          onPick={(row) => {
+            setSwitcherOpen(false);
+            if (row.kind === "agent") {
+              stageUtterance(`switch to ${row.spokenName}`);
+            } else {
+              selectRow(row);
+            }
+          }}
+          onClose={() => setSwitcherOpen(false)}
+        />
+      )}
+
+      <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+
+      {serverError && <div className="server-error">{serverError}</div>}
     </div>
   );
-}
-
-function OutcomeRow({
-  outcome,
-  snapshot,
-}: {
-  outcome: CommandOutcome;
-  snapshot: FleetSnapshot | null;
-}) {
-  const verification = outcome.verification[0];
-  return (
-    <article className="outcome-row">
-      <span className={`outcome-state ${stateClass(outcome.state)}`}>
-        {outcome.state.toLowerCase()}
-      </span>
-      <div className="outcome-body">
-        <span className="outcome-title">
-          {outcome.command.verb}
-          {outcome.command.resolvedTargetId && (
-            <>
-              <span className="dot-sep">·</span>
-              {targetName(outcome.command.resolvedTargetId, snapshot)}
-            </>
-          )}
-        </span>
-        <span className="outcome-utterance">
-          {outcome.command.rawUtterance}
-        </span>
-        {verification && (
-          <span className="outcome-verify">
-            {verification.passed ? "verified" : "predicate failed"}:{" "}
-            {verification.evidence}
-          </span>
-        )}
-      </div>
-      <span className="outcome-latency">
-        stt {formatMs(outcome.latencyMs.stt)} · route{" "}
-        {formatMs(outcome.latencyMs.route)} · act{" "}
-        {formatMs(outcome.latencyMs.act)} · verify{" "}
-        {formatMs(outcome.latencyMs.verify)}
-      </span>
-    </article>
-  );
-}
-
-function stateClass(state: CommandOutcome["state"]): string {
-  if (state === "SUCCEEDED") return "green";
-  if (state === "AWAITING_CONFIRMATION" || state === "UNVERIFIED") {
-    return "yellow";
-  }
-  if (state === "FAILED") return "red";
-  return "neutral";
-}
-
-function formatMs(value: number): string {
-  return `${Math.round(value)}ms`;
-}
-
-function targetName(
-  id: string | null,
-  snapshot: FleetSnapshot | null,
-): string {
-  if (!id) return "fleet";
-  return snapshot?.agents.find((agent) => agent.id === id)?.name ?? id;
 }

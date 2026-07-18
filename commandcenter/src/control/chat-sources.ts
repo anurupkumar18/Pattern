@@ -47,11 +47,12 @@ type SessionParser = (
 
 const DEFAULT_CURSOR_POLL_MS = 30_000;
 const DEFAULT_FILE_POLL_MS = 10_000;
-const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1_000;
+/** Seven days so the sidebar's Today/Yesterday/Earlier grouping has data. */
+const DEFAULT_WINDOW_MS = 7 * 24 * 60 * 60 * 1_000;
 /** A session file touched within this window counts as actively generating. */
 const DEFAULT_ACTIVE_MS = 45_000;
 /** Newest entries kept per source so one busy harness cannot crowd out the rest. */
-const MAX_ENTRIES_PER_SOURCE = 10;
+const MAX_ENTRIES_PER_SOURCE = 50;
 
 /**
  * Adapts the existing Cursor provider to the shared multi-source shape without
@@ -325,7 +326,14 @@ export class ChatSourcesProvider {
 }
 
 export function mergeChatEntries(entries: ChatEntry[]): ChatEntry[] {
-  return [...entries].sort(
+  const newestById = new Map<string, ChatEntry>();
+  for (const entry of entries) {
+    const current = newestById.get(entry.id);
+    if (!current || entry.lastUpdatedAt > current.lastUpdatedAt) {
+      newestById.set(entry.id, entry);
+    }
+  }
+  return [...newestById.values()].sort(
     (left, right) =>
       right.lastUpdatedAt - left.lastUpdatedAt ||
       left.source.localeCompare(right.source) ||

@@ -172,4 +172,23 @@ describe("mergeChatEntries", () => {
       "claude",
     ]);
   });
+
+  it("keeps the newest record when session ids repeat", () => {
+    const older: ChatEntry = {
+      id: "codex:repeat",
+      source: "codex",
+      name: "older title",
+      status: "completed",
+      generating: false,
+      lastUpdatedAt: 10,
+    };
+    const newer: ChatEntry = {
+      ...older,
+      name: "newer title",
+      generating: true,
+      lastUpdatedAt: 20,
+    };
+
+    expect(mergeChatEntries([older, newer])).toEqual([newer]);
+  });
 });

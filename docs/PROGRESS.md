@@ -394,3 +394,43 @@ on/off button below the sidebar agent list.
   --noEmit`, and `npm run test` (38 passed, 1 opt-in Herdr test skipped) all
   clean, including new parser/merge/cap unit tests in
   `test/chat-sources.test.ts`.
+
+## 2026-07-18 - Dictator console rebuild completed
+
+- Resumed the interrupted uncommitted rebuild rather than replacing it. The
+  inherited work already contained the componentized React shell, unified
+  Cursor/Claude Code/Codex history, design tokens, source glyphs, voice
+  recognition, command staging, verb-chip HUD, help, switcher, toasts, and
+  WebSocket reducer.
+- Finished the product pass: the live focused agent now controls both selected
+  row and main detail, old completed chats no longer appear falsely unseen,
+  history groups are exactly Today/Yesterday/Earlier, capture locks its message
+  target, Option-Space toggles voice, stopped stays neutral, and command
+  outcomes no longer leak into unrelated chat details.
+- Fixed two live-only defects found through browser evidence: duplicate Codex
+  session IDs are deduplicated newest-first before rendering, and both app
+  regions now constrain flex height so the composer and voice footer remain
+  inside the viewport.
+- The top-right HUD keeps Move, Send, and What needs me visible; cluster hover
+  reveals Interrupt, New chat, and Voice; pill hover reveals help text. Routed
+  verbs pulse, resolved rows glow, unresolved targets shake, Send gets a
+  cancelable hold, and the global bar stages the parse before dispatch.
+- No transcript data was fabricated. The detail pane uses a quiet source-app
+  handoff state because the current protocol exposes chat metadata but not
+  messages.
+- Required proof passes:
+  `npx tsc -p tsconfig.json`,
+  `npx tsc -p console/tsconfig.json --noEmit`,
+  `npm test` (42 passed, 1 opt-in real-Herdr test skipped), and
+  `npm run build`.
+- Visual proof was iterated in headless Chrome against the real feed and
+  compared with the Cursor/Codex references. Exact 1440x900 captures:
+  `/tmp/dictator-final.png` and `/tmp/dictator-hud.png`.
+- Live review server:
+  `http://127.0.0.1:4180`, real Herdr socket, seven-day chat window, and
+  `gemma4:e2b-it-qat`.
+- Honest remaining gaps: chat transcript/message detail still needs a protocol
+  addition; read/unseen state is client-local; the feed is a bounded seven-day
+  snapshot rather than paged lifetime history; historical file-session rows
+  are metadata views, while live control targets remain Herdr agents; Web
+  Speech support still varies by browser.
