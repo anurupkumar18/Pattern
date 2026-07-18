@@ -188,6 +188,12 @@ class TestConversationContract:
         )
         assert binding.task_version == 2
 
+    def test_conversation_fixtures_round_trip(self):
+        for name in ("conversation_tool_call.json", "conversation_tool_result.json"):
+            original = load_fixture(name)
+            envelope = parse_envelope(original)
+            assert envelope.to_wire_dict() == original
+
 
 class TestEventRegistry:
     def test_every_protocol_event_has_a_payload_model(self):

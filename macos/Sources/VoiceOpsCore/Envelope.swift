@@ -20,6 +20,8 @@ public enum EventType: String, Codable, Sendable, CaseIterable {
     case taskCompleted = "task.completed"
     case taskFailed = "task.failed"
     case taskCancelled = "task.cancelled"
+    case conversationToolCall = "conversation.tool_call"
+    case conversationToolResult = "conversation.tool_result"
 }
 
 public enum Risk: String, Codable, Sendable {
@@ -473,6 +475,73 @@ public struct TaskCancelled: Codable, Equatable, Sendable {
     public let reason: String?
 }
 
+/// The S2S conversation layer's only side-effect path into the task machine.
+public struct ConversationToolCall: Codable, Equatable, Sendable {
+    public let callID: String
+    public let tool: String
+    public let arguments: [String: JSONValue]
+
+    public init(callID: String, tool: String, arguments: [String: JSONValue] = [:]) {
+        self.callID = callID
+        self.tool = tool
+        self.arguments = arguments
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case tool, arguments
+        case callID = "call_id"
+    }
+}
+
+public struct ConversationToolResult: Codable, Equatable, Sendable {
+    public let callID: String
+    public let tool: String
+    public let status: String
+    public let result: [String: JSONValue]
+    public let error: StructuredError?
+
+    public init(
+        callID: String,
+        tool: String,
+        status: String,
+        result: [String: JSONValue] = [:],
+        error: StructuredError? = nil
+    ) {
+        self.callID = callID
+        self.tool = tool
+        self.status = status
+        self.result = result
+        self.error = error
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case tool, status, result, error
+        case callID = "call_id"
+    }
+}
+
+/// Read-back approval: a spoken yes authorizes exactly one action-set hash.
+public struct ApprovalBinding: Codable, Equatable, Sendable {
+    public let bindingHash: String
+    public let taskVersion: Int
+    public let readBack: String
+    public let actionIDs: [String]
+
+    public init(bindingHash: String, taskVersion: Int, readBack: String, actionIDs: [String]) {
+        self.bindingHash = bindingHash
+        self.taskVersion = taskVersion
+        self.readBack = readBack
+        self.actionIDs = actionIDs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case bindingHash = "binding_hash"
+        case taskVersion = "task_version"
+        case readBack = "read_back"
+        case actionIDs = "action_ids"
+    }
+}
+
 public enum EventPayload: Equatable, Sendable {
     case voicePartial(TranscriptPartial)
     case voiceFinal(VoiceRequest)
@@ -490,6 +559,8 @@ public enum EventPayload: Equatable, Sendable {
     case taskCompleted(TaskCompleted)
     case taskFailed(TaskFailure)
     case taskCancelled(TaskCancelled)
+    case conversationToolCall(ConversationToolCall)
+    case conversationToolResult(ConversationToolResult)
 }
 
 // MARK: - Envelope
@@ -584,6 +655,12 @@ extension Envelope: Codable {
             self.payload = .taskFailed(try container.decode(TaskFailure.self, forKey: .payload))
         case .taskCancelled:
             self.payload = .taskCancelled(try container.decode(TaskCancelled.self, forKey: .payload))
+        case .conversationToolCall:
+            self.payload = .conversationToolCall(
+                try container.decode(ConversationToolCall.self, forKey: .payload))
+        case .conversationToolResult:
+            self.payload = .conversationToolResult(
+                try container.decode(ConversationToolResult.self, forKey: .payload))
         }
     }
 
@@ -611,6 +688,8 @@ extension Envelope: Codable {
         case .taskCompleted(let value): try container.encode(value, forKey: .payload)
         case .taskFailed(let value): try container.encode(value, forKey: .payload)
         case .taskCancelled(let value): try container.encode(value, forKey: .payload)
+        case .conversationToolCall(let value): try container.encode(value, forKey: .payload)
+        case .conversationToolResult(let value): try container.encode(value, forKey: .payload)
         }
     }
 

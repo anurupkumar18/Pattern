@@ -16,6 +16,12 @@ final class EnvelopeTests: XCTestCase {
         try Data(contentsOf: Self.fixtureURL)
     }
 
+    private func fixtureData(named name: String) throws -> Data {
+        try Data(contentsOf: Self.fixtureURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(name))
+    }
+
     private func fixtureObject(mutating mutate: (inout [String: Any]) -> Void = { _ in }) throws -> Data {
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: fixtureData()) as? [String: Any])
         mutate(&object)
@@ -154,6 +160,45 @@ final class EnvelopeTests: XCTestCase {
             type: .groundingReady, taskID: taskID, payload: .groundingReady(result))
         XCTAssertEqual(
             try Envelope.decode(from: groundingEnvelope.encodeWire()), groundingEnvelope)
+    }
+
+    func testConversationToolCallFixtureRoundTrips() throws {
+        let data = try fixtureData(named: "conversation_tool_call.json")
+        let envelope = try Envelope.decode(from: data)
+        XCTAssertEqual(envelope.type, .conversationToolCall)
+        guard case .conversationToolCall(let call) = envelope.payload else {
+            return XCTFail("expected conversationToolCall payload")
+        }
+        XCTAssertEqual(call.callID, "call_001")
+        XCTAssertEqual(call.tool, "apply_patch")
+        XCTAssertEqual(
+            call.arguments["transcript"],
+            .string("Actually, don't create the replacement yet."))
+        XCTAssertEqual(try Envelope.decode(from: envelope.encodeWire()), envelope)
+    }
+
+    func testConversationToolResultFixtureRoundTrips() throws {
+        let data = try fixtureData(named: "conversation_tool_result.json")
+        let envelope = try Envelope.decode(from: data)
+        guard case .conversationToolResult(let result) = envelope.payload else {
+            return XCTFail("expected conversationToolResult payload")
+        }
+        XCTAssertEqual(result.status, "ok")
+        XCTAssertEqual(result.result["new_version"], .number(2))
+        XCTAssertNil(result.error)
+        XCTAssertEqual(try Envelope.decode(from: envelope.encodeWire()), envelope)
+    }
+
+    func testApprovalBindingDecodesSnakeCaseFields() throws {
+        let json = """
+        {"binding_hash":"\(String(repeating: "a", count: 64))","task_version":2,\
+        "read_back":"I will send the message. Nothing else. Confirm?",\
+        "action_ids":["ask_customer_preference","issue_store_credit"]}
+        """
+        let binding = try JSONDecoder().decode(ApprovalBinding.self, from: Data(json.utf8))
+        XCTAssertEqual(binding.taskVersion, 2)
+        XCTAssertEqual(binding.actionIDs.count, 2)
+        XCTAssertTrue(binding.readBack.hasSuffix("Confirm?"))
     }
 
     func testRoundTripsNativeActionAndVerificationPayloads() throws {
