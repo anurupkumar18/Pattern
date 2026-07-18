@@ -1,7 +1,7 @@
 import AppKit
 import ApplicationServices
 import CoreGraphics
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 import VoiceOpsCore
 import os
 

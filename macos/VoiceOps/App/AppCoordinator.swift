@@ -88,6 +88,11 @@ final class AppCoordinator: ObservableObject {
             panel?.hide()
 
         case .listening:
+            // Partial transcript events stay in `.listening`. Only the initial
+            // idle -> listening transition may reset the session and install
+            // an audio tap; otherwise every partial would start another
+            // VoiceSessionController on the same AVAudioEngine input.
+            guard case .idle = previous else { return }
             permissionSettingsURL = nil
             groundingChips = []
             groundingAdapter = nil

@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo "==> Python tests"
-uv run --project "$ROOT/agent" pytest "$ROOT/agent/tests"
+(cd "$ROOT/agent" && uv run python -m pytest)
 
 echo "==> Swift tests"
 swift test --package-path "$ROOT/macos"
