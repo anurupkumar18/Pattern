@@ -12,6 +12,7 @@ import {
   chipForVerb,
   isCancelWord,
   isSendWord,
+  messageTextForTarget,
   previewParse,
   type ChipId,
 } from "./grammar.js";
@@ -137,8 +138,10 @@ export function App() {
     outcomes,
     pending,
     transcript,
+    chatSend,
     serverError,
     submitUtterance,
+    sendChat,
     confirm,
     selectChatMessages,
     refreshChatMessages,
@@ -259,8 +262,22 @@ export function App() {
     if (!current) return;
     window.clearTimeout(dispatchTimer.current);
     setStaged(null);
+    const target = rowsRef.current.find(
+      (row) => row.id === current.targetRowId,
+    );
+    if (
+      target?.kind === "chat" &&
+      (target.source === "claude" || target.source === "codex")
+    ) {
+      const text = messageTextForTarget(current.utterance, target);
+      if (text) {
+        pulseChip("send");
+        sendChat(target.source, target.id, text);
+        return;
+      }
+    }
     submitUtterance(current.utterance);
-  }, [submitUtterance]);
+  }, [pulseChip, sendChat, submitUtterance]);
 
   /** Parse-before-act: preview the parse, hold, then dispatch. */
   const stageUtterance = useCallback(
@@ -392,11 +409,17 @@ export function App() {
       const target = rowsRef.current.find((row) => row.id === selectedId);
       if (target?.kind === "agent") {
         stageUtterance(`send ${target.spokenName} ${text}`);
+      } else if (
+        target?.kind === "chat" &&
+        (target.source === "claude" || target.source === "codex")
+      ) {
+        pulseChip("send");
+        sendChat(target.source, target.id, text);
       } else {
         submitUtterance(text);
       }
     },
-    [selectedId, stageUtterance, submitUtterance],
+    [pulseChip, selectedId, sendChat, stageUtterance, submitUtterance],
   );
 
   // Keyboard layer: one grammar, two input methods.
@@ -548,6 +571,7 @@ export function App() {
           snapshot={snapshot}
           transcript={transcript}
           pending={pending}
+          chatSend={chatSend}
           listening={speech.listening}
           onConfirm={confirm}
           onCancelPending={dismissPending}

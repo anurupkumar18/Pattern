@@ -11,6 +11,7 @@ import {
   type ChatTranscriptState,
   type HistoryRow,
 } from "../model.js";
+import type { ChatSendState } from "../useProtocol.js";
 import {
   ArrowUpIcon,
   MicIcon,
@@ -28,6 +29,7 @@ interface MainPaneProps {
   snapshot: FleetSnapshot | null;
   transcript: ChatTranscriptState;
   pending: CommandOutcome | null;
+  chatSend: ChatSendState;
   listening: boolean;
   onConfirm: (outcomeId: string) => void;
   onCancelPending: () => void;
@@ -44,6 +46,7 @@ export function MainPane({
   snapshot,
   transcript,
   pending,
+  chatSend,
   listening,
   onConfirm,
   onCancelPending,
@@ -53,9 +56,14 @@ export function MainPane({
   composerRef,
 }: MainPaneProps) {
   const [draft, setDraft] = useState("");
+  const readOnlyChat =
+    selected?.kind === "chat" && selected.source === "cursor";
+  const selectedSend =
+    chatSend.chatId === selected?.id ? chatSend : null;
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    if (readOnlyChat) return;
     const text = draft.trim();
     if (!text) return;
     onComposerSubmit(text);
@@ -126,10 +134,13 @@ export function MainPane({
           value={draft}
           rows={1}
           placeholder={
-            selected
+            readOnlyChat
+              ? "Mirrored from Cursor (read-only)"
+              : selected
               ? `Message ${selected.title}…`
               : "Type a command, or say the word…"
           }
+          disabled={readOnlyChat}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
@@ -141,7 +152,17 @@ export function MainPane({
         />
         <div className="composer-row">
           <span className="composer-context">
-            {selected ? selected.title : "Command"}
+            {readOnlyChat
+              ? "Mirrored from Cursor (read-only)"
+              : selectedSend?.status === "sending"
+                ? "Sending…"
+                : selectedSend?.status === "sent"
+                  ? "Sent"
+                  : selectedSend?.status === "error"
+                    ? selectedSend.error
+                    : selected
+                      ? selected.title
+                      : "Command"}
           </span>
           <span className="composer-actions">
             <button
@@ -152,14 +173,16 @@ export function MainPane({
             >
               <MicIcon size={14} />
             </button>
-            <button
-              type="submit"
-              className={draft.trim() ? "send-button ready" : "send-button"}
-              aria-label="Send"
-              disabled={!draft.trim()}
-            >
-              <ArrowUpIcon />
-            </button>
+            {!readOnlyChat && (
+              <button
+                type="submit"
+                className={draft.trim() ? "send-button ready" : "send-button"}
+                aria-label="Send"
+                disabled={!draft.trim() || selectedSend?.status === "sending"}
+              >
+                <ArrowUpIcon />
+              </button>
+            )}
           </span>
         </div>
       </form>

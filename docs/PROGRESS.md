@@ -571,3 +571,34 @@ on/off button below the sidebar agent list.
 - Honest gap: this is streaming PCM plus repeated utterance-window inference,
   not a stateful incremental Whisper decoder. Native decoder-state reuse is
   the next latency optimization.
+
+## 2026-07-18 - Command Center integration
+
+- Wired the main composer directly to `chat.send` for selected Claude Code and
+  Codex chats. It now shows quiet `Sending…`, `Sent`, or CLI error feedback.
+  Cursor chats disable the textarea, remove the send button, and show
+  `Mirrored from Cursor (read-only)`.
+- Routed staged voice `tell` / `send` / `dictate` commands to the same
+  `chat.send` path when the resolved sidebar target is a Claude or Codex chat.
+  Fleet-agent commands continue through the existing command loop.
+- Corrected Wave 1E's detached optimistic result behavior: the adapter now
+  waits for the resumed CLI turn, captures bounded CLI diagnostics, and reports
+  failure text to the requesting browser only. Codex resumes use
+  `--skip-git-repo-check` plus `CODEX_RESUME_MODEL` (default `gpt-5.5`).
+- Codex round trip is proven in rollout
+  `019f667b-45b5-71f0-8dd7-af6617031f46`. Installed CLI `0.135.0` failed with
+  HTTP 400 when inheriting `gpt-5.6-sol` because that model requires a newer
+  CLI. Retrying the same rollout with `-m gpt-5.5` appended a new user turn and
+  assistant `pong` to the same JSONL; `codex exec` exited 0.
+- Restarted port 4180 from the merged tree with real Herdr and the requested
+  Gemma/Ollama settings. A live WebSocket opened and returned 81 chats. The
+  reconnect banner was absent on initial load and after selecting both Claude
+  and Cursor conversations.
+- Final Chrome proof is `/tmp/integrator-final.png` at 1440x900 after a 9-second
+  virtual-time budget. Inspection shows the cleaned human-chat sidebar with
+  activity labels, `Automations · 50` collapsed, a selected Claude transcript,
+  readable assistant spend-limit text, and the writable composer. A separate
+  live DOM check proved the selected Cursor composer is disabled, has the
+  read-only hint, and contains no send button.
+- Final verification: both TypeScript checks pass; Vitest passes 73 tests in 13
+  files with 1 opt-in test skipped; `git diff --check` passes.

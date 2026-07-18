@@ -217,3 +217,40 @@ export function isCancelWord(utterance: string): boolean {
 export function isSendWord(utterance: string): boolean {
   return normalize(utterance) === "send";
 }
+
+/** Extracts the message portion after the resolved chat name. */
+export function messageTextForTarget(
+  utterance: string,
+  target: HistoryRow,
+): string | null {
+  const normalized = normalize(utterance);
+  const aliases = [
+    normalize(target.spokenName),
+    normalize(target.title),
+    normalize(target.id.replace(/^[a-z]+:/, "")),
+  ]
+    .flatMap((alias) => [alias, alias.replace(/[-_]+/g, " ")])
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length);
+
+  for (const alias of aliases) {
+    const direct = normalized.match(
+      new RegExp(
+        `^(?:tell|send|dictate)\\s+(?:to\\s+)?${escapeRegExp(alias)}\\s+(.+)$`,
+      ),
+    );
+    if (direct?.[1]) return direct[1].trim();
+
+    const trailing = normalized.match(
+      new RegExp(
+        `^(?:tell|send|dictate)\\s+(.+?)\\s+to\\s+${escapeRegExp(alias)}$`,
+      ),
+    );
+    if (trailing?.[1]) return trailing[1].trim();
+  }
+  return null;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

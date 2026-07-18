@@ -947,6 +947,11 @@ kbd {
 .composer-context {
   font-size: var(--text-11);
   color: var(--text-faint);
+  min-width: 0;
+  overflow: hidden;
+  padding-right: var(--space-8);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .composer-actions {

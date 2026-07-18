@@ -39,6 +39,7 @@ type ServerBroadcast =
   | {
       type: "chat.send.result";
       chatId: string;
+      source: "claude" | "codex";
       ok: boolean;
       error?: string;
     };
@@ -150,9 +151,10 @@ async function handleClientMessage(
         { source: message.source, id: message.chatId },
         message.text,
       );
-      broadcast({
+      send(socket, {
         type: "chat.send.result",
         chatId: message.chatId,
+        source: message.source,
         ...result,
       });
       return;

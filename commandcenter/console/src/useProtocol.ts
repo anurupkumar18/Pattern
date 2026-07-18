@@ -24,6 +24,12 @@ export type ClientCommand = {
   text: string;
 };
 
+export interface ChatSendState {
+  chatId: string | null;
+  status: "idle" | "sending" | "sent" | "error";
+  error: string | null;
+}
+
 type ServerEvent =
   | { type: "fleet.snapshot"; snapshot: FleetSnapshot }
   | { type: "command.routed"; command: FleetCommand; latencyMs: number }
@@ -32,6 +38,7 @@ type ServerEvent =
   | {
       type: "chat.send.result";
       chatId: string;
+      source: "claude" | "codex";
       ok: boolean;
       error?: string;
     }
@@ -73,6 +80,11 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
   const [outcomes, setOutcomes] = useState<CommandOutcome[]>([]);
   const [pending, setPending] = useState<CommandOutcome | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [chatSend, setChatSend] = useState<ChatSendState>({
+    chatId: null,
+    status: "idle",
+    error: null,
+  });
   const [transcript, setTranscript] = useState<ChatTranscriptState>({
     source: null,
     chatId: null,
@@ -100,6 +112,25 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
 
   const confirm = useCallback(
     (outcomeId: string) => send({ type: "confirm", outcomeId }),
+    [send],
+  );
+
+  const sendChat = useCallback(
+    (source: "claude" | "codex", chatId: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return false;
+      if (socketRef.current?.readyState !== WebSocket.OPEN) {
+        setChatSend({
+          chatId,
+          status: "error",
+          error: "Connection unavailable. Try again when Dictator reconnects.",
+        });
+        return false;
+      }
+      setChatSend({ chatId, status: "sending", error: null });
+      send({ type: "chat.send", source, chatId, text: trimmed });
+      return true;
+    },
     [send],
   );
 
@@ -200,6 +231,15 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
             status: "error",
             error: event.message,
           }));
+        } else if (event.type === "chat.send.result") {
+          setChatSend({
+            chatId: event.chatId,
+            status: event.ok ? "sent" : "error",
+            error: event.ok ? null : event.error ?? "The message could not be sent.",
+          });
+          if (event.ok) {
+            window.setTimeout(refreshChatMessages, 120);
+          }
         } else if (event.type === "command.routed") {
           handlersRef.current.onRouted?.({
             command: event.command,
@@ -247,8 +287,10 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
     outcomes,
     pending,
     transcript,
+    chatSend,
     serverError,
     submitUtterance,
+    sendChat,
     confirm,
     selectChatMessages,
     refreshChatMessages,

@@ -18,6 +18,7 @@ export interface SendResult {
 export interface SendAdapterOptions {
   claudeRoot?: string;
   codexRoot?: string;
+  codexModel?: string;
   busyMs?: number;
   now?: () => number;
   spawnProcess?: (
@@ -26,7 +27,7 @@ export interface SendAdapterOptions {
     options: {
       cwd: string;
       detached: boolean;
-      stdio: ["pipe", "ignore", "ignore"];
+      stdio: ["ignore", "pipe", "pipe"];
     },
   ) => ChildProcess;
 }
@@ -36,12 +37,13 @@ const UUID_RE =
 const DEFAULT_BUSY_MS = 10_000;
 
 /**
- * Resumes dormant Claude Code and Codex CLI sessions in place. The child is
- * intentionally detached: existing JSONL pollers reconcile the appended turn.
+ * Resumes dormant Claude Code and Codex CLI sessions in place. Existing JSONL
+ * pollers reconcile the appended turn while this adapter waits for CLI truth.
  */
 export class SendAdapter {
   private readonly claudeRoot: string;
   private readonly codexRoot: string;
+  private readonly codexModel: string;
   private readonly busyMs: number;
   private readonly now: () => number;
   private readonly spawnProcess: NonNullable<SendAdapterOptions["spawnProcess"]>;
@@ -51,6 +53,8 @@ export class SendAdapter {
     this.claudeRoot =
       options.claudeRoot ?? join(homedir(), ".claude/projects");
     this.codexRoot = options.codexRoot ?? join(homedir(), ".codex/sessions");
+    this.codexModel =
+      options.codexModel ?? process.env.CODEX_RESUME_MODEL ?? "gpt-5.5";
     this.busyMs = options.busyMs ?? DEFAULT_BUSY_MS;
     this.now = options.now ?? Date.now;
     this.spawnProcess = options.spawnProcess ?? spawn;
@@ -117,7 +121,16 @@ export class SendAdapter {
             }
           : {
               bin: "codex",
-              args: ["exec", "resume", "--json", sessionId, "-"],
+              args: [
+                "exec",
+                "resume",
+                "--json",
+                "--skip-git-repo-check",
+                "-m",
+                this.codexModel,
+                sessionId,
+                prompt,
+              ],
             };
 
       this.inFlight.add(key);
@@ -126,28 +139,49 @@ export class SendAdapter {
         child = this.spawnProcess(command.bin, command.args, {
           cwd,
           detached: true,
-          stdio: ["pipe", "ignore", "ignore"],
+          stdio: ["ignore", "pipe", "pipe"],
         });
       } catch (error) {
         this.inFlight.delete(key);
         return { ok: false, error: `Could not start ${command.bin}: ${errorMessage(error)}` };
       }
 
-      child.once("close", () => this.inFlight.delete(key));
-      const started = new Promise<void>((resolve, reject) => {
-        child.once("spawn", resolve);
-        child.once("error", reject);
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      child.stdout?.on("data", (chunk: Buffer | string) => {
+        if (stdout.join("").length < 16_384) stdout.push(String(chunk));
       });
-      child.stdin?.end(prompt);
-
-      try {
-        await started;
-      } catch (error) {
-        this.inFlight.delete(key);
-        return { ok: false, error: `Could not start ${command.bin}: ${errorMessage(error)}` };
-      }
-      child.unref();
-      return { ok: true };
+      child.stderr?.on("data", (chunk: Buffer | string) => {
+        if (stderr.join("").length < 16_384) stderr.push(String(chunk));
+      });
+      const completed = await new Promise<SendResult>((resolveResult) => {
+        let settled = false;
+        child.once("error", (error) => {
+          if (settled) return;
+          settled = true;
+          resolveResult({
+            ok: false,
+            error: `Could not start ${command.bin}: ${errorMessage(error)}`,
+          });
+        });
+        child.once("close", (code) => {
+          if (settled) return;
+          settled = true;
+          resolveResult(
+            code === 0
+              ? { ok: true }
+              : {
+                  ok: false,
+                  error: cliError(
+                    command.bin,
+                    [...stderr, ...stdout].join(""),
+                  ),
+                },
+          );
+        });
+      });
+      this.inFlight.delete(key);
+      return completed;
     } catch (error) {
       this.inFlight.delete(key);
       return { ok: false, error: errorMessage(error) };
@@ -247,4 +281,42 @@ function nonEmptyString(value: unknown): string | null {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function cliError(command: string, output: string): string {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  for (const line of lines.reverse()) {
+    try {
+      const event = JSON.parse(line) as unknown;
+      if (!isRecord(event)) continue;
+      const message =
+        nonEmptyString(event.message) ??
+        (isRecord(event.error) ? nonEmptyString(event.error.message) : null);
+      if (message) return unwrapJsonMessage(message).slice(0, 500);
+    } catch {
+      if (/error|limit|failed|upgrade|unavailable/i.test(line)) {
+        return line.slice(0, 500);
+      }
+    }
+  }
+  return `${command} exited before producing a reply.`;
+}
+
+function unwrapJsonMessage(message: string): string {
+  try {
+    const parsed = JSON.parse(message) as unknown;
+    if (
+      isRecord(parsed) &&
+      isRecord(parsed.error) &&
+      nonEmptyString(parsed.error.message)
+    ) {
+      return nonEmptyString(parsed.error.message) ?? message;
+    }
+  } catch {
+    // Plain CLI errors are already user-readable.
+  }
+  return message;
 }
