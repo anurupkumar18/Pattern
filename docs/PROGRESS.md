@@ -39,3 +39,26 @@ blockers for `cursor/voice-command-center`.
   skipped; `npm run build` passes.
 - Open questions: verify the configured socket path and installed agent kinds
   on the demo machine.
+
+## 2026-07-18 - Phase 3: Router
+
+- Added the async `Router` contract and deterministic grammar baseline. It
+  passes all 23 non-fuzzy fixtures, including all 6 ambient-noise cases.
+- Added `GemmaRouter` with compressed fleet context, a closed-verb prompt,
+  strict FleetCommand parsing, schema validation, one correction retry, and
+  fail-closed behavior.
+- Added executable-command and local-HTTP transports so the router is not tied
+  to one Cactus host shape.
+- Real code: prompt, parser, retry policy, transports, and deterministic
+  fallback. Mock-backed: Gemma generation tests.
+- Cactus delta: install the Cactus CLI/SDK and Gemma 4 weights (the documented
+  macOS quickstart is `brew install cactus-compute/cactus/cactus` followed by
+  `cactus run google/gemma-4-E2B-it`), then add a thin non-interactive wrapper
+  that reads the prompt from stdin and prints only the model text, or expose
+  that same completion through the documented local HTTP contract. Configure
+  the wrapper in `ExecGemmaTransport` or the endpoint in
+  `HttpGemmaTransport`. No local Cactus runtime was configured tonight.
+- Proof: `npm test` passes 14 tests in 4 files with 1 real-Herdr smoke test
+  skipped; `npm run build` passes.
+- Open questions: choose E2B versus E4B Gemma 4 weights based on demo-machine
+  latency, then tune temperature/max tokens for JSON reliability.

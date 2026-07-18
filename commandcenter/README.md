@@ -41,4 +41,18 @@ HERDR_SOCKET_PATH=/path/to/herdr.sock \
 npm test -- herdr.integration.test.ts
 ```
 
+## Routing
+
+`DeterministicRouter` is the no-model baseline. It handles every clear,
+destructive, and noise fixture and includes bounded target resolution.
+`GemmaRouter` builds a compressed fleet prompt, accepts strict schema-validated
+JSON, retries malformed output once, and then fails closed.
+
+Two local Gemma transport seams are available:
+
+- `ExecGemmaTransport`: runs a configured command, writes the prompt to stdin,
+  and expects one FleetCommand JSON object on stdout.
+- `HttpGemmaTransport`: POSTs `{ "prompt": "..." }` to a local endpoint and
+  accepts `{ "output": "..." }`, `{ "text": "..." }`, or plain text.
+
 The full runtime and demo commands are added as each build phase lands.
