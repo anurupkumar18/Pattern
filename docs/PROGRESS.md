@@ -215,3 +215,44 @@ blockers for `cursor/voice-command-center`.
 - Final artifacts: `commandcenter/eval-report.json` contains each utterance's
   expected/actual command and per-route latency; `commandcenter/eval-report.md`
   contains the aggregate readout. Generated `2026-07-18T10:41:24.656Z`.
+
+## 2026-07-18 (routing latency pass) - HTTP retained, model generation dominates
+
+- Starting retained exec result:
+  `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","gemma4","--nowordwrap","--think=false"]'`.
+  Accuracy 27/28; clear 14/15, fuzzy 5/5, noise 6/6, destructive
+  2/2; noise false-fire 0%; route p50 10.46s, p95 13.19s.
+- Added an Ollama-native HTTP transport for `/api/generate`, selected by
+  `GEMMA_OLLAMA_MODEL`. It sends `stream:false`, keeps the model loaded for
+  30 minutes, validates the Ollama `response` field, and has mocked-fetch
+  unit coverage. The eval runner makes one untimed warm-up request before
+  collecting latency. Server and eval retain the generic exec and HTTP modes.
+- One-change-at-a-time measurements:
+  - Warmed Ollama HTTP alone (`gemma4`, default generation options): 25/28;
+    clear 13/15, fuzzy 4/5, noise 6/6, destructive 2/2; false-fire 0%;
+    p50 10.62s, p95 14.53s. Process spawning was not the bottleneck.
+  - Add temperature 0, `num_predict:200`, and `think:false`: 27/28; clear
+    14/15, fuzzy 5/5, noise 6/6, destructive 2/2; false-fire 0%; p50 10.25s,
+    p95 14.06s. No truncation occurred.
+  - Compress the prompt and fleet field names: 12/28; clear 6/15, fuzzy 4/5,
+    noise 2/6, destructive 0/2; false-fire 0%; p50 10.61s, p95 14.79s.
+    Reverted. Although prompt tokens fell from roughly 418 to 305, validation
+    retries erased the input-time savings.
+  - Pulled and tested `gemma4:e2b-it-qat` (4.3 GB): 23/28; clear 12/15,
+    fuzzy 3/5, noise 6/6, destructive 2/2; false-fire 0%; p50 4.82s,
+    p95 6.45s. Faster but below the 27/28 accuracy floor, so not retained.
+- A later full-model confirmation immediately after the smaller-model and
+  repeated sustained runs held 27/28 but thermally degraded to p50 19.23s,
+  p95 28.65s. `ollama ps` showed only `gemma4` loaded, so this is recorded as
+  runtime variance, not an improvement claim. A clean retained-config rerun
+  after the runtime recovered produced 27/28, 0% false-fire, p50 10.03s, and
+  p95 12.99s. That is the final and best qualifying result.
+- Plateau stop: prompt compression and the smaller model were two consecutive
+  non-qualifying attempts. The under-2-second target was not achievable with
+  the qualifying `gemma4` model on this machine. Ollama logs show about
+  4-5 seconds each for prompt evaluation and 39-46 output tokens near the
+  best run, so persistent HTTP removes little of the dominant work.
+- Recommended invocation:
+  `GEMMA_OLLAMA_MODEL=gemma4 GEMMA_OLLAMA_TEMPERATURE=0 GEMMA_OLLAMA_NUM_PREDICT=200 GEMMA_OLLAMA_THINK=false npm run eval`
+  (or `npm run dev`). The retained final measurement is 27/28, 0% noise
+  false-fire, p50 10.03s, p95 12.99s.

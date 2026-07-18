@@ -110,6 +110,30 @@ HERDR_SOCKET_PATH=/path/to/herdr.sock \
 npm test -- herdr.integration.test.ts
 ```
 
+## Recommended real Gemma via Ollama HTTP
+
+Start `ollama serve`, ensure `gemma4` is installed, then use the persistent
+HTTP transport. The eval runner makes an untimed warm-up request before
+collecting route latency:
+
+```bash
+GEMMA_OLLAMA_MODEL=gemma4 \
+GEMMA_OLLAMA_TEMPERATURE=0 \
+GEMMA_OLLAMA_NUM_PREDICT=200 \
+GEMMA_OLLAMA_THINK=false \
+npm run eval
+```
+
+Use the same environment for the live console:
+
+```bash
+GEMMA_OLLAMA_MODEL=gemma4 \
+GEMMA_OLLAMA_TEMPERATURE=0 \
+GEMMA_OLLAMA_NUM_PREDICT=200 \
+GEMMA_OLLAMA_THINK=false \
+npm run dev
+```
+
 ## Gemma on Cactus
 
 Install and warm the documented model:

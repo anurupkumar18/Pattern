@@ -13,10 +13,16 @@ npm run dev
 # Real Herdr fleet:
 HERDR_MODE=real HERDR_SOCKET_PATH=~/.config/herdr/herdr.sock npm run dev
 
-# Real Gemma routing (any local runtime that reads a prompt on stdin and
-# prints the completion, e.g. ollama):
-GEMMA_COMMAND=ollama GEMMA_ARGS='["run","<model>"]' npm run dev
-# or an HTTP inference server that accepts {"prompt"} and returns {"output"}:
+# Recommended Ollama HTTP path. The model stays loaded for 30 minutes:
+GEMMA_OLLAMA_MODEL=gemma4 \
+GEMMA_OLLAMA_TEMPERATURE=0 \
+GEMMA_OLLAMA_NUM_PREDICT=200 \
+GEMMA_OLLAMA_THINK=false \
+npm run dev
+
+# Generic executable transport for another stdin/stdout runtime:
+GEMMA_COMMAND=/path/to/model-wrapper GEMMA_ARGS='["--model","<model>"]' npm run dev
+# Generic HTTP inference server accepting {"prompt"} and returning {"output"}:
 GEMMA_HTTP_ENDPOINT=http://127.0.0.1:8080/complete npm run dev
 ```
 
