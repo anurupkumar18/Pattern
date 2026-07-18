@@ -30,6 +30,7 @@ captures/
 evidence/tmp/
 evals/reports/*.json
 evals/reports/*.html
+!evals/reports/latest.json
 
 # OS
 .DS_Store

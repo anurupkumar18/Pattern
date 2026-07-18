@@ -8,6 +8,8 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
+Phase 7 — Evaluation and demo hardening is implemented. `scripts/run_evals.sh` now runs the complete unit/contract suites, the Swift↔Python exchange, and a 20-case cross-runtime correctness evaluation, then regenerates [latest.md](evals/reports/latest.md) and [latest.json](evals/reports/latest.json). The baseline passes 20/20 with zero false successes, zero duplicate side effects, 2/2 recovery probes, and 7/7 provenance cases. These are deterministic offline correctness results; live microphone/TCC/native-app latency trials remain explicitly unmeasured and are not presented as automated evidence.
+
 Phase 6 — Recovery and hardening is implemented. During every active state, a CGEvent-level global Escape panic stop cancels the sidecar and queued work even when the companion is not focused (with the panel shortcut as a fallback). A deterministic recovery policy classifies permissions, stale targets, closed apps, no-op/timeouts, ambiguous state, and uncertain writes; reversible reminder/briefing actions receive at most one retry, while consequential, destructive, or uncertain actions never retry. Task-marker lookups make those retries idempotent, and the expandable task timeline exposes action channels, durations, recoveries, verification, and final outcome.
 
 Phase 5 — Research-to-Follow-Up is implemented. VoiceOps extracts at most eight visible public-web company links, rejects local/private targets, researches with at most four concurrent bounded reads, ranks exactly three recommendations, and previews three next-week dates. Nothing is written until the user selects **Approve Schedule**. It then creates one escaped, cited Notes comparison and exactly three EventKit reminders, refetches both stores, and requires all five predicates before reporting success. A denied approval produces no writes; an uncertain partial write is never retried automatically.
@@ -42,6 +44,7 @@ scripts/run_sidecar.sh        # start the Python sidecar (NDJSON on stdio)
 cd agent && uv run pytest     # Python tests
 cd macos && swift test        # Swift tests
 cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
+scripts/run_evals.sh          # all checks + 20-case JSON/Markdown report
 ```
 
 ### Run the app

@@ -40,3 +40,4 @@ jobs:
       - run: uv sync --project agent
       - run: swift build --package-path macos
       - run: swift run -q --package-path macos voiceops-mock-client
+      - run: cd agent && uv run voiceops-eval --repo-root .. --output-dir ../evals/reports --run-id ci-fixture

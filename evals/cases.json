@@ -1,0 +1,22 @@
+[
+  {"id":"reminder_clear_plan","workflow":"screen-to-reminder","evaluator":"reminder_clear_plan","kind":"python","requires_provenance":true},
+  {"id":"reminder_ambiguous_year_fails_closed","workflow":"screen-to-reminder","evaluator":"reminder_ambiguous_year","kind":"python","requires_provenance":false},
+  {"id":"grounding_deictic_provenance","workflow":"grounding","evaluator":"grounding_deictic","kind":"python","requires_provenance":true},
+  {"id":"reminder_waits_for_verifier","workflow":"screen-to-reminder","evaluator":"reminder_waits","kind":"python","requires_provenance":false},
+  {"id":"reminder_all_predicates_complete","workflow":"screen-to-reminder","evaluator":"reminder_all_pass","kind":"python","requires_provenance":true},
+  {"id":"reminder_failed_predicate_is_partial","workflow":"screen-to-reminder","evaluator":"reminder_failed_predicate","kind":"python","requires_provenance":false},
+  {"id":"failed_action_never_succeeds","workflow":"safety","evaluator":"action_failure","kind":"python","requires_provenance":false},
+  {"id":"meeting_real_plan","workflow":"meeting-briefing","evaluator":"meeting_plan","kind":"python","requires_provenance":true},
+  {"id":"research_requires_approval","workflow":"research-follow-up","evaluator":"research_approval","kind":"python","requires_provenance":true},
+  {"id":"research_candidates_bounded_to_eight","workflow":"research-follow-up","evaluator":"research_bounded","kind":"python","requires_provenance":true},
+  {"id":"research_unavailable_source_labeled","workflow":"research-follow-up","evaluator":"research_unavailable","kind":"python","requires_provenance":true},
+  {"id":"research_private_target_blocked","workflow":"safety","evaluator":"research_private_blocked","kind":"python","requires_provenance":false},
+  {"id":"invalid_ipc_fails_closed","workflow":"protocol","evaluator":"invalid_ipc","kind":"python","requires_provenance":false},
+  {"id":"grounding_provider_failure_typed","workflow":"grounding","evaluator":"grounding_failure","kind":"python","requires_provenance":false},
+  {"id":"orphan_verification_rejected","workflow":"protocol","evaluator":"orphan_verification","kind":"python","requires_provenance":false},
+  {"id":"native_bounded_recovery","workflow":"recovery","evaluator":"native_bounded_recovery","kind":"native","requires_provenance":false},
+  {"id":"native_uncertain_never_retries","workflow":"safety","evaluator":"native_uncertain_never_retries","kind":"native","requires_provenance":false},
+  {"id":"native_completed_duplicate_suppressed","workflow":"safety","evaluator":"native_completed_duplicate_suppressed","kind":"native","requires_provenance":false},
+  {"id":"native_panic_stop_policy","workflow":"safety","evaluator":"native_panic_stop_policy","kind":"native","requires_provenance":false},
+  {"id":"native_trace_evidence","workflow":"evidence","evaluator":"native_trace_evidence","kind":"native","requires_provenance":false}
+]

@@ -130,18 +130,52 @@ Required:
 
 ## 6. Evaluation Runner Output
 
+Run the complete deterministic gate from the repository root:
+
+```sh
+scripts/run_evals.sh
+```
+
+The command runs Python and Swift tests, the live-process Swift↔Python mock
+exchange, and 20 catalogued evaluation cases from `evals/cases.json`. Fifteen
+cases exercise the real Python grounding/planning/orchestration code; five run
+the compiled Swift recovery, duplicate, panic-stop, and trace code through
+`voiceops-eval-probe`. It writes:
+
+- `evals/reports/latest.json` — machine-readable metrics and per-case evidence.
+- `evals/reports/latest.md` — judge-readable summary, gates, and limitations.
+
+The committed `fixture-baseline-v1` report is deterministic. It is a correctness
+suite, not a live performance benchmark: microphone, macOS permission prompts,
+native EventKit/Notes/Reminders writes, CGEvent delivery, network behavior, and
+end-to-end latency still require the permissioned trial matrix below.
+
 ```json
 {
-  "run_id": "2026-07-17T22:00:00Z",
-  "cases": 28,
-  "passed": 25,
-  "failed": 3,
+  "run_id": "fixture-baseline-v1",
+  "scope": "deterministic_offline_cross_runtime_correctness",
+  "cases": 20,
+  "passed": 20,
+  "failed": 0,
   "false_successes": 0,
-  "median_latency_ms": 28410,
-  "recovery_attempts": 6,
-  "recovery_successes": 5,
+  "duplicate_side_effects": 0,
+  "median_task_latency_ms": null,
+  "recovery_attempts": 2,
+  "recovery_successes": 2,
   "results": []
 }
 ```
 
-Generate both JSON and a human-readable HTML/Markdown report.
+### Permissioned live trial matrix
+
+Before a demo or release candidate, run at least 20 trials on a dedicated macOS
+account after `scripts/reset_demo_state.sh && scripts/seed_demo_state.sh`:
+
+- 8 Meeting Briefing trials, including one Calendar permission denial.
+- 6 Screen-to-Reminder trials, including one stopped task and one stale input.
+- 6 Research-to-Follow-Up trials, including approval denial and one unavailable source.
+
+Record task latency, stop latency, recovery result, artifact identifiers, and
+all predicate outcomes. Do not merge those measurements into the deterministic
+baseline or claim the PRD latency/reliability targets until this live matrix is
+actually complete.

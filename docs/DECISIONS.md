@@ -206,3 +206,27 @@ side effects. A hard lower-level interrupt, deterministic budgets, semantic
 task markers, and a user-visible trace keep recovery bounded, auditable, and
 independent of model judgment. The in-memory trace provides immediate evidence
 without retaining raw screen or speech content.
+
+## ADR-018: Cross-runtime deterministic evaluation with honest live gaps
+
+**Date:** 2026-07-18 · **Phase:** 7
+
+**Decision:** The final automated gate contains 20 catalogued correctness cases.
+Fifteen execute the Python grounding, planning, research safety, IPC, action,
+and verification orchestration directly. Five execute compiled Swift core code
+through `voiceops-eval-probe` for bounded recovery, uncertain-write refusal,
+completed-action deduplication, panic-stop policy, and task traces. The runner
+computes pass rate, false successes, duplicate side effects, recovery success,
+and provenance coverage, fails the command when thresholds are missed, and
+writes stable JSON and Markdown reports. CI runs the same evaluator after the
+cross-runtime mock exchange.
+
+Live microphone/TCC prompts, native application writes, event-tap delivery,
+network reliability, and latency are explicitly `null`/unmeasured in the
+automated report. They have a separate 20-trial permissioned matrix and cannot
+be inferred from fixture success.
+
+**Reason:** A deterministic suite catches regressions and makes the zero-false-
+success invariant auditable, but fabricated live metrics would weaken the
+evidence. Separating reproducible correctness from permissioned Mac trials gives
+judges and engineers a useful report with an honest boundary.
