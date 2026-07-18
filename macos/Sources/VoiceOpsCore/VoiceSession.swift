@@ -109,7 +109,7 @@ public final class VoiceSessionController {
             timeoutTask = Task { [weak self, finalizationTimeout] in
                 try? await Task.sleep(for: finalizationTimeout)
                 guard !Task.isCancelled else { return }
-                self?.finalizationTimedOut()
+                await self?.finalizationTimedOut()
             }
         }
         finishSession()
@@ -127,7 +127,7 @@ public final class VoiceSessionController {
     }
 
     private func handle(_ update: TranscriptUpdate) {
-        guard !isCancelled else { return }
+        guard isActive, !isCancelled else { return }
         if update.isFinal {
             if let pendingEnd {
                 self.pendingEnd = nil
@@ -142,9 +142,14 @@ public final class VoiceSessionController {
         }
     }
 
-    private func finalizationTimedOut() {
+    private func finalizationTimedOut() async {
         guard let pendingEnd else { return }
         self.pendingEnd = nil
+        // Close the provider before releasing the waiting caller. Without this
+        // teardown a silent Realtime socket can outlive the completed request.
+        isActive = false
+        consumeTask?.cancel()
+        await transcriber.cancel()
         if lastPartial.isEmpty {
             pendingEnd.resume(throwing: VoiceSessionError.noSpeech)
         } else {

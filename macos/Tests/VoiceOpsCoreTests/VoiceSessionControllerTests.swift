@@ -125,6 +125,8 @@ final class VoiceSessionControllerTests: XCTestCase {
         let request = try await controller.end()  // no final ever emitted
         XCTAssertEqual(request.transcript, "remind me tomorrow")
         XCTAssertEqual(request.confidence, 0)
+        let cancelCalled = await fake.cancelCalled
+        XCTAssertTrue(cancelCalled, "timeout must tear down the silent provider")
     }
 
     func testEndUsesLastPartialWhenProviderErrorsDuringFinalization() async throws {
@@ -180,6 +182,8 @@ final class VoiceSessionControllerTests: XCTestCase {
         } catch {
             XCTFail("expected .noSpeech, got \(error)")
         }
+        let cancelCalled = await fake.cancelCalled
+        XCTAssertTrue(cancelCalled, "no-speech timeout must tear down the provider")
     }
 
     func testCaptureErrorWhileListeningFiresOnError() async throws {
