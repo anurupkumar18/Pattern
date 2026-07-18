@@ -69,8 +69,8 @@ class TestApprovalBinding:
         task = version_one()
         data = task.model_dump(mode="python")
         for action in data["actions"].values():
-            if action.requires_confirmation:
-                action.status = "cancelled"
+            if action["requires_confirmation"]:
+                action["status"] = "cancelled"
         from voiceops_agent.schemas import VersionedTaskSpec
 
         neutered = VersionedTaskSpec.model_validate(data)
