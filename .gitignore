@@ -1,0 +1,31 @@
+# Secrets — never commit credentials of any kind
+.env
+.env.*
+*.pem
+*.key
+**/apikeys*
+**/credentials*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Swift / Xcode
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+
+# Ephemeral task evidence — task-scoped captures are never committed
+captures/
+evidence/tmp/
+evals/reports/*.json
+evals/reports/*.html
+
+# OS
+.DS_Store
