@@ -93,3 +93,18 @@ GEMMA_COMMAND=/path/to/cactus-wrapper \
 GEMMA_ARGS='["--model","google/gemma-4-E2B-it"]' \
 npm run dev
 ```
+
+## Evaluation
+
+```bash
+npm run eval
+```
+
+This writes `eval-report.json` and `eval-report.md` with accuracy by category,
+noise false-fire rate, end-to-end verifier success, and stage latency. Without
+a configured Gemma transport, the Gemma lane uses an explicitly labeled
+fixture-oracle mock to test its prompt/parser seam. It is not model-quality
+evidence. Set `GEMMA_HTTP_ENDPOINT` or `GEMMA_COMMAND` to produce real local
+model evidence.
+
+See `DEMO.md` for the exact four-minute walkthrough.

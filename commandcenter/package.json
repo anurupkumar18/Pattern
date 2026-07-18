@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p console/tsconfig.json --noEmit && vite build --config console/vite.config.ts",
     "dev": "tsx src/server.ts",
+    "eval": "tsx scripts/run-eval.ts",
     "schema": "tsx scripts/export-schemas.ts",
     "test": "vitest run",
     "test:watch": "vitest"

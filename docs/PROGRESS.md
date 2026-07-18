@@ -104,3 +104,24 @@ blockers for `cursor/voice-command-center`.
   skipped; TypeScript checks and the production Vite build pass.
 - Open questions: Web Speech API availability varies by browser; typed input
   remains the deterministic demo fallback.
+
+## 2026-07-18 - Phase 6: Eval runner and wrap
+
+- Added `npm run eval`, per-case JSON evidence, a concise markdown readout, and
+  category, noise false-fire, verifier-success, and stage-latency metrics.
+- Added the exact mock, real-Herdr, and Gemma-on-Cactus reviewer/demo commands
+  plus the four-minute script in `commandcenter/DEMO.md`.
+- Eval result: deterministic 28/28 overall, clear 15/15, fuzzy 5/5, noise 6/6,
+  destructive 2/2, 0% noise false-fire, and 28/28 end-to-end verified.
+- Gemma seam result: 28/28 through the fixture-oracle transport, 0% noise
+  false-fire, and 28/28 end-to-end verified. This proves prompt/parser/control
+  plumbing only. It is explicitly not a claim about Gemma model quality.
+- Real versus stubbed: command contracts, deterministic router, command loop,
+  verifier, console, socket transport, and adapter method mapping are real.
+  Herdr runtime calls are mock-backed in automated tests, and Gemma generation
+  is mock-backed until local Cactus is configured.
+- Proof: `npm test` passes 20 tests in 6 files with 1 real-Herdr smoke test
+  skipped; `npm run build` and `npm run eval` pass.
+- Open blockers: no local Herdr socket or Cactus/Gemma runtime was configured.
+  Both seams and opt-in test commands are documented; no implementation phase
+  is blocked.
