@@ -8,7 +8,7 @@ import type { EntityKind, ProjectState } from "./types";
 import { useSpeechRecognition } from "./useSpeechRecognition";
 import "./styles.css";
 
-const STORAGE_KEY = "pattern.project-state.v1";
+const STORAGE_KEY = "voice-state.project-state.v1";
 
 const entityLabels: Record<EntityKind, string> = {
   goal: "Goals",
@@ -98,7 +98,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `pattern-state-${state.sessionId}.json`;
+    anchor.download = `voice-state-${state.sessionId}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -122,7 +122,7 @@ export default function App() {
   return (
     <main className="shell">
       <header className="masthead">
-        <div className="wordmark">Pattern</div>
+        <div className="wordmark">Voice-to-State</div>
         <div className="tagline">Voice becomes durable state</div>
         <div className="session-meta">
           <span>{state.utterances.length} fragments preserved</span>

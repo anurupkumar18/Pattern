@@ -1,16 +1,16 @@
-# Pattern
+# Voice-to-State Prototype
 
 Voice becomes durable state before an agent acts.
 
-Pattern is a hackathon prototype for developers who think out loud. It streams
+This is a hackathon prototype for developers who think out loud. It streams
 speech into an append-only utterance ledger, classifies each final fragment as
 a state operation, maintains a compact project state, and queues executable
 commands with approval and full context.
 
 The core difference from screen-aware assistants such as HeyClicky is the
-input contract: Pattern does not treat speech as a disposable prompt. It keeps
-the original words, the structured interpretation, every correction, and the
-provenance connecting them.
+input contract: the prototype does not treat speech as a disposable prompt. It
+keeps the original words, the structured interpretation, every correction, and
+the provenance connecting them.
 
 ## Run locally
 

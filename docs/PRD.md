@@ -1,4 +1,4 @@
-# Pattern: Voice-to-Action Developer Agent
+# Voice-to-State Developer Agent (Working Title)
 
 ## What this document is
 
@@ -9,14 +9,14 @@ build it in parallel without creating incompatible halves.
 ## One-line pitch
 
 Every agent makes you type perfect context and forgets what you meant between
-prompts. Pattern listens, preserves, understands, and acts without making you
-touch the keyboard.
+prompts. This system listens, preserves, understands, and acts without making
+you touch the keyboard.
 
 ## Product
 
-Pattern is a voice-native agent for developers. You talk to it the way people
+This is a voice-native agent for developers. You talk to it the way people
 actually talk: messy, stuttering, self-correcting, and jumping between topics.
-Pattern preserves every original fragment, resolves each fragment into a
+The system preserves every original fragment, resolves each fragment into a
 structured operation, and maintains a small live project state containing
 goals, tasks, decisions, open questions, and commands.
 
@@ -40,13 +40,14 @@ An organizer described five judging dimensions:
 4. How can people understand what is happening in the system?
 5. How easy is it to use?
 
-Pattern answers each directly:
+The prototype answers each directly:
 
 ### 1. Value
 
 Developers lose intent when they dump unstructured speech into agents, repeat
-context across prompts, and reconstruct decisions after interruptions. Pattern
-makes imperfect speech usable without throwing away the original thought.
+context across prompts, and reconstruct decisions after interruptions. The
+prototype makes imperfect speech usable without throwing away the original
+thought.
 
 ### 2. Data
 
@@ -94,15 +95,16 @@ interaction model.
 ## Relationship to HeyClicky
 
 HeyClicky already provides push-to-talk voice, screen context, visual pointing,
-and background agents. Pattern should not compete by recreating those features.
-It borrows the useful interaction moves and differentiates on durable intent:
+and background agents. This project should not compete by recreating those
+features. It borrows the useful interaction moves and differentiates on durable
+intent:
 
 - Clicky helps with what is currently on screen.
-- Pattern maintains what the user has meant throughout the work.
-- Pattern exposes how each fragment changed state.
-- Pattern keeps corrections and superseded ideas instead of replacing the
+- The system maintains what the user has meant throughout the work.
+- It exposes how each fragment changed state.
+- It keeps corrections and superseded ideas instead of replacing the
   source transcript with one polished prompt.
-- Pattern gives every downstream agent the same inspectable context contract.
+- It gives every downstream agent the same inspectable context contract.
 
 This is a valid direction within the voice-and-computer-use wave because its
 primary innovation is the memory and control layer, not another cursor overlay.
@@ -111,7 +113,7 @@ primary innovation is the memory and control layer, not another cursor overlay.
 
 Chase AI's useful warning is that a dashboard is only observability. The real
 product is a skill architecture that turns repeated work into reliable
-automations, with memory underneath it. Pattern follows that architecture:
+automations, with memory underneath it. This project follows that architecture:
 
 - the utterance ledger and project state are the memory layer
 - command classification suggests a named skill route
@@ -125,24 +127,24 @@ for that loop.
 
 ## Demo sequence
 
-The demo is built around one causal payoff: an action succeeds because Pattern
-remembered a correction from earlier.
+The demo is built around one causal payoff: an action succeeds because the
+system remembered a correction from earlier.
 
 1. **Ramble.** The user talks for about a minute with stutters, topic jumps, and
    a correction such as: "Actually, use the dark screenshots, not the light
    ones." Live words appear on the left. Goals, tasks, decisions, and questions
    update on the right.
-2. **Command.** The user asks Pattern to update a README and draft a hackathon
+2. **Command.** The user asks the agent to update a README and draft a hackathon
    post using the downloaded screenshots.
-3. **Memory payoff.** The executor chooses the dark screenshots. Pattern
+3. **Memory payoff.** The executor chooses the dark screenshots. The state view
    highlights the exact earlier utterance that caused the choice.
 4. **Interrupt.** The user says: "No, keep the installation section. That part
-   matters." Pattern updates state and the executor changes course between
+   matters." The system updates state and the executor changes course between
    steps.
 5. **Approve and verify.** The executor pauses before saving or publishing. The
    user approves by voice. The executor shows a before/after screenshot or file
    diff proving the result.
-6. **Export.** Pattern renders a clean project brief that can be handed to
+6. **Export.** The system renders a clean project brief that can be handed to
    another agent or teammate.
 
 The safe cut order is:
@@ -173,7 +175,7 @@ against fixtures.
 
 ## State contract
 
-Pattern uses two simultaneous representations:
+The system uses two simultaneous representations:
 
 ### Lossless source ledger
 
