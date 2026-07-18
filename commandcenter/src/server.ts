@@ -11,6 +11,7 @@ import { HerdrAdapter } from "./control/herdr-adapter.js";
 import { UnixSocketHerdrTransport } from "./control/herdr-transport.js";
 import { MockHerdr } from "./control/mock-herdr.js";
 import { CommandLoop, type CommandLoopEvent } from "./loop/command-loop.js";
+import { CascadeRouter } from "./router/cascade-router.js";
 import { DeterministicRouter } from "./router/deterministic-router.js";
 import { GemmaRouter } from "./router/gemma-router.js";
 import {
@@ -115,6 +116,18 @@ function createControl(): FleetControl {
 }
 
 function createRouter(): Router {
+  const deterministic = new DeterministicRouter();
+  const gemma = createGemmaRouter();
+  if (!gemma) return deterministic;
+  if (process.env.GEMMA_CASCADE === "off") return gemma;
+  return new CascadeRouter({
+    deterministic,
+    gemma,
+    timeoutMs: optionalNumber("GEMMA_CASCADE_TIMEOUT_MS") ?? 20_000,
+  });
+}
+
+function createGemmaRouter(): GemmaRouter | null {
   if (process.env.GEMMA_OLLAMA_MODEL) {
     return new GemmaRouter(
       new OllamaHttpGemmaTransport({
@@ -144,7 +157,7 @@ function createRouter(): Router {
       }),
     );
   }
-  return new DeterministicRouter();
+  return null;
 }
 
 function optionalNumber(name: string): number | undefined {

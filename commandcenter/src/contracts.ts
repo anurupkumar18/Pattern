@@ -26,6 +26,9 @@ const CommandMetadataSchema = z.object({
   confidence: z.number().min(0).max(1),
   rawUtterance: z.string(),
   resolvedTargetId: z.string().nullable(),
+  routedBy: z
+    .enum(["deterministic", "gemma", "cascade-fallback-failed"])
+    .optional(),
 });
 
 const commandVariant = <

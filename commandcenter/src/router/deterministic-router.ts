@@ -88,6 +88,7 @@ function command(
     confidence: 1,
     rawUtterance,
     resolvedTargetId,
+    routedBy: "deterministic",
   });
 }
 

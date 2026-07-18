@@ -83,6 +83,7 @@ export function parseGemmaCommand(
   return FleetCommandSchema.parse({
     ...(parsed as Record<string, unknown>),
     rawUtterance,
+    routedBy: "gemma",
   });
 }
 

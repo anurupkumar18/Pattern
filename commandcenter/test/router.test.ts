@@ -61,6 +61,9 @@ describe("DeterministicRouter", () => {
       ),
     );
     expect(commands.every(({ verb }) => verb === "noise")).toBe(true);
+    expect(commands.every(({ routedBy }) => routedBy === "deterministic")).toBe(
+      true,
+    );
   });
 });
 
@@ -116,6 +119,7 @@ describe("GemmaRouter", () => {
       verb: "focus",
       rawUtterance: "focus migration",
       resolvedTargetId: "w1:p1",
+      routedBy: "gemma",
     });
     expect(transport.prompts).toHaveLength(2);
     expect(transport.prompts[1]).toContain("failed strict validation");
@@ -137,6 +141,7 @@ describe("GemmaRouter", () => {
       confidence: 0.9,
       rawUtterance: "fleet status",
       resolvedTargetId: null,
+      routedBy: "gemma",
     });
   });
 

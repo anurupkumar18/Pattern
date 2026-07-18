@@ -111,6 +111,19 @@ describe("FleetCommand contracts", () => {
     expect(outcome.state).toBe("UNVERIFIED");
   });
 
+  it("accepts optional router provenance", () => {
+    const command = FleetCommandSchema.parse({
+      verb: "status",
+      payload: {},
+      confidence: 1,
+      rawUtterance: "status",
+      resolvedTargetId: null,
+      routedBy: "deterministic",
+    });
+
+    expect(command.routedBy).toBe("deterministic");
+  });
+
   it("validates the fixture matrix", async () => {
     const raw = await readFile(resolve("fixtures/utterances.json"), "utf8");
     const fixtures = FixtureSchema.parse(JSON.parse(raw));
