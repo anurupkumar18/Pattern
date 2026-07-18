@@ -2,6 +2,9 @@ import AVFoundation
 import Foundation
 import Speech
 import VoiceOpsCore
+import os
+
+private let log = Logger(subsystem: "com.voiceops.VoiceOps", category: "speech")
 
 /// System speech adapter (ARD §2: zero-setup STT for the MVP). Thin by design:
 /// session logic lives in VoiceOpsCore.VoiceSessionController and is tested
@@ -17,10 +20,20 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
 
     public init() {}
 
-    public enum SpeechError: Error {
+    public enum SpeechError: Error, LocalizedError {
         case speechRecognitionDenied
         case microphoneDenied
         case recognizerUnavailable
+        case noAudioInput
+
+        public var errorDescription: String? {
+            switch self {
+            case .speechRecognitionDenied: "Speech recognition permission was denied."
+            case .microphoneDenied: "Microphone permission was denied."
+            case .recognizerUnavailable: "Speech recognition is unavailable for the current locale."
+            case .noAudioInput: "No usable audio input device was found."
+            }
+        }
     }
 
     public static func requestPermissions() async -> Bool {
@@ -32,14 +45,23 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
     }
 
     public func start() async throws -> AsyncThrowingStream<TranscriptUpdate, Error> {
+        log.info("mic auth: \(AVCaptureDevice.authorizationStatus(for: .audio).rawValue), speech auth: \(SFSpeechRecognizer.authorizationStatus().rawValue)")
         guard let recognizer = SFSpeechRecognizer(locale: Locale.current), recognizer.isAvailable
-        else { throw SpeechError.recognizerUnavailable }
+        else {
+            log.error("recognizer unavailable for locale \(Locale.current.identifier)")
+            throw SpeechError.recognizerUnavailable
+        }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
 
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
+        log.info("input format: \(format.sampleRate) Hz, \(format.channelCount) ch")
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            log.error("no usable audio input (unsigned build or missing device?)")
+            throw SpeechError.noAudioInput
+        }
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             request.append(buffer)
         }
@@ -87,6 +109,7 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
             return
         }
         if let result {
+            log.debug("recognition update, final=\(result.isFinal)")
             let transcription = result.bestTranscription
             let segments = transcription.segments.map { segment in
                 TranscriptSegment(
@@ -112,6 +135,7 @@ public final class SpeechTranscriber: Transcriber, @unchecked Sendable {
                 return
             }
         } else if let error {
+            log.error("recognition failed: \(error.localizedDescription)")
             self.continuation = nil
             self.task = nil
             self.request = nil

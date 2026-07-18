@@ -103,6 +103,9 @@ final class AppCoordinator: ObservableObject {
                 locale: Locale.current.identifier(.bcp47))
             controller.onPartial = { [weak self] in self?.dispatch(.partialTranscript($0)) }
             controller.onAutoFinal = { [weak self] in self?.dispatch(.finalTranscript($0)) }
+            controller.onError = { [weak self] in
+                self?.dispatch(.taskFailed(reason: "Speech capture failed: \($0.localizedDescription)"))
+            }
             voiceSession = controller
             do {
                 try await controller.begin()

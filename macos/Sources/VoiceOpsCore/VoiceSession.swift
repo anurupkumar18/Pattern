@@ -43,6 +43,9 @@ public final class VoiceSessionController {
     /// Fired when the provider finalizes on its own (e.g. a long pause) while
     /// no end() call is waiting — the app uses this to leave listening state.
     public var onAutoFinal: ((String) -> Void)?
+    /// Fired when capture fails while no end() call is waiting — without this
+    /// the app would sit in listening state with a dead microphone.
+    public var onError: ((Error) -> Void)?
 
     private var consumeTask: Task<Void, Never>?
     private var storedFinal: TranscriptUpdate?
@@ -123,7 +126,12 @@ public final class VoiceSessionController {
     }
 
     private func streamEnded(error: Error?) {
-        guard let pendingEnd else { return }
+        guard let pendingEnd else {
+            if let error, !isCancelled, storedFinal == nil {
+                onError?(error)
+            }
+            return
+        }
         self.pendingEnd = nil
         if let final = storedFinal {
             pendingEnd.resume(returning: final)

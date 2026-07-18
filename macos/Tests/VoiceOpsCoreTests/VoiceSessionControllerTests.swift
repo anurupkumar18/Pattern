@@ -29,6 +29,11 @@ actor FakeTranscriber: Transcriber {
             continuation = nil
         }
     }
+
+    func failStream(_ error: Error) {
+        continuation?.finish(throwing: error)
+        continuation = nil
+    }
 }
 
 @MainActor
@@ -95,6 +100,22 @@ final class VoiceSessionControllerTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(autoFinals, ["auto ended"])
         _ = try await controller.end()
+    }
+
+    func testCaptureErrorWhileListeningFiresOnError() async throws {
+        // A recognizer failure with no end() waiting must reach the app —
+        // otherwise the UI sits in "Listening…" forever.
+        struct MicFailure: Error {}
+        let fake = FakeTranscriber()
+        let controller = VoiceSessionController(transcriber: fake, locale: "en-US")
+        var errors: [String] = []
+        controller.onError = { errors.append(String(describing: $0)) }
+        try await controller.begin()
+
+        await fake.failStream(MicFailure())
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(errors.count, 1)
+        XCTAssertTrue(errors[0].contains("MicFailure"), errors[0])
     }
 
     func testCancelDiscardsSessionAndEndThrows() async throws {
