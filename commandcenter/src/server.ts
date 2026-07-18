@@ -6,6 +6,10 @@ import { createServer as createViteServer } from "vite";
 import { WebSocket, WebSocketServer } from "ws";
 
 import type { FleetAgent } from "./contracts.js";
+import {
+  ChatSourcesProvider,
+  type ChatEntry,
+} from "./control/chat-sources.js";
 import type { FleetControl } from "./control/fleet-control.js";
 import { HerdrAdapter } from "./control/herdr-adapter.js";
 import { UnixSocketHerdrTransport } from "./control/herdr-transport.js";
@@ -20,6 +24,11 @@ import {
   OllamaHttpGemmaTransport,
 } from "./router/gemma-transport.js";
 import type { Router } from "./router/router.js";
+
+type ServerBroadcast = {
+  type: "cursor.chats";
+  chats: ChatEntry[];
+};
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const port = Number(process.env.PORT ?? 4173);
@@ -41,15 +50,23 @@ httpServer.on("request", (request, response) => {
   });
 });
 
+const chatSources = new ChatSourcesProvider({
+  cursor: { pollMs: optionalNumber("CURSOR_CHATS_POLL_MS") ?? 30_000 },
+  windowMs: optionalNumber("CHATS_WINDOW_MS"),
+});
+if (process.env.CURSOR_CHATS !== "off") chatSources.start();
+
 loop.subscribe((event) => broadcast(event));
 control.subscribe((snapshot) =>
   broadcast({ type: "fleet.snapshot", snapshot }),
 );
+chatSources.subscribe((chats) => broadcast({ type: "cursor.chats", chats }));
 
 webSockets.on("connection", (socket) => {
   void control.snapshot().then((snapshot) => {
     send(socket, { type: "fleet.snapshot", snapshot });
   });
+  send(socket, { type: "cursor.chats", chats: chatSources.current() });
   socket.on("message", (data) => {
     void handleClientMessage(socket, data.toString("utf8"));
   });
@@ -178,7 +195,7 @@ function optionalBoolean(name: string): boolean | undefined {
   throw new Error(`${name} must be true or false`);
 }
 
-function broadcast(event: CommandLoopEvent): void {
+function broadcast(event: CommandLoopEvent | ServerBroadcast): void {
   for (const client of webSockets.clients) send(client, event);
 }
 

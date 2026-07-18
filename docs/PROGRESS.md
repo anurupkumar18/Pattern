@@ -346,3 +346,27 @@ on/off button below the sidebar agent list.
   Web Speech recognition start/stop.
 - Verified: console tsc clean, WS snapshot live against real Herdr
   (smoke-shell agent renders), headless Chrome screenshot matches reference.
+
+## 2026-07-18 - Unified recent chat sources
+
+- Added one read-only `ChatSourcesProvider` that merges the existing Cursor
+  SQLite feed with Claude Code JSONL sessions and Codex CLI rollout JSONL
+  sessions, sorted newest first behind the existing `cursor.chats` WebSocket
+  event.
+- Claude and Codex poll by directory metadata, cache parsed entries by mtime,
+  and only reread files that changed. Titles prefer stored summary/session
+  metadata and fall back to the first human user message. Files touched within
+  two minutes render as working; older file sessions render as done.
+- Updated the Herdr-style chat row to show
+  `state · cursor|claude|codex · relative time` without changing the rest of
+  the console.
+- Added 10 focused parser, partial-line, active-state, and merge tests. Full
+  proof: 38 tests passed in 9 files, 1 opt-in real-Herdr test skipped;
+  `npx tsc -p tsconfig.json` and
+  `npx tsc -p console/tsconfig.json --noEmit` passed.
+- Live 24-hour WebSocket snapshot on the demo machine: 15 Cursor, 0 Claude,
+  and 0 Codex entries. The newest source files were outside the strict window
+  (Claude: 2026-07-10T17:56:57Z; Codex: 2026-07-17T14:26:36Z), so fabricating
+  entries or widening the product contract was intentionally avoided.
+  `/tmp/console-multisource.png` confirms the populated sidebar and source
+  label rendering. No source was stubbed.
