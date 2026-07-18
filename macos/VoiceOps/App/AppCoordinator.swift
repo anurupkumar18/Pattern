@@ -276,11 +276,11 @@ final class AppCoordinator: ObservableObject {
                     ) { [weak self] error in
                         Task { @MainActor [weak self] in
                             guard let self else { return }
-                            voiceProvider = "Apple Speech"
-                            voiceModel = "System recognizer · automatic fallback"
-                            voiceFallbackActive = true
-                            voiceStatus = "FALLBACK"
-                            recordTrace(
+                            self.voiceProvider = "Apple Speech"
+                            self.voiceModel = "System recognizer · automatic fallback"
+                            self.voiceFallbackActive = true
+                            self.voiceStatus = "FALLBACK"
+                            self.recordTrace(
                                 .recovery,
                                 "Voice provider failed over without restarting the task: "
                                     + error.localizedDescription)
