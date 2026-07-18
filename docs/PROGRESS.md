@@ -489,6 +489,33 @@ on/off button below the sidebar agent list.
   `/tmp/w1b.png` was inspected: no attention row or untitled labels, and the
   collapsed `Automations · 50` section appears at the bottom.
 
+## 2026-07-18 - Wave 1A transcript fidelity and faster sync
+
+- Added a dependency-free, React-escaped markdown renderer for headings,
+  emphasis, lists, safe links, inline code, and fenced code blocks. Raw HTML is
+  never interpreted, and unsafe link schemes remain plain text.
+- Cursor, Claude Code, and Codex readers now emit optional collapsed thinking
+  blocks and quiet activity labels. Tool arguments and tool-result content are
+  not exposed; only bounded tool names become labels.
+- Removed the duplicate title inside the transcript. The app header remains the
+  single conversation title, while the transcript stays centered at a readable
+  760px measure.
+- Added a one-second selected-chat server poll backed by the existing Cursor
+  `lastUpdatedAt` and file mtime/size short circuits. Stable message keys,
+  memoized turns, and near-bottom-only autoscroll preserve reading position as
+  new content arrives.
+- Browser iteration caught and fixed two live defects: recursive inline
+  formatting could reset a shared regex cursor and stall rendering, and
+  response deduplication could suppress a chat when switching away and back.
+- Verification passed: both required TypeScript checks, 73 Vitest tests with 1
+  opt-in test skipped, and 3 focused synthetic extras tests. A real local chat
+  rendered 149 markdown nodes and 27 activity rows with zero duplicate
+  transcript titles. The inspected 1440x900 screenshot is
+  `/tmp/w1a-final.png`.
+- Remaining evidence gap: the selected real Claude sample had activity events
+  but no readable thinking text, so collapsed thinking behavior is covered by
+  synthetic parser fixtures rather than that screenshot.
+
 ## 2026-07-18 - Wave 1E same-session send adapter
 
 - Added a detached, stdin-only send adapter for dormant Claude Code and Codex
@@ -511,3 +538,36 @@ on/off button below the sidebar agent list.
   appended the user turn to the same JSONL, but that automation rollout
   completed with no assistant message. Same-file user append is proven for
   both sources; end-to-end assistant reply remains environment-blocked.
+
+## 2026-07-18 - Wave 1D fully local streaming STT
+
+- Replaced the rejected browser/network speech dependency with a standalone
+  loopback STT process in `commandcenter/stt/`. It accepts PCM16 mono 16 kHz
+  audio at `ws://127.0.0.1:4191`, gates utterances with local RMS VAD, and
+  emits `{type:"interim"|"final", text, tMs}`. Finals fire after about one
+  second of silence; `stop` flushes immediately.
+- Built pinned whisper.cpp `v1.7.6` with `GGML_METAL=ON`. Runtime proof on the
+  Apple M4 reports `using Metal backend`, `found device: Apple M4`, and a
+  487 MB Metal allocation for `small.en`. Both `ggml-base.en.bin` and
+  `ggml-small.en.bin` are downloaded locally and gitignored.
+- The bridge keeps whisper.cpp's HTTP backend warm on loopback port 4192,
+  transcribes in-memory growing WAV snapshots for interims, and never sends
+  audio off the Mac. No console or control-plane file was changed.
+- Benchmarked three Samantha-generated command WAVs with visible-chat
+  vocabulary hints. `base.en` averaged 1063 ms to first interim and 2475 ms
+  from speech end to final, with 2/3 exact transcripts (`evals` became
+  `Evels`). Eight-thread `small.en` averaged 2974 ms and 4614 ms, with 3/3
+  exact transcripts. Recommendation: `small.en` for demo routing because a
+  wrong chat target is worse than its latency cost; retain `base.en` as the
+  speed fallback after safe alias matching exists.
+- End-to-end WAV proof produced
+  `{"type":"interim","text":"Moved","tMs":8034}` then
+  `{"type":"final","text":"Move to evals.","tMs":9289}`. Tail latency varied
+  under concurrent local model load; the benchmark table and exact console
+  integration contract are in `commandcenter/stt/README.md`.
+- Validation: shell syntax, Node syntax, Metal linkage, both model downloads,
+  VAD interim/final streaming, exact vocabulary-biased final text, and a live
+  listener on `127.0.0.1:4191` all pass.
+- Honest gap: this is streaming PCM plus repeated utterance-window inference,
+  not a stateful incremental Whisper decoder. Native decoder-state reuse is
+  the next latency optimization.
