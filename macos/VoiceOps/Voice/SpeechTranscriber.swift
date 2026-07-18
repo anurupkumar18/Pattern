@@ -237,12 +237,17 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
     private var audioContinuation: AsyncStream<Data>.Continuation?
     private var senderTask: Task<Void, Never>?
     private var receiverTask: Task<Void, Never>?
+    private var finalizerTask: Task<Void, Never>?
     private var converter: AVAudioConverter?
     private var outputFormat: AVAudioFormat?
     private var transcript = ""
+    private var recordedPCM = Data()
+    private var refinementEligible = true
     private var finishRequested = false
     private var cancelled = false
+    private var serverCompleted = false
     private var tapInstalled = false
+    private let maxRefinementBytes = 10 * 1_024 * 1_024
 
     public init(
         apiKey: String,
@@ -310,8 +315,11 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
             self.converter = converter
             self.outputFormat = targetFormat
             self.transcript = ""
+            self.recordedPCM = Data()
+            self.refinementEligible = true
             self.finishRequested = false
             self.cancelled = false
+            self.serverCompleted = false
             self.tapInstalled = false
         }
 
@@ -353,7 +361,8 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
                     handle(try RealtimeTranscriptionWire.parseServerEvent(text))
                 }
             } catch {
-                if !lock.withLock({ cancelled }) { fail(error) }
+                let shouldFail = lock.withLock { !cancelled && !serverCompleted }
+                if shouldFail { fail(error) }
             }
         }
 
@@ -417,6 +426,7 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
         state.3?.finish()
         senderTask?.cancel()
         receiverTask?.cancel()
+        finalizerTask?.cancel()
         state.2?.cancel(with: .goingAway, reason: nil)
     }
 
@@ -448,9 +458,18 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
             fail(conversionError ?? RealtimeError.conversionFailed)
             return
         }
-        continuation.yield(Data(
+        let chunk = Data(
             bytes: samples,
-            count: Int(output.frameLength) * MemoryLayout<Int16>.size))
+            count: Int(output.frameLength) * MemoryLayout<Int16>.size)
+        lock.withLock {
+            if refinementEligible && recordedPCM.count + chunk.count <= maxRefinementBytes {
+                recordedPCM.append(chunk)
+            } else {
+                refinementEligible = false
+                recordedPCM.removeAll(keepingCapacity: false)
+            }
+        }
+        continuation.yield(chunk)
     }
 
     private func handle(_ event: RealtimeTranscriptionServerEvent) {
@@ -464,19 +483,21 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
                 text: state.0, isFinal: false, confidence: nil, segments: []))
         case .completed(_, let final):
             let state = lock.withLock {
-                () -> (Bool, AsyncThrowingStream<TranscriptUpdate, Error>.Continuation?) in
+                () -> (Bool, Data, Bool) in
                 transcript = final
-                guard finishRequested else { return (false, outputContinuation) }
-                let continuation = outputContinuation
-                outputContinuation = nil
-                return (true, continuation)
+                guard finishRequested else { return (false, Data(), false) }
+                serverCompleted = true
+                return (true, recordedPCM, refinementEligible)
             }
             if state.0 {
-                state.1?.yield(TranscriptUpdate(
-                    text: final, isFinal: true, confidence: nil, segments: []))
-                state.1?.finish()
                 receiverTask?.cancel()
                 socket?.cancel(with: .normalClosure, reason: nil)
+                finalizerTask = Task { [weak self] in
+                    await self?.publishRefinedFinal(
+                        realtimeTranscript: final,
+                        pcm16: state.1,
+                        eligible: state.2)
+                }
             }
         case .error(let message):
             fail(RealtimeError.server(message))
@@ -507,6 +528,61 @@ public final class OpenAIRealtimeTranscriber: Transcriber, @unchecked Sendable {
         }
         state.0?.finish(throwing: error)
         state.1?.finish(throwing: error)
+    }
+
+    private func publishRefinedFinal(
+        realtimeTranscript: String,
+        pcm16: Data,
+        eligible: Bool
+    ) async {
+        var final = realtimeTranscript
+        if eligible, !pcm16.isEmpty, let model = configuration.finalModel {
+            do {
+                final = try await requestHighAccuracyTranscript(
+                    pcm16: pcm16, model: model)
+                log.info("high-accuracy final transcription completed")
+            } catch {
+                log.info(
+                    "high-accuracy finalization unavailable; using Realtime final: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        let continuation: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation? = lock.withLock {
+            guard !cancelled else { return nil }
+            let value = outputContinuation
+            outputContinuation = nil
+            return value
+        }
+        continuation?.yield(TranscriptUpdate(
+            text: final, isFinal: true, confidence: nil, segments: []))
+        continuation?.finish()
+    }
+
+    private func requestHighAccuracyTranscript(
+        pcm16: Data, model: String
+    ) async throws -> String {
+        guard let url = URL(string: "https://api.openai.com/v1/audio/transcriptions")
+        else { throw RealtimeError.invalidSocketMessage }
+        let boundary = "voiceops-\(UUID().uuidString.lowercased())"
+        let wav = HighAccuracyTranscriptionWire.wavFile(
+            pcm16: pcm16, sampleRate: configuration.sampleRate)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 5
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)",
+            forHTTPHeaderField: "Content-Type")
+        request.httpBody = HighAccuracyTranscriptionWire.multipartBody(
+            wav: wav,
+            model: model,
+            language: configuration.language,
+            prompt: configuration.finalPrompt,
+            boundary: boundary)
+        let (data, response) = try await session.data(for: request)
+        guard let response = response as? HTTPURLResponse,
+              (200..<300).contains(response.statusCode)
+        else { throw RealtimeError.server("high-accuracy finalization failed") }
+        return try HighAccuracyTranscriptionWire.parseTranscript(data)
     }
 
     private func stopAudio() {

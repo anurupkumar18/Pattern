@@ -296,7 +296,7 @@ final class AppCoordinator: ObservableObject {
                 configureVoiceCallbacks(controller)
                 voiceSession = controller
                 voiceProvider = "OpenAI Realtime"
-                voiceModel = "gpt-realtime-whisper · medium delay"
+                voiceModel = "gpt-realtime-whisper → gpt-4o-transcribe"
                 voiceFallbackActive = false
                 voiceStatus = "LIVE"
                 do {

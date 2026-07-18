@@ -74,7 +74,10 @@ struct VLMSettingsView: View {
     var body: some View {
         Form {
             Section("OpenAI voice and intelligence") {
-                LabeledContent("Voice", value: "gpt-realtime-whisper · Apple Speech failover")
+                LabeledContent(
+                    "Voice",
+                    value: "Realtime Whisper → 4o Transcribe · Apple Speech failover"
+                )
                 LabeledContent("Vision", value: "OpenAI Responses API")
                 LabeledContent("Status") {
                     Label(

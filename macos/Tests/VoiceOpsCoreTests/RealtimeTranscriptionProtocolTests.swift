@@ -53,4 +53,34 @@ final class RealtimeTranscriptionProtocolTests: XCTestCase {
                 #"{"type":"session.updated"}"#),
             .ignored(type: "session.updated"))
     }
+
+    func testBuildsValidMonoPCM16WAVForFinalRefinement() {
+        let pcm = Data([1, 2, 3, 4])
+        let wav = HighAccuracyTranscriptionWire.wavFile(
+            pcm16: pcm, sampleRate: 24_000)
+
+        XCTAssertEqual(String(data: wav[0..<4], encoding: .utf8), "RIFF")
+        XCTAssertEqual(String(data: wav[8..<12], encoding: .utf8), "WAVE")
+        XCTAssertEqual(String(data: wav[36..<40], encoding: .utf8), "data")
+        XCTAssertEqual(wav.count, 44 + pcm.count)
+        XCTAssertEqual(wav.suffix(pcm.count), pcm)
+    }
+
+    func testBuildsMultipartRefinementRequestAndParsesResult() throws {
+        let body = HighAccuracyTranscriptionWire.multipartBody(
+            wav: Data([82, 73, 70, 70]),
+            model: "gpt-4o-transcribe",
+            language: "en",
+            prompt: "Shopify, Maya Chen, Slack",
+            boundary: "voiceops-boundary")
+        let text = try XCTUnwrap(String(data: body, encoding: .utf8))
+        XCTAssertTrue(text.contains("name=\"model\"\r\n\r\ngpt-4o-transcribe"))
+        XCTAssertTrue(text.contains("name=\"language\"\r\n\r\nen"))
+        XCTAssertTrue(text.contains("name=\"prompt\"\r\n\r\nShopify, Maya Chen, Slack"))
+        XCTAssertTrue(text.contains("filename=\"voiceops.wav\""))
+        XCTAssertEqual(
+            try HighAccuracyTranscriptionWire.parseTranscript(
+                Data(#"{"text":"Order 1842 for Maya Chen"}"#.utf8)),
+            "Order 1842 for Maya Chen")
+    }
 }

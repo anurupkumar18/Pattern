@@ -17,7 +17,7 @@ In under four minutes, prove all eligibility requirements and visibly map the pr
   Reminders, and Automation are not required for the fixture-backed hero path.
 - Run `scripts/rehearse_order_rescue.sh`; require 20/20 in both deterministic reports before presenting.
 - Run `scripts/replay_order_rescue_app.sh`; require `NATIVE ORDER RESCUE REPLAY VERIFIED`.
-- Confirm the companion's voice badge says either `OpenAI Realtime · gpt-realtime-whisper` or clearly labeled `Apple Speech · FALLBACK`.
+- Confirm the companion's voice badge says either `OpenAI Realtime · gpt-realtime-whisper → gpt-4o-transcribe` or clearly labeled `Apple Speech · FALLBACK`.
 - Keep the network backup hotspot available.
 
 ## 3. Opening (20 seconds)

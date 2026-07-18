@@ -49,7 +49,7 @@ Alternative: implement orchestration entirely in Swift if the team has strong Sw
 
 Use provider adapters, not model-specific business logic.
 
-- Streaming speech-to-text: `gpt-realtime-whisper` over a transcription-only Realtime WebSocket, with 24 kHz mono PCM, manual hotkey commit, and Apple Speech start/midstream failover. `gpt-realtime-2.1` remains the full-duplex voice-agent option, not the transcription-only command path.
+- Streaming speech-to-text: `gpt-realtime-whisper` over a transcription-only Realtime WebSocket, with 24 kHz mono PCM, manual hotkey commit, and Apple Speech start/midstream failover. A bounded committed WAV is then refined by `gpt-4o-transcribe`; timeout or provider failure retains the completed Realtime result. `gpt-realtime-2.1` remains the full-duplex voice-agent option, not the transcription-only command path.
 - Planner/reasoner: `gpt-5.6-sol` through a provider adapter for flagship live intelligence; deterministic typed compilers remain the demo-safe fallback.
 - Screen understanding: the same multimodal model for MVP; optional separate OCR for speed.
 - Research/synthesis: text model with web-search tool.
