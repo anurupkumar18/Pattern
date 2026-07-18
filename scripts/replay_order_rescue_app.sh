@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED="$ROOT/macos/build"
 APP="$DERIVED/Build/Products/Debug/VoiceOps.app"
 TEMP_DIR="$(mktemp -d -t voiceops-order-rescue-replay)"
-REPORT="$TEMP_DIR/report.json"
+REPORT="${VOICEOPS_REPLAY_REPORT_OUT:-$TEMP_DIR/report.json}"
 SCREENSHOT="${VOICEOPS_REPLAY_SCREENSHOT_OUT:-$TEMP_DIR/companion.png}"
 
 cleanup() {
@@ -41,6 +41,9 @@ for _ in {1..5}; do
   fi
 done
 test "$SIGNED" = true
+
+mkdir -p "$(dirname "$REPORT")" "$(dirname "$SCREENSHOT")"
+rm -f "$REPORT" "$SCREENSHOT"
 
 "$APP/Contents/MacOS/VoiceOps" \
   --replay-order-rescue \
