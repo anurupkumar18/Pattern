@@ -14,16 +14,34 @@ struct CompanionView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             if coordinator.state != .idle { voiceMethod }
-            content
-            if coordinator.activeTaskSpec != nil { versionedPlan }
-            if !coordinator.executionLedger.isEmpty { executionLedger }
-            if coordinator.state != .idle { taskTimeline }
+            if showsDetailedWork {
+                ScrollView {
+                    detailContent
+                }
+                .frame(height: 560)
+            } else {
+                detailContent
+            }
             footer
         }
         .padding(16)
         .frame(width: 520, alignment: .leading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .animation(.easeInOut(duration: 0.15), value: coordinator.state)
+    }
+
+    private var showsDetailedWork: Bool {
+        coordinator.activeTaskSpec != nil || !coordinator.executionLedger.isEmpty
+    }
+
+    private var detailContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            content
+            if coordinator.activeTaskSpec != nil { versionedPlan }
+            if !coordinator.executionLedger.isEmpty { executionLedger }
+            if coordinator.state != .idle { taskTimeline }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var voiceMethod: some View {
@@ -43,7 +61,8 @@ struct CompanionView: View {
         .background(.quaternary.opacity(0.45), in: Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "Voice provider \(coordinator.voiceProvider), model \(coordinator.voiceModel)")
+            "Voice provider \(coordinator.voiceProvider), model \(coordinator.voiceModel), "
+                + "status \(coordinator.voiceStatus)")
     }
 
     private var taskTimeline: some View {
@@ -232,6 +251,21 @@ struct CompanionView: View {
                         Text("Objective").font(.caption2.weight(.semibold))
                         Text(task.objective).font(.caption)
                     }
+                    Text("Grounded entities").font(.caption2.weight(.semibold))
+                    ForEach(task.entities.keys.sorted(), id: \.self) { key in
+                        if let value = task.entities[key] {
+                            Text("\(humanize(key)): \(value)")
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(.quaternary, in: Capsule())
+                        }
+                    }
+                    Text("Evidence to collect").font(.caption2.weight(.semibold))
+                    ForEach(task.evidenceToCollect, id: \.self) { evidence in
+                        Label(evidence, systemImage: "magnifyingglass")
+                            .font(.caption)
+                    }
                     Divider()
                     Text("Actions").font(.caption2.weight(.semibold))
                     ForEach(task.actions.keys.sorted(), id: \.self) { actionID in
@@ -255,19 +289,30 @@ struct CompanionView: View {
                                 .font(.caption)
                         }
                     }
+                    Text("Completion criteria").font(.caption2.weight(.semibold))
+                    ForEach(task.completionCriteria.keys.sorted(), id: \.self) { key in
+                        if let value = task.completionCriteria[key] {
+                            Label(value, systemImage: "checkmark.circle")
+                                .font(.caption)
+                        }
+                    }
                     if let patch = coordinator.appliedPlanPatch {
                         Divider()
                         Label(
                             "Patch v\(patch.baseVersion) → v\(patch.newVersion)",
                             systemImage: "arrow.triangle.branch")
                             .font(.caption.weight(.semibold))
-                        if !patch.removed.isEmpty {
-                            Text("Removed · \(patch.removed.joined(separator: ", "))")
-                                .font(.caption2)
-                        }
-                        if !patch.added.isEmpty {
-                            Text("Added · \(patch.added.joined(separator: ", "))")
-                                .font(.caption2)
+                        Text("Voice correction")
+                            .font(.caption2.weight(.semibold))
+                        Text(patch.transcript)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(patch.operations.enumerated()), id: \.offset) { _, operation in
+                            Label(
+                                "\(operation.operation.rawValue.capitalized) · "
+                                    + humanizePatchTarget(operation.target),
+                                systemImage: patchOperationSymbol(operation.operation))
+                                .font(.caption)
                         }
                         Text("Preserved · \(patch.preserved.count) task fields")
                             .font(.caption2)
@@ -295,11 +340,14 @@ struct CompanionView: View {
     private var executionLedger: some View {
         DisclosureGroup(isExpanded: $ledgerExpanded) {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(coordinator.executionLedger.suffix(14), id: \.sequence) { event in
+                ForEach(coordinator.executionLedger, id: \.sequence) { event in
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text(event.eventType.rawValue.uppercased())
                                 .font(.caption2.monospaced().weight(.bold))
+                            Text(event.timestamp, style: .time)
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.secondary)
                             Text(event.whereText)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -309,9 +357,17 @@ struct CompanionView: View {
                         if let found = event.found {
                             Text(found).font(.caption2).foregroundStyle(.secondary)
                         }
+                        Text("Why it matters: \(event.whyItMatters)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         Text("Source: \(event.source) · Confidence: \(Int(event.confidence * 100))%")
                             .font(.caption2.monospaced())
                             .foregroundStyle(.tertiary)
+                        if let next = event.next {
+                            Text("Next: \(next)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
             }
@@ -423,6 +479,25 @@ struct CompanionView: View {
         case "no-refund-issued": "Confirmed: no refund issued"
         case "no-replacement-created": "Confirmed: no replacement created"
         default: predicateID.replacingOccurrences(of: "-", with: " ").capitalized
+        }
+    }
+
+    private func humanize(_ value: String) -> String {
+        value.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    private func humanizePatchTarget(_ target: String) -> String {
+        target
+            .split(separator: ".")
+            .map { humanize(String($0)) }
+            .joined(separator: " → ")
+    }
+
+    private func patchOperationSymbol(_ operation: PatchOperationKind) -> String {
+        switch operation {
+        case .add: "plus.circle"
+        case .remove: "minus.circle"
+        case .replace: "arrow.triangle.2.circlepath"
         }
     }
 
