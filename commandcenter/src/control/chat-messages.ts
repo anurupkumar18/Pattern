@@ -10,7 +10,12 @@ export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   createdAt?: string;
+  extras?: ChatMessageExtra[];
 }
+
+export type ChatMessageExtra =
+  | { kind: "thinking"; text: string }
+  | { kind: "activity"; label: string };
 
 export interface ChatMessagesResult {
   source: ChatSource;
@@ -46,6 +51,8 @@ export interface CursorBubbleRow {
   createdAt?: string | null;
   text?: string | null;
   richText?: string | null;
+  thinking?: unknown;
+  toolFormerData?: unknown;
   hidden?: number;
 }
 
@@ -97,6 +104,8 @@ SELECT
   coalesce(json_extract(bubble.value, '$.createdAt'), headers.headerCreatedAt) AS createdAt,
   json_extract(bubble.value, '$.text') AS text,
   json_extract(bubble.value, '$.richText') AS richText,
+  json_extract(bubble.value, '$.thinking') AS thinking,
+  json_extract(bubble.value, '$.toolFormerData') AS toolFormerData,
   CASE
     WHEN json_type(bubble.value, '$.thinking') IS NOT NULL
       OR json_type(bubble.value, '$.toolFormerData') IS NOT NULL
@@ -108,13 +117,15 @@ JOIN cursorDiskKV AS bubble
 WHERE headers.type IN (1, 2)
   AND coalesce(headers.renderable, 1) != 0
   AND coalesce(headers.simulated, 0) = 0
-  AND json_type(bubble.value, '$.thinking') IS NULL
-  AND json_type(bubble.value, '$.toolFormerData') IS NULL
-  AND trim(coalesce(
-    json_extract(bubble.value, '$.text'),
-    json_extract(bubble.value, '$.richText'),
-    ''
-  )) != ''
+  AND (
+    trim(coalesce(
+      json_extract(bubble.value, '$.text'),
+      json_extract(bubble.value, '$.richText'),
+      ''
+    )) != ''
+    OR json_type(bubble.value, '$.thinking') IS NOT NULL
+    OR json_type(bubble.value, '$.toolFormerData') IS NOT NULL
+  )
 ORDER BY headers.ordinal
 `;
 
@@ -283,28 +294,39 @@ export function parseChatMessagesRequest(
 }
 
 export function parseCursorBubbleRows(rows: CursorBubbleRow[]): ChatMessage[] {
-  const candidates = [...rows]
-    .sort((left, right) => left.ordinal - right.ordinal)
-    .flatMap((row): MessageCandidate[] => {
-      if (row.hidden === 1 || (row.type !== 1 && row.type !== 2)) return [];
-      const text =
-        visibleText(row.text) ?? flattenCursorRichText(row.richText) ?? null;
-      if (!text) return [];
-      return [
-        {
-          id: row.bubbleId,
-          role: row.type === 1 ? "user" : "assistant",
-          text,
-          createdAt: isoTimestamp(row.createdAt),
-          lineIndex: row.ordinal,
-        },
-      ];
+  const candidates: MessageCandidate[] = [];
+  let pendingExtras: ChatMessageExtra[] = [];
+  for (const row of [...rows].sort(
+    (left, right) => left.ordinal - right.ordinal,
+  )) {
+    if (row.type !== 1 && row.type !== 2) continue;
+    const extras = cursorExtras(row);
+    if (row.hidden === 1 && extras.length === 0) continue;
+    const text =
+      visibleText(row.text) ?? flattenCursorRichText(row.richText) ?? null;
+    if (!text) {
+      if (row.type === 2) pendingExtras = mergeExtras(pendingExtras, extras);
+      continue;
+    }
+    const messageExtras =
+      row.type === 2 ? mergeExtras(pendingExtras, extras) : extras;
+    if (row.type === 2) pendingExtras = [];
+    candidates.push({
+      id: row.bubbleId,
+      role: row.type === 1 ? "user" : "assistant",
+      text,
+      createdAt: isoTimestamp(row.createdAt),
+      extras: messageExtras.length > 0 ? messageExtras : undefined,
+      lineIndex: row.ordinal,
     });
+  }
+  attachTrailingExtras(candidates, pendingExtras);
   return dedupeMessages(candidates);
 }
 
 export function parseClaudeMessages(content: string): ChatMessage[] {
   const candidates: MessageCandidate[] = [];
+  let pendingExtras: ChatMessageExtra[] = [];
   for (const { event, lineIndex } of parseJsonLinesStrict(content)) {
     if (
       (event.type !== "user" && event.type !== "assistant") ||
@@ -322,27 +344,57 @@ export function parseClaudeMessages(content: string): ChatMessage[] {
     }
     const message = recordValue(event.message);
     if (!message || message.role !== event.type) continue;
+    const extras =
+      event.type === "assistant" ? claudeExtras(message.content) : [];
     const text = visibleContent(message.content, "claude");
-    if (!text) continue;
+    if (!text) {
+      if (event.type === "assistant") {
+        pendingExtras = mergeExtras(pendingExtras, extras);
+      }
+      continue;
+    }
+    const messageExtras =
+      event.type === "assistant"
+        ? mergeExtras(pendingExtras, extras)
+        : undefined;
+    if (event.type === "assistant") pendingExtras = [];
     candidates.push({
       id: stringValue(event.uuid) ?? `claude-line-${lineIndex}`,
       role: event.type,
       text,
       createdAt: isoTimestamp(event.timestamp),
+      extras: messageExtras?.length ? messageExtras : undefined,
       lineIndex,
     });
   }
+  attachTrailingExtras(candidates, pendingExtras);
   return dedupeMessages(candidates);
 }
 
 export function parseCodexMessages(content: string): ChatMessage[] {
   const eventCandidates: MessageCandidate[] = [];
   const responseCandidates: MessageCandidate[] = [];
+  let pendingExtras: ChatMessageExtra[] = [];
 
   for (const { event, lineIndex } of parseJsonLinesStrict(content)) {
     const payload = recordValue(event.payload);
     if (!payload) continue;
     if (event.type === "event_msg") {
+      if (payload.type === "agent_reasoning") {
+        const text =
+          visibleText(payload.text) ?? visibleText(payload.message) ?? null;
+        if (text) {
+          pendingExtras = mergeExtras(pendingExtras, [
+            { kind: "thinking", text },
+          ]);
+        }
+        continue;
+      }
+      const eventActivity = codexActivity(payload);
+      if (eventActivity) {
+        pendingExtras = mergeExtras(pendingExtras, [eventActivity]);
+        continue;
+      }
       const role =
         payload.type === "user_message"
           ? "user"
@@ -357,9 +409,30 @@ export function parseCodexMessages(content: string): ChatMessage[] {
         role,
         text,
         createdAt: isoTimestamp(event.timestamp),
+        extras:
+          role === "assistant" && pendingExtras.length > 0
+            ? pendingExtras
+            : undefined,
         lineIndex,
       });
+      if (role === "assistant") pendingExtras = [];
       continue;
+    }
+    if (event.type === "response_item" && payload.type === "reasoning") {
+      const text = codexReasoningText(payload);
+      if (text) {
+        pendingExtras = mergeExtras(pendingExtras, [
+          { kind: "thinking", text },
+        ]);
+      }
+      continue;
+    }
+    if (event.type === "response_item") {
+      const activity = codexActivity(payload);
+      if (activity) {
+        pendingExtras = mergeExtras(pendingExtras, [activity]);
+        continue;
+      }
     }
     if (
       event.type !== "response_item" ||
@@ -375,8 +448,13 @@ export function parseCodexMessages(content: string): ChatMessage[] {
       role: payload.role,
       text,
       createdAt: isoTimestamp(event.timestamp),
+      extras:
+        payload.role === "assistant" && pendingExtras.length > 0
+          ? pendingExtras
+          : undefined,
       lineIndex,
     });
+    if (payload.role === "assistant") pendingExtras = [];
   }
 
   // Modern Codex emits a visible event_msg and a lower-level response_item for
@@ -391,6 +469,7 @@ export function parseCodexMessages(content: string): ChatMessage[] {
       : responseCandidates.filter((candidate) => candidate.role === role);
   });
   selected.sort((left, right) => left.lineIndex - right.lineIndex);
+  attachTrailingExtras(selected, pendingExtras);
   return dedupeMessages(selected);
 }
 
@@ -450,6 +529,184 @@ function visibleText(value: unknown): string | null {
   return text;
 }
 
+function cursorExtras(row: CursorBubbleRow): ChatMessageExtra[] {
+  const extras: ChatMessageExtra[] = [];
+  const thinking = nestedText(row.thinking, ["text", "thinking", "content"]);
+  if (thinking) extras.push({ kind: "thinking", text: thinking });
+  if (row.toolFormerData !== null && row.toolFormerData !== undefined) {
+    const name = nestedString(row.toolFormerData, [
+      "name",
+      "toolName",
+      "tool_name",
+    ]);
+    extras.push({
+      kind: "activity",
+      label: name ? activityLabel(name) : "Used a tool",
+    });
+  }
+  return mergeExtras([], extras);
+}
+
+function claudeExtras(value: unknown): ChatMessageExtra[] {
+  if (!Array.isArray(value)) return [];
+  const extras: ChatMessageExtra[] = [];
+  for (const item of value) {
+    const block = recordValue(item);
+    if (!block) continue;
+    if (block.type === "thinking") {
+      const text =
+        visibleText(block.thinking) ?? visibleText(block.text) ?? null;
+      if (text) extras.push({ kind: "thinking", text });
+    } else if (block.type === "tool_use") {
+      const name = stringValue(block.name);
+      extras.push({
+        kind: "activity",
+        label: name ? activityLabel(name) : "Used a tool",
+      });
+    }
+  }
+  return mergeExtras([], extras);
+}
+
+function codexReasoningText(payload: Record<string, unknown>): string | null {
+  const direct =
+    visibleText(payload.text) ?? visibleText(payload.message) ?? null;
+  if (direct) return direct;
+  if (!Array.isArray(payload.summary)) return null;
+  const parts = payload.summary.flatMap((item): string[] => {
+    const summary = recordValue(item);
+    const text = summary ? visibleText(summary.text) : null;
+    return text ? [text] : [];
+  });
+  return parts.length > 0 ? parts.join("\n\n") : null;
+}
+
+function codexActivity(
+  payload: Record<string, unknown>,
+): Extract<ChatMessageExtra, { kind: "activity" }> | null {
+  if (
+    payload.type !== "function_call" &&
+    payload.type !== "custom_tool_call" &&
+    payload.type !== "web_search_call" &&
+    payload.type !== "computer_call" &&
+    payload.type !== "tool_call"
+  ) {
+    return null;
+  }
+  if (payload.type === "web_search_call") {
+    return { kind: "activity", label: "Searched the web" };
+  }
+  const name = stringValue(payload.name);
+  return {
+    kind: "activity",
+    label: name ? activityLabel(name) : "Used a tool",
+  };
+}
+
+function activityLabel(name: string): string {
+  const safeName = name
+    .replace(/[_-]+/g, " ")
+    .replace(/[^\p{L}\p{N} .:/]/gu, "")
+    .trim()
+    .slice(0, 80);
+  if (!safeName) return "Used a tool";
+  return /\b(search|find|query|browse)\b/i.test(safeName)
+    ? `Searched with ${safeName}`
+    : `Used ${safeName}`;
+}
+
+function nestedText(value: unknown, keys: string[]): string | null {
+  if (typeof value === "string") {
+    const direct = visibleText(value);
+    if (!direct) return null;
+    try {
+      return nestedText(JSON.parse(direct) as unknown, keys) ?? direct;
+    } catch {
+      return direct;
+    }
+  }
+  if (Array.isArray(value)) {
+    const parts = value.flatMap((item): string[] => {
+      const text = nestedText(item, keys);
+      return text ? [text] : [];
+    });
+    return parts.length > 0 ? parts.join("\n\n") : null;
+  }
+  const record = recordValue(value);
+  if (!record) return null;
+  for (const key of keys) {
+    const direct = visibleText(record[key]);
+    if (direct) return direct;
+  }
+  for (const child of Object.values(record)) {
+    const text = nestedText(child, keys);
+    if (text) return text;
+  }
+  return null;
+}
+
+function nestedString(value: unknown, keys: string[]): string | null {
+  if (typeof value === "string") {
+    try {
+      return nestedString(JSON.parse(value) as unknown, keys);
+    } catch {
+      return null;
+    }
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const match = nestedString(child, keys);
+      if (match) return match;
+    }
+    return null;
+  }
+  const record = recordValue(value);
+  if (!record) return null;
+  for (const key of keys) {
+    const match = stringValue(record[key]);
+    if (match) return match;
+  }
+  for (const child of Object.values(record)) {
+    const match = nestedString(child, keys);
+    if (match) return match;
+  }
+  return null;
+}
+
+function mergeExtras(
+  left: ChatMessageExtra[],
+  right: ChatMessageExtra[],
+): ChatMessageExtra[] {
+  const seen = new Set(left.map(extraKey));
+  const merged = [...left];
+  for (const extra of right) {
+    const key = extraKey(extra);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(extra);
+  }
+  return merged;
+}
+
+function extraKey(extra: ChatMessageExtra): string {
+  return extra.kind === "thinking"
+    ? `thinking:${extra.text}`
+    : `activity:${extra.label}`;
+}
+
+function attachTrailingExtras(
+  candidates: MessageCandidate[],
+  extras: ChatMessageExtra[],
+): void {
+  if (extras.length === 0) return;
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const candidate = candidates[index];
+    if (candidate?.role !== "assistant") continue;
+    candidate.extras = mergeExtras(candidate.extras ?? [], extras);
+    return;
+  }
+}
+
 function flattenCursorRichText(value: string | null | undefined): string | null {
   const text = visibleText(value);
   if (!text) return null;
@@ -491,7 +748,7 @@ function dedupeMessages(candidates: MessageCandidate[]): ChatMessage[] {
   const seenContent = new Set<string>();
   const messages: ChatMessage[] = [];
   for (const candidate of candidates) {
-    const contentKey = `${candidate.role}\u0000${candidate.createdAt ?? ""}\u0000${candidate.text}`;
+    const contentKey = `${candidate.role}\u0000${candidate.createdAt ?? ""}\u0000${candidate.text}\u0000${JSON.stringify(candidate.extras ?? [])}`;
     if (seenIds.has(candidate.id) || seenContent.has(contentKey)) continue;
     seenIds.add(candidate.id);
     seenContent.add(contentKey);

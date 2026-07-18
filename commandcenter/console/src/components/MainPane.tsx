@@ -18,6 +18,8 @@ import {
   StopIcon,
   WorkingSpinner,
 } from "./icons.js";
+import { TranscriptMessage } from "./TranscriptMessage.js";
+import "../transcript.css";
 
 interface MainPaneProps {
   selected: HistoryRow | null;
@@ -262,7 +264,12 @@ function TranscriptStream({
     if (nearBottomRef.current) {
       stream.scrollTop = stream.scrollHeight;
     }
-  }, [selected.id, transcript.messages.length, transcript.status]);
+  }, [
+    selected.id,
+    transcript.messages.length,
+    transcript.status,
+    transcript.updatedAt,
+  ]);
 
   return (
     <div
@@ -276,15 +283,6 @@ function TranscriptStream({
       }}
     >
       <div className="stream-column transcript-column">
-        <div className="stream-context">
-          <SourceGlyph source={selected.source} />
-          <span>{selected.title}</span>
-          {selected.working && (
-            <span className="stream-working">
-              <WorkingSpinner /> Working
-            </span>
-          )}
-        </div>
         {transcript.status === "loading" ? (
           <TranscriptSkeleton />
         ) : transcript.status === "error" ? (
@@ -302,16 +300,7 @@ function TranscriptStream({
         ) : (
           <div className="transcript" aria-label="Conversation history">
             {transcript.messages.map((message) => (
-              <article
-                key={message.id}
-                className={`transcript-turn ${message.role}`}
-                aria-label={message.role === "user" ? "You" : "Assistant"}
-              >
-                <div className="turn-role">
-                  {message.role === "user" ? "You" : "Assistant"}
-                </div>
-                <div className="turn-text">{message.text}</div>
-              </article>
+              <TranscriptMessage key={message.id} message={message} />
             ))}
           </div>
         )}

@@ -44,6 +44,10 @@ const httpServer = createServer();
 const webSockets = new WebSocketServer({ server: httpServer, path: "/ws" });
 const chatMessages = new ChatMessagesService();
 const sentChatMessages = new WeakMap<WebSocket, Map<string, string>>();
+const selectedChats = new WeakMap<
+  WebSocket,
+  { source: ChatEntry["source"]; chatId: string; requestedAt: number }
+>();
 const vite = await createViteServer({
   root: resolve(root, "console"),
   server: { middlewareMode: true },
@@ -70,6 +74,11 @@ control.subscribe((snapshot) =>
 chatSources.subscribe((chats) => broadcast({ type: "cursor.chats", chats }));
 
 webSockets.on("connection", (socket) => {
+  const chatPoll = setInterval(() => {
+    const selected = selectedChats.get(socket);
+    if (!selected || Date.now() - selected.requestedAt > 3_500) return;
+    void sendChatMessages(socket, selected.source, selected.chatId);
+  }, 1_000);
   void control.snapshot().then((snapshot) => {
     send(socket, { type: "fleet.snapshot", snapshot });
   });
@@ -77,6 +86,7 @@ webSockets.on("connection", (socket) => {
   socket.on("message", (data) => {
     void handleClientMessage(socket, data.toString("utf8"));
   });
+  socket.on("close", () => clearInterval(chatPoll));
 });
 
 httpServer.listen(port, "127.0.0.1", () => {
@@ -93,6 +103,21 @@ async function handleClientMessage(
     const parsed = JSON.parse(rawMessage) as unknown;
     const chatRequest = parseChatMessagesRequest(parsed);
     if (chatRequest) {
+      const previous = selectedChats.get(socket);
+      if (
+        previous &&
+        (previous.source !== chatRequest.source ||
+          previous.chatId !== chatRequest.chatId)
+      ) {
+        sentChatMessages
+          .get(socket)
+          ?.delete(`${chatRequest.source}:${chatRequest.chatId}`);
+      }
+      selectedChats.set(socket, {
+        source: chatRequest.source,
+        chatId: chatRequest.chatId,
+        requestedAt: Date.now(),
+      });
       await sendChatMessages(socket, chatRequest.source, chatRequest.chatId);
       return;
     }
