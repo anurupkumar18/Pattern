@@ -17,7 +17,9 @@
         "verification.finished",
         "task.completed",
         "task.failed",
-        "task.cancelled"
+        "task.cancelled",
+        "conversation.tool_call",
+        "conversation.tool_result"
       ],
       "title": "EventType",
       "type": "string"

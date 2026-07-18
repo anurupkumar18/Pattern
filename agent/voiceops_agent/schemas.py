@@ -44,6 +44,8 @@ class EventType(StrEnum):
     TASK_COMPLETED = "task.completed"
     TASK_FAILED = "task.failed"
     TASK_CANCELLED = "task.cancelled"
+    CONVERSATION_TOOL_CALL = "conversation.tool_call"
+    CONVERSATION_TOOL_RESULT = "conversation.tool_result"
 
 
 Risk = Literal["read", "reversible_write", "consequential", "destructive"]
@@ -51,6 +53,15 @@ CandidateSource = Literal["accessibility", "ocr", "vision", "dom"]
 TaskState = Literal["succeeded", "partial", "failed", "needs_user"]
 PatchOperationKind = Literal["add", "remove", "replace"]
 LedgerEventKind = Literal["observed", "interpreted", "decided", "acted", "verified"]
+ConversationToolName = Literal[
+    "compile_task",
+    "apply_patch",
+    "get_task_state",
+    "request_approval",
+    "confirm_approval",
+    "execute_plan",
+    "get_ledger",
+]
 
 
 class FailureCode(StrEnum):
@@ -367,6 +378,34 @@ class TaskCancelled(VoiceOpsModel):
     reason: str | None = None
 
 
+# --- Conversation layer ---
+
+
+class ConversationToolCall(VoiceOpsModel):
+    """The S2S conversation layer's only side-effect path into the task machine."""
+
+    call_id: str = Field(min_length=1)
+    tool: ConversationToolName
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationToolResult(VoiceOpsModel):
+    call_id: str = Field(min_length=1)
+    tool: ConversationToolName
+    status: Literal["ok", "rejected", "failed"]
+    result: dict[str, Any] = Field(default_factory=dict)
+    error: StructuredError | None = None
+
+
+class ApprovalBinding(VoiceOpsModel):
+    """Read-back approval: a spoken yes authorizes exactly one action-set hash."""
+
+    binding_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    task_version: int = Field(ge=1)
+    read_back: str = Field(min_length=1)
+    action_ids: list[str] = Field(min_length=1)
+
+
 EVENT_PAYLOADS: dict[EventType, type[VoiceOpsModel]] = {
     EventType.VOICE_PARTIAL: TranscriptPartial,
     EventType.VOICE_FINAL: VoiceRequest,
@@ -384,6 +423,8 @@ EVENT_PAYLOADS: dict[EventType, type[VoiceOpsModel]] = {
     EventType.TASK_COMPLETED: TaskCompleted,
     EventType.TASK_FAILED: TaskFailure,
     EventType.TASK_CANCELLED: TaskCancelled,
+    EventType.CONVERSATION_TOOL_CALL: ConversationToolCall,
+    EventType.CONVERSATION_TOOL_RESULT: ConversationToolResult,
 }
 
 
@@ -470,6 +511,9 @@ _EXPORTED_MODELS: tuple[type[VoiceOpsModel], ...] = (
     TaskCompleted,
     TaskFailure,
     TaskCancelled,
+    ConversationToolCall,
+    ConversationToolResult,
+    ApprovalBinding,
 )
 
 

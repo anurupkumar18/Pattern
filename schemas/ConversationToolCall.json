@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "description": "The S2S conversation layer's only side-effect path into the task machine.",
+  "properties": {
+    "call_id": {
+      "minLength": 1,
+      "title": "Call Id",
+      "type": "string"
+    },
+    "tool": {
+      "enum": [
+        "compile_task",
+        "apply_patch",
+        "get_task_state",
+        "request_approval",
+        "confirm_approval",
+        "execute_plan",
+        "get_ledger"
+      ],
+      "title": "Tool",
+      "type": "string"
+    },
+    "arguments": {
+      "additionalProperties": true,
+      "title": "Arguments",
+      "type": "object"
+    }
+  },
+  "required": [
+    "call_id",
+    "tool"
+  ],
+  "title": "ConversationToolCall",
+  "type": "object"
+}

@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "description": "Read-back approval: a spoken yes authorizes exactly one action-set hash.",
+  "properties": {
+    "binding_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Binding Hash",
+      "type": "string"
+    },
+    "task_version": {
+      "minimum": 1,
+      "title": "Task Version",
+      "type": "integer"
+    },
+    "read_back": {
+      "minLength": 1,
+      "title": "Read Back",
+      "type": "string"
+    },
+    "action_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Action Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "binding_hash",
+    "task_version",
+    "read_back",
+    "action_ids"
+  ],
+  "title": "ApprovalBinding",
+  "type": "object"
+}

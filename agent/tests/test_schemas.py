@@ -13,11 +13,15 @@ from pydantic import ValidationError
 from voiceops_agent import schemas
 from voiceops_agent.schemas import (
     EVENT_PAYLOADS,
+    ApprovalBinding,
+    ConversationToolCall,
+    ConversationToolResult,
     Envelope,
     EventType,
     TaskPlan,
     TaskStep,
     VoiceRequest,
+    make_envelope,
     parse_envelope,
 )
 
@@ -148,6 +152,41 @@ class TestWireTimestamps:
         timestamp = envelope.to_wire_dict()["timestamp"]
         assert timestamp.endswith("Z")
         assert "." not in timestamp
+
+
+class TestConversationContract:
+    def test_conversation_tool_call_envelope_round_trips(self):
+        from uuid import uuid4
+
+        payload = ConversationToolCall(
+            call_id="call_001",
+            tool="apply_patch",
+            arguments={"transcript": "Actually, don't create the replacement yet."},
+        )
+        envelope = make_envelope(EventType.CONVERSATION_TOOL_CALL, uuid4(), payload)
+        parsed = parse_envelope(envelope.to_ndjson())
+        assert parsed.type == EventType.CONVERSATION_TOOL_CALL
+        assert parsed.payload.tool == "apply_patch"
+
+    def test_conversation_tool_result_requires_known_tool(self):
+        with pytest.raises(ValidationError):
+            ConversationToolResult(call_id="c", tool="rm_rf", status="ok")
+
+    def test_approval_binding_requires_sha256_hex_hash(self):
+        with pytest.raises(ValidationError):
+            ApprovalBinding(
+                binding_hash="nope",
+                task_version=2,
+                read_back="I will send the message. Confirm?",
+                action_ids=["ask_customer_preference"],
+            )
+        binding = ApprovalBinding(
+            binding_hash="a" * 64,
+            task_version=2,
+            read_back="I will send the message. Confirm?",
+            action_ids=["ask_customer_preference"],
+        )
+        assert binding.task_version == 2
 
 
 class TestEventRegistry:

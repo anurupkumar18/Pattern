@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "FailureCode": {
+      "enum": [
+        "TARGET_NOT_FOUND",
+        "TARGET_STALE",
+        "NO_STATE_CHANGE",
+        "PERMISSION_DENIED",
+        "APP_NOT_RUNNING",
+        "TIMEOUT",
+        "AMBIGUOUS_STATE",
+        "MODEL_INVALID_OUTPUT",
+        "CONSEQUENTIAL_STATE_UNCERTAIN",
+        "INVALID_MESSAGE"
+      ],
+      "title": "FailureCode",
+      "type": "string"
+    },
+    "StructuredError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/FailureCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "StructuredError",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "call_id": {
+      "minLength": 1,
+      "title": "Call Id",
+      "type": "string"
+    },
+    "tool": {
+      "enum": [
+        "compile_task",
+        "apply_patch",
+        "get_task_state",
+        "request_approval",
+        "confirm_approval",
+        "execute_plan",
+        "get_ledger"
+      ],
+      "title": "Tool",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "rejected",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "result": {
+      "additionalProperties": true,
+      "title": "Result",
+      "type": "object"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StructuredError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "call_id",
+    "tool",
+    "status"
+  ],
+  "title": "ConversationToolResult",
+  "type": "object"
+}
