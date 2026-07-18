@@ -563,3 +563,36 @@ class TestSidecarProcess:
         assert messages[-1]["payload"]["summary"] == (
             "ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED"
         )
+
+
+class TestConversationDispatch:
+    def test_conversation_tool_call_routes_to_router(self):
+        from voiceops_agent.schemas import ConversationToolCall
+
+        runtime = SidecarRuntime()
+        envelope = make_envelope(
+            EventType.CONVERSATION_TOOL_CALL,
+            uuid4(),
+            ConversationToolCall(
+                call_id="c1",
+                tool="compile_task",
+                arguments={"transcript": "Take care of this delayed order"},
+            ),
+        )
+        events = runtime.handle_line(envelope.to_ndjson())
+        assert events[0].type == EventType.TASK_SPEC_READY
+        assert events[-1].type == EventType.CONVERSATION_TOOL_RESULT
+        assert events[-1].payload.status == "ok"
+
+    def test_conversation_tool_call_with_bad_arguments_is_rejected(self):
+        from voiceops_agent.schemas import ConversationToolCall
+
+        runtime = SidecarRuntime()
+        envelope = make_envelope(
+            EventType.CONVERSATION_TOOL_CALL,
+            uuid4(),
+            ConversationToolCall(call_id="c1", tool="compile_task"),
+        )
+        events = runtime.handle_line(envelope.to_ndjson())
+        assert len(events) == 1
+        assert events[0].payload.status == "rejected"

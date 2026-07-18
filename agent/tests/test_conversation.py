@@ -9,9 +9,11 @@ import pytest
 
 from voiceops_agent.conversation import (
     ConversationError,
+    ConversationToolRouter,
     approval_binding_for,
     classify_affirmative,
 )
+from voiceops_agent.schemas import ConversationToolCall, EventType
 from voiceops_agent.workflows.order_rescue import (
     OrderRescueFixture,
     apply_plan_patch,
@@ -76,6 +78,72 @@ class TestApprovalBinding:
         neutered = VersionedTaskSpec.model_validate(data)
         with pytest.raises(ConversationError):
             approval_binding_for(neutered)
+
+
+def router() -> ConversationToolRouter:
+    return ConversationToolRouter(fixture=fixture())
+
+
+def call(tool: str, **arguments) -> ConversationToolCall:
+    return ConversationToolCall(
+        call_id=f"call_{tool}", tool=tool, arguments=arguments
+    )
+
+
+class TestRouterCompileAndPatch:
+    def test_compile_task_emits_spec_and_ok_result(self):
+        events = router().handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+        assert [e.type for e in events] == [
+            EventType.TASK_SPEC_READY,
+            EventType.CONVERSATION_TOOL_RESULT,
+        ]
+        result = events[-1].payload
+        assert result.status == "ok"
+        assert result.result["version"] == 1
+        assert "1842" in result.result["objective"]
+        assert result.result["speech_summary"]
+
+    def test_apply_patch_emits_diff_and_preserves_task_id(self):
+        r = router()
+        r.handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+        events = r.handle(TASK_ID, call("apply_patch", transcript=CORRECTION))
+        assert [e.type for e in events] == [
+            EventType.PLAN_PATCH_APPLIED,
+            EventType.TASK_SPEC_READY,
+            EventType.CONVERSATION_TOOL_RESULT,
+        ]
+        assert all(e.task_id == TASK_ID for e in events)
+        result = events[-1].payload
+        assert result.status == "ok"
+        assert result.result["new_version"] == 2
+        assert "actions.create_replacement" in result.result["removed"]
+
+    def test_apply_patch_without_task_is_rejected_not_crashed(self):
+        events = router().handle(TASK_ID, call("apply_patch", transcript="whatever"))
+        assert events[-1].type == EventType.CONVERSATION_TOOL_RESULT
+        assert events[-1].payload.status == "rejected"
+        assert events[-1].payload.error is not None
+
+    def test_get_task_state_reports_version_and_constraints(self):
+        r = router()
+        r.handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+        events = r.handle(TASK_ID, call("get_task_state"))
+        result = events[-1].payload
+        assert result.status == "ok"
+        assert result.result["version"] == 1
+        assert "no_refund" in result.result["constraints"]
+        assert result.result["completed"] is False
+
+    def test_missing_required_argument_is_rejected(self):
+        events = router().handle(TASK_ID, call("compile_task"))
+        assert events[-1].payload.status == "rejected"
+
+    def test_get_ledger_is_empty_before_execution(self):
+        r = router()
+        r.handle(TASK_ID, call("compile_task", transcript=INITIAL_REQUEST))
+        events = r.handle(TASK_ID, call("get_ledger"))
+        assert events[-1].payload.status == "ok"
+        assert events[-1].payload.result["events"] == []
 
 
 class TestAffirmativeGate:

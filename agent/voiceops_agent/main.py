@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from .conversation import ConversationToolRouter
 from .grounding import (
     DeterministicMultimodalGroundingAdapter,
     FallbackGroundingAdapter,
@@ -125,6 +126,7 @@ class SidecarRuntime:
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
         self._order_rescue_fixture = order_rescue_fixture or load_order_rescue_fixture()
         self._order_rescue_tasks: dict[UUID, VersionedTaskSpec] = {}
+        self._conversation = ConversationToolRouter(fixture=self._order_rescue_fixture)
 
     def handle_line(self, line: str) -> list[Envelope]:
         try:
@@ -139,6 +141,9 @@ class SidecarRuntime:
         if envelope.type is EventType.TASK_CANCELLED:
             self._cleanup(envelope.task_id)
             return []
+
+        if envelope.type is EventType.CONVERSATION_TOOL_CALL:
+            return self._conversation.handle(envelope.task_id, envelope.payload)
 
         if envelope.type is EventType.ACTION_FINISHED:
             return self._handle_action_finished(envelope.task_id, envelope.payload)
