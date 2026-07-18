@@ -62,4 +62,34 @@ executes through `FleetControl`, and emits typed stage events. `Verifier`
 performs a separate snapshot read and owns the only transition to `SUCCEEDED`.
 An executor acknowledgement without a passing predicate becomes `UNVERIFIED`.
 
-The full runtime and demo commands are added as each build phase lands.
+## Live console
+
+Start the Vite/React console, Node control server, and WebSocket bridge:
+
+```bash
+npm run dev
+```
+
+Open `http://127.0.0.1:4173`. MockHerdr and the deterministic router are the
+zero-setup defaults. The browser can submit Web Speech API transcripts or typed
+utterances through the same command loop.
+
+Use real Herdr:
+
+```bash
+HERDR_MODE=real HERDR_SOCKET_PATH=/path/to/herdr.sock npm run dev
+```
+
+Use a local Gemma bridge:
+
+```bash
+GEMMA_HTTP_ENDPOINT=http://127.0.0.1:8080/complete npm run dev
+```
+
+or:
+
+```bash
+GEMMA_COMMAND=/path/to/cactus-wrapper \
+GEMMA_ARGS='["--model","google/gemma-4-E2B-it"]' \
+npm run dev
+```

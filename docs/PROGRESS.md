@@ -79,3 +79,28 @@ blockers for `cursor/voice-command-center`.
 - Proof: `npm test` passes 18 tests in 5 files with 1 real-Herdr smoke test
   skipped; `npm run build` passes.
 - Open questions: none.
+
+## 2026-07-18 - Phase 5: Live console
+
+- Added a Vite/React console and Node WebSocket server. MockHerdr plus the
+  deterministic router are the defaults; real Herdr and Gemma transports are
+  selected through environment flags.
+- Added browser Web Speech API input from the existing
+  `cursor/voice-state-pipeline` hook pattern plus a keyboard-only utterance
+  path.
+- The live surface shows mic/server state, streaming heard text, routed verb,
+  target, confidence, routing latency, confirmation gate, fleet state, and a
+  verifier-owned command ledger with per-stage latency.
+- Design references: Haselwood ledger proof rows and flat charcoal rules,
+  Samir's source/caveat-forward hierarchy, and the Podium dashboard SOP's
+  table-first operational density. Purple is limited to action/selection.
+- Runtime proof: local HTTP loaded, and a text-simulated WebSocket utterance
+  (`tell the blocked one to use staging`) returned `SUCCEEDED`, target
+  `migration`, with every verifier predicate passing.
+- Visual proof: headless Chrome desktop (1440px) and narrow (390px) layouts
+  were inspected with no overlap or horizontal overflow. The empty first-load
+  state is intentionally sparse; richer value appears after the first command.
+- Proof: `npm test` passes 18 tests in 5 files with 1 real-Herdr smoke test
+  skipped; TypeScript checks and the production Vite build pass.
+- Open questions: Web Speech API availability varies by browser; typed input
+  remains the deterministic demo fallback.
