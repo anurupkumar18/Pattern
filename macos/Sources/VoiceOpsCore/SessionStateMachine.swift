@@ -12,6 +12,9 @@ public enum SessionState: Equatable, Sendable {
     case acting(description: String, groundingChips: [GroundingChip])
     case verifying
     case result(SessionResult)
+    /// Hotkey-bounded speech-to-speech session: the mic is live, the agent may
+    /// be speaking, and the task version tracks the sidecar's authority.
+    case conversing(agentSpeaking: Bool, planVersion: Int?, transcript: String)
 }
 
 public enum SessionResult: Equatable, Sendable {
@@ -35,6 +38,10 @@ public enum SessionEvent: Equatable, Sendable {
     case taskFailed(reason: String)
     case stopRequested
     case dismissResult
+    case conversationOpened
+    case conversationClosed
+    case agentSpeechStarted
+    case agentSpeechEnded
 }
 
 /// Pure reducer: (state, event) -> next state, or nil when the event is
@@ -110,6 +117,32 @@ public enum SessionStateMachine {
 
         case (.result, .dismissResult):
             return .idle
+
+        // -- speech-to-speech conversation session --------------------------
+        case (.idle, .conversationOpened):
+            return .conversing(agentSpeaking: false, planVersion: nil, transcript: "")
+        case (.conversing(let speaking, let version, _), .partialTranscript(let text)):
+            return .conversing(
+                agentSpeaking: speaking, planVersion: version, transcript: text)
+        case (.conversing(let speaking, _, let transcript), .taskSpecReady(let version, _)):
+            return .conversing(
+                agentSpeaking: speaking, planVersion: version, transcript: transcript)
+        case (.conversing(_, let version, let transcript), .agentSpeechStarted):
+            return .conversing(
+                agentSpeaking: true, planVersion: version, transcript: transcript)
+        case (.conversing(_, let version, let transcript), .agentSpeechEnded):
+            return .conversing(
+                agentSpeaking: false, planVersion: version, transcript: transcript)
+        case (.conversing, .stopRequested):
+            return .result(.cancelled)
+        case (.conversing(_, .none, _), .conversationClosed):
+            return .idle
+        case (.conversing(_, .some, _), .conversationClosed):
+            return nil  // an open task ends via taskCompleted/taskFailed only
+        case (.conversing, .taskCompleted(let taskState, let summary)):
+            return .result(.completed(state: taskState, summary: summary))
+        case (.conversing, .taskFailed(let reason)):
+            return .result(.failed(reason: reason))
 
         default:
             return nil

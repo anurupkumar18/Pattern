@@ -208,6 +208,24 @@ final class AppCoordinator: ObservableObject {
             recordTrace(.verification, "Independent fetch-back verification started")
             narrate("Verifying")
 
+        case .conversing:
+            // The speech-to-speech session owns audio in this state; the
+            // session lifecycle (WebSocket + engine) is wired by the
+            // conversation controller, which dispatches these events.
+            guard case .idle = previous else { return }
+            taskTrace = TaskTrace()
+            recordTrace(.listening, "Conversational voice session opened")
+            permissionSettingsURL = nil
+            groundingChips = []
+            groundingAdapter = nil
+            groundingWarnings = []
+            verificationResults = []
+            activeTaskSpec = nil
+            appliedPlanPatch = nil
+            executionLedger = []
+            cleanupScreenContext()
+            panel?.show()
+
         case .result(let result):
             let shouldExitAfterReplay = isReplayingOrderRescue && replayReportURL != nil
             switch result {
@@ -876,7 +894,8 @@ final class AppCoordinator: ObservableObject {
     private func isTaskActive(_ state: SessionState) -> Bool {
         switch state {
         case .listening, .grounding, .planning, .readyForCorrection,
-             .correctionListening, .awaitingApproval, .acting, .verifying:
+             .correctionListening, .awaitingApproval, .acting, .verifying,
+             .conversing:
             true
         case .idle, .result:
             false

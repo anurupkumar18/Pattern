@@ -124,6 +124,8 @@ struct CompanionView: View {
         case .awaitingApproval: "hand.raised.fill"
         case .acting: "gearshape.2.fill"
         case .verifying: "checklist"
+        case .conversing(let speaking, _, _):
+            speaking ? "waveform.and.person.filled" : "person.wave.2.fill"
         case .result(.completed(let state, _)):
             switch state {
             case .succeeded: "checkmark.seal.fill"
@@ -147,6 +149,12 @@ struct CompanionView: View {
         case .awaitingApproval: "Approval needed"
         case .acting: "Acting"
         case .verifying: "Verifying"
+        case .conversing(let speaking, let version, _):
+            if let version {
+                "In conversation — plan v\(version)"
+            } else {
+                speaking ? "VoiceOps speaking…" : "In conversation"
+            }
         case .result(.completed(let state, _)): state == .succeeded ? "Done" : "Finished: \(state.rawValue)"
         case .result(.failed): "Failed"
         case .result(.cancelled): "Stopped"
@@ -164,6 +172,28 @@ struct CompanionView: View {
 
         case .listening(let transcript):
             transcriptView(transcript.isEmpty ? "…" : transcript)
+
+        case .conversing(let speaking, let version, let transcript):
+            VStack(alignment: .leading, spacing: 8) {
+                transcriptView(transcript.isEmpty ? "…" : transcript)
+                HStack(spacing: 6) {
+                    Image(systemName: speaking ? "speaker.wave.2.fill" : "mic.fill")
+                        .foregroundStyle(speaking ? Color.accentColor : .secondary)
+                    Text(speaking
+                        ? "VoiceOps is speaking — talk to interrupt"
+                        : "Listening")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    if let version {
+                        Spacer()
+                        Text("v\(version)")
+                            .font(.caption.monospaced())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.quaternary, in: Capsule())
+                    }
+                }
+            }
 
         case .grounding(let transcript):
             VStack(alignment: .leading, spacing: 6) {
@@ -556,7 +586,7 @@ struct CompanionView: View {
                     .buttonStyle(.borderedProminent)
             }
         case .listening, .grounding, .planning, .readyForCorrection,
-             .correctionListening, .acting, .verifying:
+             .correctionListening, .acting, .verifying, .conversing:
             HStack {
                 Spacer()
                 Button(role: .destructive) {
