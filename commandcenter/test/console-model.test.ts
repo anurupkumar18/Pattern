@@ -19,6 +19,7 @@ function chat(
     name: id,
     status: "completed",
     generating: false,
+    kind: "human",
     lastUpdatedAt,
     ...overrides,
   };
@@ -78,5 +79,88 @@ describe("console history model", () => {
       needsInput: false,
       doneUnseen: false,
     });
+  });
+
+  it("keeps automations collapsed at the bottom and omits system rows", () => {
+    const rows = buildRows(
+      null,
+      [
+        chat("human", NOW, { kind: "human" }),
+        chat("automation", NOW - 1, { kind: "automation" }),
+        chat("system", NOW - 2, { kind: "system" }),
+      ],
+      {},
+      NOW,
+      NOW,
+    );
+    const sections = groupRows(rows, NOW);
+
+    expect(sections.map(({ label }) => label)).toEqual([
+      "Today",
+      "Automations",
+    ]);
+    expect(sections[0]?.rows.map(({ id }) => id)).toEqual(["human"]);
+    expect(sections[1]?.rows.map(({ id }) => id)).toEqual(["automation"]);
+  });
+
+  it("shows activity only while a chat is working", () => {
+    const rows = buildRows(
+      null,
+      [
+        chat("working", NOW, {
+          generating: true,
+          activity: "Running tools",
+        }),
+        chat("idle", NOW - 1, { activity: "Thinking" }),
+      ],
+      {},
+      NOW,
+      NOW,
+    );
+
+    expect(rows.find(({ id }) => id === "working")?.subtitle).toBe(
+      "Running tools",
+    );
+    expect(rows.find(({ id }) => id === "idle")?.subtitle).toBeNull();
+  });
+
+  it("hides smoke and test Herdr agents from the library", () => {
+    const rows = buildRows(
+      {
+        capturedAt: new Date(NOW).toISOString(),
+        focusedAgentId: null,
+        listening: false,
+        agents: [
+          {
+            id: "smoke",
+            name: "smoke-shell",
+            harness: "shell",
+            status: "working",
+            cwd: "/tmp",
+            lastActivity: {
+              summary: "Synthetic smoke check",
+              at: new Date(NOW).toISOString(),
+            },
+          },
+          {
+            id: "real",
+            name: "builder",
+            harness: "codex",
+            status: "working",
+            cwd: "/tmp",
+            lastActivity: {
+              summary: "Synthetic build",
+              at: new Date(NOW).toISOString(),
+            },
+          },
+        ],
+      },
+      [],
+      {},
+      NOW,
+      NOW,
+    );
+
+    expect(rows.map(({ id }) => id)).toEqual(["real"]);
   });
 });

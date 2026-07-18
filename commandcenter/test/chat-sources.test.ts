@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classifyChatKind,
+  deriveFileActivity,
   mergeChatEntries,
   parseClaudeSession,
   parseCodexSession,
@@ -45,7 +47,7 @@ describe("parseClaudeSession", () => {
       message: { role: "user", content: longMessage },
     });
     const entry = parseClaudeSession(content, "/x/def.jsonl", NOW, NOW);
-    expect(entry?.name).toHaveLength(60);
+    expect(entry?.name).toHaveLength(48);
     expect(entry?.name.endsWith("...")).toBe(true);
     expect(entry?.id).toBe("claude:def");
   });
@@ -86,6 +88,7 @@ describe("parseClaudeSession", () => {
     );
     expect(stale?.generating).toBe(false);
     expect(stale?.status).toBe("completed");
+    expect(stale?.activity).toBeUndefined();
   });
 
   it("returns null when no title can be derived", () => {
@@ -146,8 +149,95 @@ describe("parseCodexSession", () => {
     });
     const entry = parseCodexSession(content, rolloutPath, NOW, NOW);
     expect(entry?.name).toBe(
-      "Automation: Ambient Brain morning startup Automation ID: x",
+      "Automation: Ambient Brain morning startup Aut...",
     );
+    expect(entry?.kind).toBe("automation");
+  });
+});
+
+describe("chat classification", () => {
+  it.each([
+    [{ title: "--- type: librarian-instruction" }, "automation"],
+    [
+      { firstUserMessage: "You are the lead investigator for this run." },
+      "automation",
+    ],
+    [{ firstUserMessage: "You are Sol. Complete the bounded task." }, "automation"],
+    [
+      { title: "Normal planning chat", firstUserMessage: "Help me plan today" },
+      "human",
+    ],
+    [{ title: "Headless child", headless: true }, "automation"],
+    [
+      {
+        firstUserMessage:
+          "<system_reminder>internal context</system_reminder>",
+      },
+      "system",
+    ],
+  ] as const)("classifies %o as %s", (input, expected) => {
+    expect(classifyChatKind(input)).toBe(expected);
+  });
+
+  it("uses the long brief heuristic without hiding short persona prompts", () => {
+    expect(
+      classifyChatKind({
+        firstUserMessage:
+          "Act as a reviewer. " +
+          "Task: inspect these synthetic fixtures. ".repeat(10) +
+          "Return findings under the stated constraints.",
+      }),
+    ).toBe("automation");
+    expect(
+      classifyChatKind({ firstUserMessage: "Act as a concise writing coach." }),
+    ).toBe("human");
+  });
+});
+
+describe("file activity derivation", () => {
+  it("derives Claude thinking, tool, and response labels", () => {
+    expect(
+      deriveFileActivity("claude", [
+        {
+          type: "assistant",
+          message: { content: [{ type: "thinking", thinking: "hidden" }] },
+        },
+      ]),
+    ).toBe("Thinking");
+    expect(
+      deriveFileActivity("claude", [
+        {
+          type: "assistant",
+          message: { content: [{ type: "tool_use", name: "FixtureTool" }] },
+        },
+      ]),
+    ).toBe("Running tools");
+    expect(
+      deriveFileActivity("claude", [
+        {
+          type: "assistant",
+          message: { content: [{ type: "text", text: "synthetic output" }] },
+        },
+      ]),
+    ).toBe("Responding");
+  });
+
+  it("derives Codex reasoning, function-call, and response labels", () => {
+    expect(
+      deriveFileActivity("codex", [
+        { type: "event_msg", payload: { type: "agent_reasoning" } },
+      ]),
+    ).toBe("Thinking");
+    expect(
+      deriveFileActivity("codex", [
+        { type: "response_item", payload: { type: "function_call" } },
+      ]),
+    ).toBe("Running tools");
+    expect(
+      deriveFileActivity("codex", [
+        { type: "event_msg", payload: { type: "agent_message" } },
+      ]),
+    ).toBe("Responding");
   });
 });
 
@@ -159,6 +249,7 @@ describe("mergeChatEntries", () => {
       name: "n",
       status: "completed",
       generating: false,
+      kind: "human",
       lastUpdatedAt: at,
     });
     const merged = mergeChatEntries([
@@ -180,6 +271,7 @@ describe("mergeChatEntries", () => {
       name: "older title",
       status: "completed",
       generating: false,
+      kind: "human",
       lastUpdatedAt: 10,
     };
     const newer: ChatEntry = {

@@ -7,6 +7,8 @@ export interface ChatEntry {
   name: string;
   status: string;
   generating: boolean;
+  activity?: string;
+  kind: "human" | "automation" | "system";
   lastUpdatedAt: number;
 }
 
@@ -44,6 +46,8 @@ export interface HistoryRow {
   focused: boolean;
   /** Spoken name used when routing voice/keyboard focus commands. */
   spokenName: string;
+  /** Controls whether the row appears in the main library or its archive. */
+  libraryKind: ChatEntry["kind"];
 }
 
 export interface HistorySection {
@@ -68,9 +72,9 @@ export function buildRows(
   now = Date.now(),
   observedAt = now,
 ): HistoryRow[] {
-  const agentRows = (snapshot?.agents ?? []).map((agent) =>
-    agentRow(agent, snapshot?.focusedAgentId ?? null, now),
-  );
+  const agentRows = (snapshot?.agents ?? [])
+    .filter((agent) => !/smoke|test/i.test(agent.name))
+    .map((agent) => agentRow(agent, snapshot?.focusedAgentId ?? null, now));
   const chatRows = chats.map((chat) => chatRow(chat, seen, observedAt));
   return [...agentRows, ...chatRows];
 }
@@ -97,6 +101,7 @@ function agentRow(
     stopped: false,
     focused: agent.id === focusedAgentId,
     spokenName: agent.name,
+    libraryKind: "human",
   };
 }
 
@@ -114,7 +119,7 @@ function chatRow(
     kind: "chat",
     source: chat.source,
     title: chat.name,
-    subtitle: null,
+    subtitle: chat.generating ? chat.activity ?? "Working…" : null,
     timestamp: chat.lastUpdatedAt,
     working: chat.generating,
     needsInput: false,
@@ -126,6 +131,7 @@ function chatRow(
     stopped: chat.status === "aborted",
     focused: false,
     spokenName: chat.name,
+    libraryKind: chat.kind,
   };
 }
 
@@ -140,23 +146,34 @@ function agentSource(harness: FleetAgent["harness"]): RowSource {
 export function groupRows(rows: HistoryRow[], now = Date.now()): HistorySection[] {
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
   const startOfYesterday = startOfToday - DAY_MS;
+  const humanRows = rows.filter((row) => row.libraryKind === "human");
+  const automationRows = rows.filter(
+    (row) => row.libraryKind === "automation",
+  );
 
   const buckets: Record<"Today" | "Yesterday" | "Earlier", HistoryRow[]> = {
     Today: [],
     Yesterday: [],
     Earlier: [],
   };
-  for (const row of rows) {
+  for (const row of humanRows) {
     if (row.timestamp >= startOfToday) buckets.Today.push(row);
     else if (row.timestamp >= startOfYesterday) buckets.Yesterday.push(row);
     else buckets.Earlier.push(row);
   }
-  return Object.entries(buckets)
+  const sections = Object.entries(buckets)
     .filter(([, sectionRows]) => sectionRows.length > 0)
     .map(([label, sectionRows]) => ({
       label,
       rows: [...sectionRows].sort(compareRows),
     }));
+  if (automationRows.length > 0) {
+    sections.push({
+      label: "Automations",
+      rows: [...automationRows].sort(compareRows),
+    });
+  }
+  return sections;
 }
 
 function compareRows(left: HistoryRow, right: HistoryRow): number {

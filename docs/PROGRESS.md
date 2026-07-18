@@ -461,3 +461,30 @@ on/off button below the sidebar agent list.
   unchanged refresh responses. Claude was unavailable in the configured
   seven-day metadata window; its newest local session predates that window.
   No message text was printed or captured.
+
+## 2026-07-18 - Wave 1B activity and Library cleanup
+
+- Extended the shared chat metadata with optional live `activity` and required
+  `human` / `automation` / `system` classification. Claude and Codex labels
+  come from the final synthetic event shape (`Thinking`, `Running tools`,
+  `Responding`, or `Working…`) and are cleared as soon as the active-mtime
+  heuristic expires.
+- Kept Cursor inspection read-only (`mode=ro`). Composer and bubble markers
+  now produce the same generic labels without exposing hidden reasoning text.
+  Replacing the full-table key scan with an indexed composer-key range reduced
+  the seven-day live query from timeout to about 3.3 seconds.
+- Untitled rows now use the first visible user turn, truncated to 48
+  characters, with `New chat` only when no visible turn exists. The live feed
+  contained zero `(untitled)` labels.
+- The default Library now contains human rows only. Automation chats are in a
+  collapsed bottom section with a count; system rows and smoke/test Herdr
+  agents are hidden. The sidebar attention row was removed while its command
+  and model helpers remain intact.
+- Live WebSocket proof after restart: 81 chats total, 31 human, 50 automation,
+  0 system; source split 29 Cursor, 2 Claude, 50 Codex. No source was actively
+  generating in the final snapshot; an earlier active Claude sample emitted
+  the safe fallback `Working…`.
+- Verification: backend and console TypeScript checks passed; Vitest passed
+  73 tests with 1 opt-in test skipped. The live 1440x2000 screenshot at
+  `/tmp/w1b.png` was inspected: no attention row or untitled labels, and the
+  collapsed `Automations · 50` section appears at the bottom.

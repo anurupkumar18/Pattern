@@ -9,6 +9,7 @@ import {
 } from "./cursor-chats.js";
 
 export type ChatSource = "cursor" | "claude" | "codex";
+export type ChatKind = "human" | "automation" | "system";
 
 export interface ChatEntry {
   id: string;
@@ -16,6 +17,8 @@ export interface ChatEntry {
   name: string;
   status: string;
   generating: boolean;
+  activity?: string;
+  kind: ChatKind;
   lastUpdatedAt: number;
 }
 
@@ -191,6 +194,7 @@ class FileChatsProvider implements ChatSourceProvider {
               ...entry,
               status: generating ? "none" : "completed",
               generating,
+              activity: generating ? entry.activity ?? "Working…" : undefined,
             },
           ];
         }),
@@ -363,8 +367,9 @@ export function parseClaudeSession(
   let sessionId = basename(filePath, ".jsonl");
   let title: string | null = null;
   let firstUserMessage: string | null = null;
+  const events = parseJsonLines(content);
 
-  for (const event of parseJsonLines(content)) {
+  for (const event of events) {
     sessionId = stringValue(event.sessionId) ?? sessionId;
     if (event.type === "summary") {
       title =
@@ -385,7 +390,15 @@ export function parseClaudeSession(
 
   const name = cleanTitle(title) ?? fallbackTitle(firstUserMessage);
   if (!name) return null;
-  return fileEntry("claude", sessionId, name, mtimeMs, nowMs);
+  return fileEntry(
+    "claude",
+    sessionId,
+    name,
+    mtimeMs,
+    nowMs,
+    deriveFileActivity("claude", events),
+    classifyChatKind({ title: name, firstUserMessage }),
+  );
 }
 
 export function parseCodexSession(
@@ -397,8 +410,9 @@ export function parseCodexSession(
   let sessionId = rolloutId(filePath);
   let title: string | null = null;
   let firstUserMessage: string | null = null;
+  const events = parseJsonLines(content);
 
-  for (const event of parseJsonLines(content)) {
+  for (const event of events) {
     const payload = recordValue(event.payload);
     if (event.type === "session_meta" && payload) {
       sessionId =
@@ -418,7 +432,15 @@ export function parseCodexSession(
 
   const name = cleanTitle(title) ?? fallbackTitle(firstUserMessage);
   if (!name) return null;
-  return fileEntry("codex", sessionId, name, mtimeMs, nowMs);
+  return fileEntry(
+    "codex",
+    sessionId,
+    name,
+    mtimeMs,
+    nowMs,
+    deriveFileActivity("codex", events),
+    classifyChatKind({ title: name, firstUserMessage }),
+  );
 }
 
 async function listSessionFiles(
@@ -455,9 +477,18 @@ async function listSessionFiles(
 
 function cursorEntry(chat: CursorChat): ChatEntry {
   return {
-    ...chat,
     id: `cursor:${chat.id}`,
     source: "cursor",
+    name: chat.name,
+    status: chat.status,
+    generating: chat.generating,
+    activity: chat.generating ? chat.activity ?? "Working…" : undefined,
+    kind: classifyChatKind({
+      title: chat.name,
+      firstUserMessage: chat.firstUserMessage,
+      headless: chat.headless,
+    }),
+    lastUpdatedAt: chat.lastUpdatedAt,
   };
 }
 
@@ -467,6 +498,8 @@ function fileEntry(
   name: string,
   mtimeMs: number,
   nowMs: number,
+  activity: string,
+  kind: ChatKind,
 ): ChatEntry {
   const generating = nowMs - mtimeMs <= DEFAULT_ACTIVE_MS;
   return {
@@ -475,8 +508,134 @@ function fileEntry(
     name,
     status: generating ? "none" : "completed",
     generating,
+    activity: generating ? activity : undefined,
+    kind,
     lastUpdatedAt: mtimeMs,
   };
+}
+
+export function classifyChatKind({
+  title,
+  firstUserMessage,
+  headless = false,
+}: {
+  title?: string | null;
+  firstUserMessage?: string | null;
+  headless?: boolean;
+}): ChatKind {
+  if (headless) return "automation";
+
+  const titleText = cleanTitle(title) ?? "";
+  const promptText = cleanTitle(firstUserMessage) ?? "";
+  const candidates = [titleText, promptText].filter(Boolean);
+
+  if (
+    candidates.some(
+      (text) =>
+        /^<system_reminder\b/i.test(text) ||
+        /^system\s+(?:prompt|message|notification)\b/i.test(text),
+    )
+  ) {
+    return "system";
+  }
+
+  if (
+    candidates.some(
+      (text) =>
+        /^---\s*type\s*:/i.test(text) ||
+        /^automation\s*:/i.test(text) ||
+        /\blibrarian[-_\s]+instruction(?:s|\b)/i.test(text) ||
+        /^you are (?:the )?lead investigator\b/i.test(text) ||
+        /^you are (?:gpt[-\s\d.]+\s+)?sol\b/i.test(text),
+    )
+  ) {
+    return "automation";
+  }
+
+  if (
+    promptText.length >= 240 &&
+    /^(?:you are|act as)\b/i.test(promptText) &&
+    /\b(?:task|instructions?|constraints?|return|deliverables?|file ownership)\b/i.test(
+      promptText,
+    )
+  ) {
+    return "automation";
+  }
+
+  return "human";
+}
+
+export function deriveFileActivity(
+  source: Exclude<ChatSource, "cursor">,
+  events: Array<Record<string, unknown>>,
+): string {
+  const lastEvent = events.at(-1);
+  if (!lastEvent) return "Working…";
+  return source === "claude"
+    ? claudeActivity(lastEvent)
+    : codexActivity(lastEvent);
+}
+
+function claudeActivity(event: Record<string, unknown>): string {
+  const message = recordValue(event.message);
+  if (event.type === "assistant" && message) {
+    const content = message.content;
+    if (Array.isArray(content)) {
+      for (let index = content.length - 1; index >= 0; index -= 1) {
+        const part = recordValue(content[index]);
+        if (!part) continue;
+        if (
+          part.type === "tool_use" ||
+          part.type === "server_tool_use" ||
+          part.type === "function_call"
+        ) {
+          return "Running tools";
+        }
+        if (part.type === "thinking" || part.type === "reasoning") {
+          return "Thinking";
+        }
+        if (part.type === "text") return "Responding";
+      }
+    }
+    if (typeof content === "string" && content.trim()) return "Responding";
+  }
+
+  if (
+    event.type === "tool_use" ||
+    event.type === "tool_result" ||
+    event.type === "tool_progress" ||
+    event.sourceToolAssistantUUID
+  ) {
+    return "Running tools";
+  }
+  if (event.type === "user") return "Thinking";
+  return "Working…";
+}
+
+function codexActivity(event: Record<string, unknown>): string {
+  const payload = recordValue(event.payload);
+  const payloadType = stringValue(payload?.type);
+
+  if (
+    payloadType === "function_call" ||
+    payloadType === "function_call_output" ||
+    payloadType === "custom_tool_call" ||
+    payloadType === "custom_tool_call_output" ||
+    payloadType === "web_search_call"
+  ) {
+    return "Running tools";
+  }
+  if (payloadType === "reasoning" || payloadType === "agent_reasoning") {
+    return "Thinking";
+  }
+  if (payloadType === "agent_message") return "Responding";
+  if (payloadType === "user_message" || payloadType === "task_started") {
+    return "Thinking";
+  }
+  if (payloadType === "message" && recordValue(payload)?.role === "assistant") {
+    return "Responding";
+  }
+  return "Working…";
 }
 
 function parseJsonLines(content: string): Array<Record<string, unknown>> {
@@ -517,7 +676,7 @@ function textValue(value: unknown): string | null {
   return text || null;
 }
 
-function cleanTitle(value: string | null): string | null {
+function cleanTitle(value: string | null | undefined): string | null {
   const cleaned = value?.replace(/\s+/g, " ").trim();
   return cleaned || null;
 }
@@ -525,7 +684,7 @@ function cleanTitle(value: string | null): string | null {
 function fallbackTitle(value: string | null): string | null {
   const cleaned = cleanTitle(value);
   if (!cleaned) return null;
-  return cleaned.length <= 60 ? cleaned : `${cleaned.slice(0, 57)}...`;
+  return cleaned.length <= 48 ? cleaned : `${cleaned.slice(0, 45)}...`;
 }
 
 function rolloutId(filePath: string): string {

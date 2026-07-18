@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import {
-  attentionSummary,
   relativeTime,
   type AttentionItem,
   type HistoryRow,
@@ -13,7 +12,6 @@ import {
   PlusIcon,
   SearchIcon,
   SourceGlyph,
-  SparkleIcon,
   Waveform,
   WorkingSpinner,
 } from "./icons.js";
@@ -40,7 +38,6 @@ interface SidebarProps {
 
 export function Sidebar({
   sections,
-  attention,
   selectedId,
   glowRowId,
   glowKey,
@@ -48,7 +45,6 @@ export function Sidebar({
   onQueryChange,
   onSelect,
   onNewChat,
-  onAttention,
   voice,
   searchRef,
 }: SidebarProps) {
@@ -75,12 +71,6 @@ export function Sidebar({
         />
         <kbd>⌘K</kbd>
       </label>
-
-      <button type="button" className="attention-row" onClick={onAttention}>
-        <SparkleIcon />
-        <span className="attention-label">What needs me</span>
-        <span className="attention-summary">{attentionSummary(attention)}</span>
-      </button>
 
       <nav className="history" aria-label="Chat history">
         {sections.length === 0 && (
@@ -121,15 +111,22 @@ function HistoryGroup({
   glowKey: number;
   onSelect: (row: HistoryRow) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const collapsible = section.label === "Earlier";
+  const [collapsed, setCollapsed] = useState(
+    section.label === "Automations",
+  );
+  const collapsible =
+    section.label === "Earlier" || section.label === "Automations";
+  const heading =
+    section.label === "Automations"
+      ? `Automations · ${section.rows.length}`
+      : section.label;
   return (
     <section className="history-section">
       <h2
         className={collapsible ? "section-header collapsible" : "section-header"}
         onClick={collapsible ? () => setCollapsed((value) => !value) : undefined}
       >
-        {section.label}
+        {heading}
         {collapsible && (
           <span className="section-caret">{collapsed ? "▸" : "▾"}</span>
         )}
@@ -183,7 +180,7 @@ function ChatRow({
       </span>
       <span className="row-body">
         <span className="row-title">{row.title}</span>
-        {row.needsInput && row.subtitle && (
+        {(row.working || row.needsInput) && row.subtitle && (
           <span className="row-sub">{row.subtitle}</span>
         )}
       </span>
