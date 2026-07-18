@@ -488,3 +488,26 @@ on/off button below the sidebar agent list.
   73 tests with 1 opt-in test skipped. The live 1440x2000 screenshot at
   `/tmp/w1b.png` was inspected: no attention row or untitled labels, and the
   collapsed `Automations · 50` section appears at the bottom.
+
+## 2026-07-18 - Wave 1E same-session send adapter
+
+- Added a detached, stdin-only send adapter for dormant Claude Code and Codex
+  CLI sessions. It resolves the existing JSONL by source/session UUID,
+  extracts the original cwd, rejects files modified in the last 10 seconds,
+  and holds an in-process lock until the child exits.
+- Added WebSocket command
+  `{ type: "chat.send", chatId, source: "claude" | "codex", text }` and
+  broadcast result `{ type: "chat.send.result", chatId, ok, error? }`.
+- Synthetic proof covers Claude project-scoped lookup, Codex dated rollout
+  lookup, malformed IDs, truncated JSONL, and source-specific cwd extraction.
+- Verification: backend and console TypeScript checks passed; Vitest passed
+  73 tests with 1 opt-in test skipped.
+- Live Claude smoke selected the most recent session idle for at least 60
+  seconds. The user turn appended to the same JSONL, but Claude returned the
+  account-level organization monthly spend-limit error instead of `pong`.
+  A fresh Sonnet session failed at the same account-level gate.
+- Live Codex smoke first exposed a desktop/CLI rollout compatibility error
+  (0.144 desktop store versus installed 0.135 CLI). Retrying a 0.135 rollout
+  appended the user turn to the same JSONL, but that automation rollout
+  completed with no assistant message. Same-file user append is proven for
+  both sources; end-to-end assistant reply remains environment-blocked.

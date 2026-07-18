@@ -17,11 +17,24 @@ export interface RoutedEvent {
   at: number;
 }
 
+export type ClientCommand = {
+  type: "chat.send";
+  chatId: string;
+  source: "claude" | "codex";
+  text: string;
+};
+
 type ServerEvent =
   | { type: "fleet.snapshot"; snapshot: FleetSnapshot }
   | { type: "command.routed"; command: FleetCommand; latencyMs: number }
   | { type: "command.outcome"; outcome: CommandOutcome }
   | { type: "cursor.chats"; chats: ChatEntry[] }
+  | {
+      type: "chat.send.result";
+      chatId: string;
+      ok: boolean;
+      error?: string;
+    }
   | {
       type: "chat.messages";
       source: ChatEntry["source"];

@@ -15,6 +15,7 @@ import {
   ChatMessagesService,
   parseChatMessagesRequest,
 } from "./control/chat-messages.js";
+import { SendAdapter } from "./control/send-adapter.js";
 import type { FleetControl } from "./control/fleet-control.js";
 import { HerdrAdapter } from "./control/herdr-adapter.js";
 import { UnixSocketHerdrTransport } from "./control/herdr-transport.js";
@@ -30,10 +31,17 @@ import {
 } from "./router/gemma-transport.js";
 import type { Router } from "./router/router.js";
 
-type ServerBroadcast = {
-  type: "cursor.chats";
-  chats: ChatEntry[];
-};
+type ServerBroadcast =
+  | {
+      type: "cursor.chats";
+      chats: ChatEntry[];
+    }
+  | {
+      type: "chat.send.result";
+      chatId: string;
+      ok: boolean;
+      error?: string;
+    };
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const port = Number(process.env.PORT ?? 4173);
@@ -43,6 +51,7 @@ const loop = new CommandLoop({ router, control });
 const httpServer = createServer();
 const webSockets = new WebSocketServer({ server: httpServer, path: "/ws" });
 const chatMessages = new ChatMessagesService();
+const sendAdapter = new SendAdapter();
 const sentChatMessages = new WeakMap<WebSocket, Map<string, string>>();
 const selectedChats = new WeakMap<
   WebSocket,
@@ -126,7 +135,28 @@ async function handleClientMessage(
       text?: string;
       sttMs?: number;
       outcomeId?: string;
+      chatId?: string;
+      source?: string;
     };
+    if (message.type === "chat.send") {
+      if (
+        !message.chatId ||
+        !message.text?.trim() ||
+        (message.source !== "claude" && message.source !== "codex")
+      ) {
+        throw new Error("chat.send requires chatId, source, and text");
+      }
+      const result = await sendAdapter.send(
+        { source: message.source, id: message.chatId },
+        message.text,
+      );
+      broadcast({
+        type: "chat.send.result",
+        chatId: message.chatId,
+        ...result,
+      });
+      return;
+    }
     if (message.type === "utterance" && message.text?.trim()) {
       await loop.handleUtterance(message.text.trim(), {
         sttMs: message.sttMs,
