@@ -9,6 +9,10 @@ outcomes by fresh reads.
 
 ## Pre-demo checklist
 
+- Run `scripts/preflight_order_rescue_demo.sh` first. It is read-only and exits
+  nonzero unless the native app, OpenAI credential, all five commerce
+  credentials, and both live adapter health probes are ready. It never prints
+  credential values or performs Shopify/Slack writes.
 - Use a dedicated macOS profile and seed the local Order #1842 workspace with
   `scripts/seed_order_rescue_demo.sh`.
 - In **Voice & Intelligence Settings…**, require Microphone, Screen Recording,
