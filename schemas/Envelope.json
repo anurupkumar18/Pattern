@@ -4,9 +4,13 @@
       "enum": [
         "voice.partial",
         "voice.final",
+        "voice.correction",
         "observation.ready",
         "grounding.ready",
         "plan.ready",
+        "task.spec_ready",
+        "plan.patch_applied",
+        "ledger.event",
         "approval.requested",
         "action.started",
         "action.finished",

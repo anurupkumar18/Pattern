@@ -67,7 +67,7 @@ def test_corrected_plan_executes_and_independent_verifier_proves_positive_and_ne
     assert execution.state.replacement_order_id is None
     assert execution.state.store_credit_usd == 20
     assert {event.event_type for event in report.ledger} == {
-        "observed", "interpreted", "acted", "verified"
+        "observed", "interpreted", "decided", "acted", "verified"
     }
     assert [event.sequence for event in report.ledger] == list(
         range(1, len(report.ledger) + 1)

@@ -7,9 +7,13 @@ import Foundation
 public enum EventType: String, Codable, Sendable, CaseIterable {
     case voicePartial = "voice.partial"
     case voiceFinal = "voice.final"
+    case voiceCorrection = "voice.correction"
     case observationReady = "observation.ready"
     case groundingReady = "grounding.ready"
     case planReady = "plan.ready"
+    case taskSpecReady = "task.spec_ready"
+    case planPatchApplied = "plan.patch_applied"
+    case ledgerEvent = "ledger.event"
     case approvalRequested = "approval.requested"
     case actionStarted = "action.started"
     case actionFinished = "action.finished"
@@ -29,6 +33,18 @@ public enum Risk: String, Codable, Sendable {
 public enum TaskState: String, Codable, Sendable {
     case succeeded, partial, failed
     case needsUser = "needs_user"
+}
+
+public enum TaskActionStatus: String, Codable, Sendable {
+    case pending, completed, cancelled
+}
+
+public enum PatchOperationKind: String, Codable, Sendable {
+    case add, remove, replace
+}
+
+public enum LedgerEventKind: String, Codable, Sendable {
+    case observed, interpreted, decided, acted, verified
 }
 
 // MARK: - Arbitrary JSON values (step arguments, predicate expectations)
@@ -149,6 +165,136 @@ public struct TaskPlan: Codable, Equatable, Sendable {
     public let goal: String
     public let summary: String
     public let steps: [TaskStep]
+}
+
+// MARK: - Persistent, versioned task and execution ledger
+
+public struct TaskActionDefinition: Codable, Equatable, Sendable {
+    public let id: String
+    public let description: String
+    public let risk: Risk
+    public let requiresConfirmation: Bool
+    public let status: TaskActionStatus
+
+    enum CodingKeys: String, CodingKey {
+        case id, description, risk, status
+        case requiresConfirmation = "requires_confirmation"
+    }
+}
+
+public struct PlanPatchOperation: Codable, Equatable, Sendable {
+    public let operation: PatchOperationKind
+    public let target: String
+    public let value: JSONValue?
+}
+
+public struct AppliedPlanPatch: Codable, Equatable, Sendable {
+    public let baseVersion: Int
+    public let newVersion: Int
+    public let transcript: String
+    public let operations: [PlanPatchOperation]
+    public let added: [String]
+    public let removed: [String]
+    public let replaced: [String]
+    public let preserved: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case transcript, operations, added, removed, replaced, preserved
+        case baseVersion = "base_version"
+        case newVersion = "new_version"
+    }
+}
+
+public struct VersionedTaskSpec: Codable, Equatable, Sendable {
+    public let taskID: UUID
+    public let version: Int
+    public let rawRequest: String
+    public let objective: String
+    public let entities: [String: String]
+    public let evidenceToCollect: [String]
+    public let actions: [String: TaskActionDefinition]
+    public let constraints: [String: String]
+    public let completionCriteria: [String: String]
+    public let provenance: [String: [String]]
+    public let patchHistory: [AppliedPlanPatch]
+
+    enum CodingKeys: String, CodingKey {
+        case version, objective, entities, actions, constraints, provenance
+        case taskID = "task_id"
+        case rawRequest = "raw_request"
+        case evidenceToCollect = "evidence_to_collect"
+        case completionCriteria = "completion_criteria"
+        case patchHistory = "patch_history"
+    }
+}
+
+public struct ExecutionLedgerEvent: Equatable, Sendable {
+    public let sequence: Int
+    public let timestamp: Date
+    public let eventType: LedgerEventKind
+    public let whereText: String
+    public let what: String
+    public let found: String?
+    public let source: String
+    public let whyItMatters: String
+    public let confidence: Double
+    public let next: String?
+}
+
+extension ExecutionLedgerEvent: Codable {
+    enum CodingKeys: String, CodingKey {
+        case sequence, timestamp, what, found, source, confidence, next
+        case eventType = "event_type"
+        case whereText = "where"
+        case whyItMatters = "why_it_matters"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sequence = try container.decode(Int.self, forKey: .sequence)
+        let rawTimestamp = try container.decode(String.self, forKey: .timestamp)
+        guard let date = WireDate.parse(rawTimestamp) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .timestamp, in: container,
+                debugDescription: "ledger timestamp is not ISO-8601: \(rawTimestamp)")
+        }
+        timestamp = date
+        eventType = try container.decode(LedgerEventKind.self, forKey: .eventType)
+        whereText = try container.decode(String.self, forKey: .whereText)
+        what = try container.decode(String.self, forKey: .what)
+        found = try container.decodeIfPresent(String.self, forKey: .found)
+        source = try container.decode(String.self, forKey: .source)
+        whyItMatters = try container.decode(String.self, forKey: .whyItMatters)
+        confidence = try container.decode(Double.self, forKey: .confidence)
+        next = try container.decodeIfPresent(String.self, forKey: .next)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sequence, forKey: .sequence)
+        try container.encode(WireDate.format(timestamp), forKey: .timestamp)
+        try container.encode(eventType, forKey: .eventType)
+        try container.encode(whereText, forKey: .whereText)
+        try container.encode(what, forKey: .what)
+        try container.encodeIfPresent(found, forKey: .found)
+        try container.encode(source, forKey: .source)
+        try container.encode(whyItMatters, forKey: .whyItMatters)
+        try container.encode(confidence, forKey: .confidence)
+        try container.encodeIfPresent(next, forKey: .next)
+    }
+}
+
+public struct ApprovalRequest: Codable, Equatable, Sendable {
+    public let stepID: String
+    public let description: String
+    public let risk: Risk
+    public let dataPreview: [String: JSONValue]
+
+    enum CodingKeys: String, CodingKey {
+        case description, risk
+        case stepID = "step_id"
+        case dataPreview = "data_preview"
+    }
 }
 
 public struct VerificationResult: Codable, Equatable, Sendable {
@@ -318,9 +464,14 @@ public struct TaskCancelled: Codable, Equatable, Sendable {
 
 public enum EventPayload: Equatable, Sendable {
     case voiceFinal(VoiceRequest)
+    case voiceCorrection(VoiceRequest)
     case observationReady(Observation)
     case groundingReady(GroundingResult)
     case planReady(TaskPlan)
+    case taskSpecReady(VersionedTaskSpec)
+    case planPatchApplied(AppliedPlanPatch)
+    case ledgerEvent(ExecutionLedgerEvent)
+    case approvalRequested(ApprovalRequest)
     case actionStarted(ActionStarted)
     case actionFinished(ActionResult)
     case verificationFinished(VerificationResult)
@@ -385,12 +536,26 @@ extension Envelope: Codable {
         switch type {
         case .voiceFinal:
             self.payload = .voiceFinal(try container.decode(VoiceRequest.self, forKey: .payload))
+        case .voiceCorrection:
+            self.payload = .voiceCorrection(try container.decode(VoiceRequest.self, forKey: .payload))
         case .observationReady:
             self.payload = .observationReady(try container.decode(Observation.self, forKey: .payload))
         case .groundingReady:
             self.payload = .groundingReady(try container.decode(GroundingResult.self, forKey: .payload))
         case .planReady:
             self.payload = .planReady(try container.decode(TaskPlan.self, forKey: .payload))
+        case .taskSpecReady:
+            self.payload = .taskSpecReady(
+                try container.decode(VersionedTaskSpec.self, forKey: .payload))
+        case .planPatchApplied:
+            self.payload = .planPatchApplied(
+                try container.decode(AppliedPlanPatch.self, forKey: .payload))
+        case .ledgerEvent:
+            self.payload = .ledgerEvent(
+                try container.decode(ExecutionLedgerEvent.self, forKey: .payload))
+        case .approvalRequested:
+            self.payload = .approvalRequested(
+                try container.decode(ApprovalRequest.self, forKey: .payload))
         case .actionStarted:
             self.payload = .actionStarted(try container.decode(ActionStarted.self, forKey: .payload))
         case .actionFinished:
@@ -420,9 +585,14 @@ extension Envelope: Codable {
         try container.encode(WireDate.format(timestamp), forKey: .timestamp)
         switch payload {
         case .voiceFinal(let value): try container.encode(value, forKey: .payload)
+        case .voiceCorrection(let value): try container.encode(value, forKey: .payload)
         case .observationReady(let value): try container.encode(value, forKey: .payload)
         case .groundingReady(let value): try container.encode(value, forKey: .payload)
         case .planReady(let value): try container.encode(value, forKey: .payload)
+        case .taskSpecReady(let value): try container.encode(value, forKey: .payload)
+        case .planPatchApplied(let value): try container.encode(value, forKey: .payload)
+        case .ledgerEvent(let value): try container.encode(value, forKey: .payload)
+        case .approvalRequested(let value): try container.encode(value, forKey: .payload)
         case .actionStarted(let value): try container.encode(value, forKey: .payload)
         case .actionFinished(let value): try container.encode(value, forKey: .payload)
         case .verificationFinished(let value): try container.encode(value, forKey: .payload)

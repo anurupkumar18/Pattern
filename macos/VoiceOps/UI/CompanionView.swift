@@ -7,16 +7,20 @@ import VoiceOpsCore
 struct CompanionView: View {
     @ObservedObject var coordinator: AppCoordinator
     @State private var timelineExpanded = false
+    @State private var planExpanded = true
+    @State private var ledgerExpanded = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
             content
+            if coordinator.activeTaskSpec != nil { versionedPlan }
+            if !coordinator.executionLedger.isEmpty { executionLedger }
             if coordinator.state != .idle { taskTimeline }
             footer
         }
         .padding(16)
-        .frame(width: 380, alignment: .leading)
+        .frame(width: 520, alignment: .leading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .animation(.easeInOut(duration: 0.15), value: coordinator.state)
     }
@@ -75,6 +79,8 @@ struct CompanionView: View {
         case .listening: "mic.fill"
         case .grounding: "viewfinder.circle"
         case .planning: "brain"
+        case .readyForCorrection: "square.and.pencil"
+        case .correctionListening: "waveform.badge.mic"
         case .awaitingApproval: "hand.raised.fill"
         case .acting: "gearshape.2.fill"
         case .verifying: "checklist"
@@ -96,6 +102,8 @@ struct CompanionView: View {
         case .listening: "Listening…"
         case .grounding: "Grounding"
         case .planning: "Planning"
+        case .readyForCorrection(_, let version, _): "Plan v\(version) ready"
+        case .correctionListening: "Listening for correction…"
         case .awaitingApproval: "Approval needed"
         case .acting: "Acting"
         case .verifying: "Verifying"
@@ -141,6 +149,28 @@ struct CompanionView: View {
                 }
             }
 
+        case .readyForCorrection(let objective, let version, let chips):
+            VStack(alignment: .leading, spacing: 8) {
+                groundingChips(chips)
+                groundingMethod
+                Label("Persistent task compiled · version \(version)", systemImage: "checkmark.seal")
+                    .font(.callout.weight(.semibold))
+                Text(objective).font(.callout)
+                Text("Press ⌃⌥V and speak a correction. VoiceOps will patch this task instead of restarting it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+        case .correctionListening(let transcript, let version, _):
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Patching task version \(version)", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.callout.weight(.semibold))
+                transcriptView(transcript.isEmpty ? "…" : transcript)
+                Text("Press ⌃⌥V again to apply the correction.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
         case .awaitingApproval(let description, let chips):
             VStack(alignment: .leading, spacing: 8) {
                 groundingChips(chips)
@@ -168,6 +198,111 @@ struct CompanionView: View {
 
         case .result(let result):
             resultView(result)
+        }
+    }
+
+    private var versionedPlan: some View {
+        DisclosureGroup(isExpanded: $planExpanded) {
+            if let task = coordinator.activeTaskSpec {
+                VStack(alignment: .leading, spacing: 8) {
+                    Group {
+                        Text("Raw request").font(.caption2.weight(.semibold))
+                        Text(task.rawRequest).font(.caption).foregroundStyle(.secondary)
+                        Text("Objective").font(.caption2.weight(.semibold))
+                        Text(task.objective).font(.caption)
+                    }
+                    Divider()
+                    Text("Actions").font(.caption2.weight(.semibold))
+                    ForEach(task.actions.keys.sorted(), id: \.self) { actionID in
+                        if let action = task.actions[actionID] {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Image(systemName: action.status == .cancelled
+                                    ? "minus.circle" : "circle")
+                                Text(action.description).font(.caption)
+                                Spacer(minLength: 4)
+                                Text(action.risk.rawValue.replacingOccurrences(
+                                    of: "_", with: " "))
+                                    .font(.caption2.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    Text("Constraints").font(.caption2.weight(.semibold))
+                    ForEach(task.constraints.keys.sorted(), id: \.self) { key in
+                        if let value = task.constraints[key] {
+                            Label(value, systemImage: "lock.shield")
+                                .font(.caption)
+                        }
+                    }
+                    if let patch = coordinator.appliedPlanPatch {
+                        Divider()
+                        Label(
+                            "Patch v\(patch.baseVersion) → v\(patch.newVersion)",
+                            systemImage: "arrow.triangle.branch")
+                            .font(.caption.weight(.semibold))
+                        if !patch.removed.isEmpty {
+                            Text("Removed · \(patch.removed.joined(separator: ", "))")
+                                .font(.caption2)
+                        }
+                        if !patch.added.isEmpty {
+                            Text("Added · \(patch.added.joined(separator: ", "))")
+                                .font(.caption2)
+                        }
+                        Text("Preserved · \(patch.preserved.count) task fields")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 6)
+            }
+        } label: {
+            HStack {
+                Label("Versioned action plan", systemImage: "list.bullet.clipboard")
+                Spacer()
+                if let task = coordinator.activeTaskSpec {
+                    Text("v\(task.version)")
+                        .font(.caption2.monospaced().weight(.bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.quaternary, in: Capsule())
+                }
+            }
+            .font(.caption)
+        }
+    }
+
+    private var executionLedger: some View {
+        DisclosureGroup(isExpanded: $ledgerExpanded) {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(coordinator.executionLedger.suffix(14), id: \.sequence) { event in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(event.eventType.rawValue.uppercased())
+                                .font(.caption2.monospaced().weight(.bold))
+                            Text(event.whereText)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Text(event.what).font(.caption)
+                        if let found = event.found {
+                            Text(found).font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Text("Source: \(event.source) · Confidence: \(Int(event.confidence * 100))%")
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .padding(.top, 6)
+        } label: {
+            HStack {
+                Label("Execution ledger", systemImage: "point.3.connected.trianglepath.dotted")
+                Spacer()
+                Text("\(coordinator.executionLedger.count) events")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption)
         }
     }
 
@@ -259,6 +394,13 @@ struct CompanionView: View {
         case "research-citations": "Sources and rationale retained"
         case "research-followups": "Three approved follow-ups match"
         case "research-visible": "Research note visible in Notes"
+        case "tracking-reviewed": "Tracking reviewed"
+        case "shopify-updated": "Shopify updated and $20 credit issued"
+        case "customer-contacted": "Customer choice message in Sent"
+        case "operations-notified": "Sarah notified in Slack"
+        case "followup-scheduled": "Follow-up scheduled"
+        case "no-refund-issued": "Confirmed: no refund issued"
+        case "no-replacement-created": "Confirmed: no replacement created"
         default: predicateID.replacingOccurrences(of: "-", with: " ").capitalized
         }
     }
@@ -317,7 +459,8 @@ struct CompanionView: View {
                 Button("Approve Schedule") { coordinator.approvePendingAction() }
                     .buttonStyle(.borderedProminent)
             }
-        case .listening, .grounding, .planning, .acting, .verifying:
+        case .listening, .grounding, .planning, .readyForCorrection,
+             .correctionListening, .acting, .verifying:
             HStack {
                 Spacer()
                 Button(role: .destructive) {

@@ -14,6 +14,9 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var groundingWarnings: [String] = []
     @Published private(set) var verificationResults: [VerificationResult] = []
     @Published private(set) var taskTrace = TaskTrace()
+    @Published private(set) var activeTaskSpec: VersionedTaskSpec?
+    @Published private(set) var appliedPlanPatch: AppliedPlanPatch?
+    @Published private(set) var executionLedger: [ExecutionLedgerEvent] = []
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
@@ -107,9 +110,13 @@ final class AppCoordinator: ObservableObject {
             groundingAdapter = nil
             groundingWarnings = []
             verificationResults = []
+            activeTaskSpec = nil
+            appliedPlanPatch = nil
+            executionLedger = []
             cleanupScreenContext()
             panel?.show()
-            narrator.say("Listening")
+            // Never play synthesized speech while the microphone is open; it
+            // contaminates recognition and makes interruption behavior flaky.
             startCapture()
 
         case .grounding:
@@ -123,13 +130,26 @@ final class AppCoordinator: ObservableObject {
             recordTrace(.planning, "Grounded context sent to the typed planner")
             narrator.say("I found the visible context")
 
+        case .readyForCorrection(_, let version, _):
+            recordTrace(.planning, "Version \(version) is ready for a voice correction")
+            narrator.say("Plan ready")
+
+        case .correctionListening:
+            guard case .readyForCorrection = previous else { return }
+            recordTrace(.listening, "Voice correction capture started on the active task")
+            startCapture()
+
         case .awaitingApproval:
             recordTrace(.approval, "Waiting for explicit schedule approval")
             narrator.say("Approval needed")
 
         case .acting:
             recordTrace(.action, "Approved plan entered native execution")
-            narrator.say("Working on it")
+            if case .correctionListening = previous {
+                finishCorrectionCapture()
+            } else {
+                narrator.say("Working on it")
+            }
 
         case .verifying:
             recordTrace(.verification, "Independent fetch-back verification started")
@@ -178,7 +198,7 @@ final class AppCoordinator: ObservableObject {
                 return
             }
             // The user may have cancelled while the permission dialog was up.
-            guard case .listening = state else { return }
+            guard isVoiceCaptureState(state) else { return }
 
             let controller = VoiceSessionController(
                 transcriber: SpeechTranscriber(),
@@ -224,6 +244,39 @@ final class AppCoordinator: ObservableObject {
                     dispatch(.taskFailed(reason:
                         "Could not collect the spoken request and visible screen: "
                         + error.localizedDescription))
+                }
+            }
+            self.voiceSession = nil
+            self.contextTask = nil
+        }
+    }
+
+    private func finishCorrectionCapture() {
+        contextTask = Task { [weak self] in
+            guard let self,
+                  let voiceSession,
+                  let client = sidecarClient,
+                  let taskID = activeTaskID
+            else { return }
+            do {
+                let correction = try await voiceSession.end()
+                guard !Task.isCancelled else { return }
+                recordTrace(
+                    .planning,
+                    "Correction transcribed and sent as a patch to task \(taskID.uuidString.prefix(8))")
+                try await client.send(Envelope(
+                    type: .voiceCorrection,
+                    taskID: taskID,
+                    payload: .voiceCorrection(correction)))
+            } catch VoiceSessionError.cancelled {
+                // stop already handled by the state machine
+            } catch VoiceSessionError.noSpeech {
+                dispatch(.taskFailed(reason:
+                    "No correction speech captured. The version-one plan was not changed."))
+            } catch {
+                if !Task.isCancelled {
+                    dispatch(.taskFailed(reason:
+                        "Could not apply the voice correction: \(error.localizedDescription)"))
                 }
             }
             self.voiceSession = nil
@@ -318,6 +371,24 @@ final class AppCoordinator: ObservableObject {
                                 }
                             }
                         }
+                    case .taskSpecReady(let task):
+                        self?.activeTaskSpec = task
+                        self?.recordTrace(
+                            .planning,
+                            "Compiled persistent Order Rescue task version \(task.version)")
+                        self?.dispatch(.taskSpecReady(
+                            version: task.version, objective: task.objective))
+                    case .planPatchApplied(let patch):
+                        self?.appliedPlanPatch = patch
+                        self?.recordTrace(
+                            .planning,
+                            "Applied plan patch v\(patch.baseVersion) → v\(patch.newVersion): "
+                                + "\(patch.removed.count) removed, \(patch.added.count) added")
+                    case .ledgerEvent(let event):
+                        self?.executionLedger.append(event)
+                        self?.recordTrace(
+                            self?.traceStage(for: event.eventType) ?? .planning,
+                            "\(event.eventType.rawValue.capitalized): \(event.what)")
                     case .taskCompleted(let completed):
                         self?.verificationResults = completed.verification
                         self?.dispatch(.taskCompleted(state: completed.state, summary: completed.summary))
@@ -495,10 +566,27 @@ final class AppCoordinator: ObservableObject {
 
     private func isTaskActive(_ state: SessionState) -> Bool {
         switch state {
-        case .listening, .grounding, .planning, .awaitingApproval, .acting, .verifying:
+        case .listening, .grounding, .planning, .readyForCorrection,
+             .correctionListening, .awaitingApproval, .acting, .verifying:
             true
         case .idle, .result:
             false
+        }
+    }
+
+    private func isVoiceCaptureState(_ state: SessionState) -> Bool {
+        switch state {
+        case .listening, .correctionListening: true
+        default: false
+        }
+    }
+
+    private func traceStage(for event: LedgerEventKind) -> TaskTraceStage {
+        switch event {
+        case .observed: .grounding
+        case .interpreted, .decided: .planning
+        case .acted: .action
+        case .verified: .verification
         }
     }
 

@@ -85,6 +85,19 @@ class FixtureOrderRescueExecutor:
         actions: dict[str, OrderRescueActionRecord] = {}
         ledger: list[ExecutionLedgerEvent] = []
         clock = _LedgerClock()
+        if required:
+            ledger.append(clock.event(
+                "decided",
+                where="VoiceOps authorization gate",
+                what="Bound explicit operator approval to the corrected action set.",
+                found=(
+                    "Approved action IDs: " + ", ".join(sorted(required))
+                ),
+                source="microphone.operator",
+                why="Consequential actions must be traceable to the user's latest instruction.",
+                confidence=1,
+                next="Execute only the approved version-two actions.",
+            ))
 
         for action_id in ACTION_ORDER:
             action = task.actions.get(action_id)

@@ -30,9 +30,13 @@ class VoiceOpsModel(BaseModel):
 class EventType(StrEnum):
     VOICE_PARTIAL = "voice.partial"
     VOICE_FINAL = "voice.final"
+    VOICE_CORRECTION = "voice.correction"
     OBSERVATION_READY = "observation.ready"
     GROUNDING_READY = "grounding.ready"
     PLAN_READY = "plan.ready"
+    TASK_SPEC_READY = "task.spec_ready"
+    PLAN_PATCH_APPLIED = "plan.patch_applied"
+    LEDGER_EVENT = "ledger.event"
     APPROVAL_REQUESTED = "approval.requested"
     ACTION_STARTED = "action.started"
     ACTION_FINISHED = "action.finished"
@@ -366,9 +370,13 @@ class TaskCancelled(VoiceOpsModel):
 EVENT_PAYLOADS: dict[EventType, type[VoiceOpsModel]] = {
     EventType.VOICE_PARTIAL: TranscriptPartial,
     EventType.VOICE_FINAL: VoiceRequest,
+    EventType.VOICE_CORRECTION: VoiceRequest,
     EventType.OBSERVATION_READY: Observation,
     EventType.GROUNDING_READY: GroundingResult,
     EventType.PLAN_READY: TaskPlan,
+    EventType.TASK_SPEC_READY: VersionedTaskSpec,
+    EventType.PLAN_PATCH_APPLIED: AppliedPlanPatch,
+    EventType.LEDGER_EVENT: ExecutionLedgerEvent,
     EventType.APPROVAL_REQUESTED: ApprovalRequest,
     EventType.ACTION_STARTED: ActionStarted,
     EventType.ACTION_FINISHED: ActionResult,

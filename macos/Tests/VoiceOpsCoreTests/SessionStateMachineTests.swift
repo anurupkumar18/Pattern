@@ -60,6 +60,31 @@ final class SessionStateMachineTests: XCTestCase {
             .acting(description: "one verified write", groundingChips: chips))
     }
 
+    func testOrderRescueHotkeyCapturesCorrectionOnTheSameVersionedTask() {
+        let chips = [GroundingChip(
+            phrase: "this delayed order", resolvedText: "Order #1842",
+            source: .accessibility, confidence: 1)]
+        let ready = SessionStateMachine.reduce(
+            .planning(transcript: "take care of this delayed order", groundingChips: chips),
+            .taskSpecReady(version: 1, objective: "Resolve Order #1842"))
+        XCTAssertEqual(ready, .readyForCorrection(
+            objective: "Resolve Order #1842", version: 1, groundingChips: chips))
+
+        let listening = SessionStateMachine.reduce(ready!, .hotkeyTapped)
+        XCTAssertEqual(listening, .correctionListening(
+            transcript: "", planVersion: 1, groundingChips: chips))
+        let partial = SessionStateMachine.reduce(
+            listening!, .partialTranscript("Actually, don't create the replacement"))
+        XCTAssertEqual(partial, .correctionListening(
+            transcript: "Actually, don't create the replacement",
+            planVersion: 1, groundingChips: chips))
+        XCTAssertEqual(
+            SessionStateMachine.reduce(partial!, .hotkeyTapped),
+            .acting(
+                description: "Applying correction to the existing plan",
+                groundingChips: chips))
+    }
+
     func testVerificationStartedMovesToVerifying() {
         XCTAssertEqual(
             SessionStateMachine.reduce(.acting(description: "d", groundingChips: []), .verificationStarted),
@@ -127,6 +152,8 @@ final class SessionStateMachineTests: XCTestCase {
         for state: SessionState in [
             .grounding(transcript: "t"),
             .planning(transcript: "t", groundingChips: []),
+            .readyForCorrection(objective: "o", version: 1, groundingChips: []),
+            .correctionListening(transcript: "c", planVersion: 1, groundingChips: []),
             .awaitingApproval(description: "approve", groundingChips: []),
             .acting(description: "d", groundingChips: []),
             .verifying,
@@ -146,6 +173,8 @@ final class SessionStateMachineTests: XCTestCase {
         for state: SessionState in [
             .listening(transcript: ""), .grounding(transcript: "t"),
             .planning(transcript: "t", groundingChips: []),
+            .readyForCorrection(objective: "o", version: 1, groundingChips: []),
+            .correctionListening(transcript: "c", planVersion: 1, groundingChips: []),
             .awaitingApproval(description: "approve", groundingChips: []),
             .acting(description: "d", groundingChips: []), .verifying,
         ] {

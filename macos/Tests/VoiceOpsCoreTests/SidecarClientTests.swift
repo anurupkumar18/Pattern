@@ -152,6 +152,78 @@ final class SidecarClientTests: XCTestCase {
         await client.cancel()
     }
 
+    func testOrderRescueCorrectionStreamsVersionPatchLedgerAndVerifiedCompletion() async throws {
+        try requireUV()
+        let taskID = UUID()
+        let observationURL = Self.repoRoot
+            .appendingPathComponent("fixtures/screen/order_1842_observation.json")
+        let observation = try JSONDecoder().decode(
+            Observation.self, from: Data(contentsOf: observationURL))
+        let initial = VoiceRequest(
+            transcript: "Take care of this delayed order. Check whether it has moved recently. She looks like a valuable customer, so if it has been stuck for more than three days, prepare an expedited replacement, apologize to her, update the order, and remind me tomorrow to verify the new tracking.",
+            locale: "en-US", confidence: 1, segments: [])
+        let correction = VoiceRequest(
+            transcript: "Actually, don't create the replacement yet. Ask whether she would prefer the replacement or a full refund. Give her a twenty-dollar store credit either way, and tag Sarah in Slack because this is the third delayed package from this carrier.",
+            locale: "en-US", confidence: 1, segments: [])
+
+        let client = makeClient()
+        let events = try await client.start()
+        try await client.send(Envelope(
+            type: .observationReady, taskID: taskID,
+            payload: .observationReady(observation)))
+        try await client.send(Envelope(
+            type: .voiceFinal, taskID: taskID,
+            payload: .voiceFinal(initial)))
+
+        var iterator = events.makeAsyncIterator()
+        let groundingEnvelope = try await iterator.next()
+        XCTAssertEqual(groundingEnvelope?.type, .groundingReady)
+        let nextEnvelope = try await iterator.next()
+        let initialSpecEnvelope = try XCTUnwrap(nextEnvelope)
+        guard case .taskSpecReady(let taskV1) = initialSpecEnvelope.payload else {
+            return XCTFail("expected version-one task spec")
+        }
+        XCTAssertEqual(taskV1.version, 1)
+        XCTAssertNotNil(taskV1.actions["create_replacement"])
+
+        try await client.send(Envelope(
+            type: .voiceCorrection, taskID: taskID,
+            payload: .voiceCorrection(correction)))
+
+        var patch: AppliedPlanPatch?
+        var taskV2: VersionedTaskSpec?
+        var ledger: [ExecutionLedgerEvent] = []
+        var completion: TaskCompleted?
+        while let envelope = try await iterator.next() {
+            switch envelope.payload {
+            case .planPatchApplied(let value): patch = value
+            case .taskSpecReady(let value): taskV2 = value
+            case .ledgerEvent(let value): ledger.append(value)
+            case .taskCompleted(let value): completion = value
+            default: break
+            }
+            if completion != nil { break }
+        }
+
+        XCTAssertEqual(patch?.baseVersion, 1)
+        XCTAssertEqual(patch?.newVersion, 2)
+        XCTAssertTrue(patch?.removed.contains("actions.create_replacement") == true)
+        XCTAssertEqual(taskV2?.version, 2)
+        XCTAssertNil(taskV2?.actions["create_replacement"])
+        XCTAssertEqual(Set(ledger.map(\.eventType)), Set([
+            .observed, .interpreted, .decided, .acted, .verified,
+        ]))
+        XCTAssertEqual(ledger.map(\.sequence), Array(1...ledger.count))
+        XCTAssertEqual(completion?.state, .succeeded)
+        XCTAssertEqual(completion?.summary, "ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED")
+        XCTAssertEqual(completion?.verification.count, 7)
+        XCTAssertTrue(completion?.verification.allSatisfy(\.passed) == true)
+        XCTAssertEqual(
+            Set(completion?.verification.suffix(2).map(\.predicateId) ?? []),
+            Set(["no-refund-issued", "no-replacement-created"]))
+        await client.cancel()
+    }
+
     func testCancelInterruptsTaskAndFinishesStream() async throws {
         try requireUV()
         let client = makeClient()

@@ -50,6 +50,25 @@ RESEARCH_FIXTURE_PATH = (
     / "screen"
     / "company_research_observation.json"
 )
+ORDER_RESCUE_OBSERVATION_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "fixtures"
+    / "screen"
+    / "order_1842_observation.json"
+)
+
+ORDER_RESCUE_REQUEST = (
+    "Take care of this delayed order. Check whether it has moved recently. "
+    "She looks like a valuable customer, so if it has been stuck for more than "
+    "three days, prepare an expedited replacement, apologize to her, update the "
+    "order, and remind me tomorrow to verify the new tracking."
+)
+ORDER_RESCUE_CORRECTION = (
+    "Actually, don't create the replacement yet. Ask whether she would prefer "
+    "the replacement or a full refund. Give her a twenty-dollar store credit "
+    "either way, and tag Sarah in Slack because this is the third delayed package "
+    "from this carrier."
+)
 
 
 class FixtureResearchAdapter:
@@ -305,6 +324,87 @@ class TestHandleLine:
         assert events[-1].payload.error.code == FailureCode.TARGET_NOT_FOUND
         assert "did not perform or verify" in events[-1].payload.error.message
 
+    def test_order_rescue_correction_patches_executes_and_independently_verifies(self):
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+        observation = Observation.model_validate_json(
+            ORDER_RESCUE_OBSERVATION_PATH.read_text()
+        )
+        initial = VoiceRequest(
+            transcript=ORDER_RESCUE_REQUEST,
+            locale="en-US", confidence=1, segments=[],
+        )
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, task_id, observation
+        ).to_ndjson())
+
+        planned = runtime.handle_line(make_envelope(
+            EventType.VOICE_FINAL, task_id, initial
+        ).to_ndjson())
+
+        assert [event.type for event in planned] == [
+            EventType.GROUNDING_READY, EventType.TASK_SPEC_READY,
+        ]
+        task_v1 = planned[-1].payload
+        assert task_v1.version == 1
+        assert task_v1.entities["order"] == "#1842"
+        assert "create_replacement" in task_v1.actions
+
+        correction = VoiceRequest(
+            transcript=ORDER_RESCUE_CORRECTION,
+            locale="en-US", confidence=1, segments=[],
+        )
+        completed = runtime.handle_line(make_envelope(
+            EventType.VOICE_CORRECTION, task_id, correction
+        ).to_ndjson())
+
+        assert completed[0].type is EventType.PLAN_PATCH_APPLIED
+        assert completed[1].type is EventType.TASK_SPEC_READY
+        assert all(
+            event.type is EventType.LEDGER_EVENT for event in completed[2:-1]
+        )
+        assert completed[-1].type is EventType.TASK_COMPLETED
+        task_v2 = completed[1].payload
+        result = completed[-1].payload
+        assert task_v2.version == 2
+        assert "create_replacement" not in task_v2.actions
+        assert {
+            "ask_customer_preference", "issue_store_credit", "notify_operations"
+        }.issubset(task_v2.actions)
+        assert result.state == "succeeded"
+        assert result.summary == "ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED"
+        assert len(result.verification) == 7
+        assert all(item.passed for item in result.verification)
+        assert {item.predicate_id for item in result.verification[-2:]} == {
+            "no-refund-issued", "no-replacement-created"
+        }
+        assert {
+            event.payload.event_type for event in completed[2:-1]
+        } == {"observed", "interpreted", "decided", "acted", "verified"}
+
+    def test_order_rescue_rejects_incomplete_correction_without_mutating_plan(self):
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+        initial = VoiceRequest(
+            transcript="Take care of delayed order #1842.",
+            locale="en-US", confidence=1, segments=[],
+        )
+        runtime.handle_line(make_envelope(
+            EventType.VOICE_FINAL, task_id, initial
+        ).to_ndjson())
+        incomplete = VoiceRequest(
+            transcript="Actually, just send Sarah a note.",
+            locale="en-US", confidence=1, segments=[],
+        )
+
+        rejected = runtime.handle_line(make_envelope(
+            EventType.VOICE_CORRECTION, task_id, incomplete
+        ).to_ndjson())
+
+        assert [event.type for event in rejected] == [EventType.TASK_FAILED]
+        assert rejected[0].payload.error.code is FailureCode.AMBIGUOUS_STATE
+        assert runtime._order_rescue_tasks[task_id].version == 1
+
     def test_each_step_must_execute_before_its_predicate_can_verify(self):
         runtime = SidecarRuntime()
         task_id = uuid4()
@@ -433,3 +533,33 @@ class TestSidecarProcess:
         messages = self.run_sidecar("garbage\n" + fixture_line() + "\n")
         types = [m["type"] for m in messages]
         assert types == ["task.failed", "plan.ready", "task.completed"]
+
+    def test_order_rescue_exchange_over_stdio(self):
+        task_id = uuid4()
+        observation = Observation.model_validate_json(
+            ORDER_RESCUE_OBSERVATION_PATH.read_text()
+        )
+        initial = VoiceRequest(
+            transcript=ORDER_RESCUE_REQUEST,
+            locale="en-US", confidence=1, segments=[],
+        )
+        correction = VoiceRequest(
+            transcript=ORDER_RESCUE_CORRECTION,
+            locale="en-US", confidence=1, segments=[],
+        )
+        stdin = "".join([
+            make_envelope(EventType.OBSERVATION_READY, task_id, observation).to_ndjson(),
+            make_envelope(EventType.VOICE_FINAL, task_id, initial).to_ndjson(),
+            make_envelope(EventType.VOICE_CORRECTION, task_id, correction).to_ndjson(),
+        ])
+
+        messages = self.run_sidecar(stdin)
+        types = [message["type"] for message in messages]
+
+        assert types[:4] == [
+            "grounding.ready", "task.spec_ready", "plan.patch_applied", "task.spec_ready"
+        ]
+        assert types[-1] == "task.completed"
+        assert messages[-1]["payload"]["summary"] == (
+            "ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED"
+        )

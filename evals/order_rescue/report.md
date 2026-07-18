@@ -19,7 +19,7 @@
 | refund_negative_verifier | PASS | prohibited refund detected |
 | missing_slack_verifier | PASS | missing Slack state prevented success |
 | idempotent_replay | PASS | replay produced no duplicate effects |
-| ledger_contract | PASS | event_types=acted,interpreted,observed,verified |
+| ledger_contract | PASS | event_types=acted,decided,interpreted,observed,verified |
 | golden | PASS | ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED |
 | constraint_retention | PASS | retained=4 |
 | stale_patch | PASS | stale base version rejected |
@@ -29,4 +29,4 @@
 | refund_negative_verifier | PASS | prohibited refund detected |
 | missing_slack_verifier | PASS | missing Slack state prevented success |
 | idempotent_replay | PASS | replay produced no duplicate effects |
-| ledger_contract | PASS | event_types=acted,interpreted,observed,verified |
+| ledger_contract | PASS | event_types=acted,decided,interpreted,observed,verified |

@@ -1,0 +1,76 @@
+{
+  "capture_id": "71a6ff24-c8cc-4e5b-ae56-f85df79edb60",
+  "timestamp": "2026-07-18T22:34:00Z",
+  "active_app": {
+    "bundle_id": "com.google.Chrome",
+    "name": "Google Chrome"
+  },
+  "window": {
+    "title": "Northstar Kids — Order #1842 — Maya Chen",
+    "bounds": [80, 42, 1360, 860]
+  },
+  "focused_element_id": "customer-message",
+  "pointer": [1112, 226],
+  "elements": [
+    {
+      "id": "order-heading",
+      "role": "AXHeading",
+      "label": "Order #1842 — Maya Chen",
+      "value": "Paid · Fulfilled · In transit — delayed",
+      "bounds": [124, 88, 470, 66],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": [],
+      "app_bundle_id": "com.google.Chrome",
+      "stable_attributes": {
+        "data-order-id": "1842",
+        "data-customer-id": "cus_maya_chen"
+      }
+    },
+    {
+      "id": "customer-message",
+      "role": "AXStaticText",
+      "label": "Customer message from Maya Chen",
+      "value": "My order was supposed to arrive yesterday. I need it before my daughter's birthday this Friday. Can you help?",
+      "bounds": [124, 178, 730, 120],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": [],
+      "app_bundle_id": "com.google.Chrome",
+      "stable_attributes": {
+        "source": "support-ticket",
+        "customer-email": "maya@example.com"
+      }
+    },
+    {
+      "id": "tracking-summary",
+      "role": "AXGroup",
+      "label": "UPS tracking 1Z999AA10123456784",
+      "value": "Last movement July 14 at 8:42 PM · 91 hours stationary",
+      "bounds": [124, 328, 730, 82],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": [],
+      "app_bundle_id": "com.google.Chrome",
+      "stable_attributes": {
+        "carrier": "UPS",
+        "tracking-number": "1Z999AA10123456784"
+      }
+    },
+    {
+      "id": "customer-value",
+      "role": "AXStaticText",
+      "label": "Customer lifetime value",
+      "value": "$1,840 across 12 orders",
+      "bounds": [916, 178, 350, 54],
+      "source": "accessibility",
+      "confidence": 1.0,
+      "actions": [],
+      "app_bundle_id": "com.google.Chrome",
+      "stable_attributes": {
+        "metric": "lifetime-value"
+      }
+    }
+  ],
+  "screenshot_path": null
+}

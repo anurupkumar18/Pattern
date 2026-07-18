@@ -6,6 +6,8 @@ public enum SessionState: Equatable, Sendable {
     case listening(transcript: String)
     case grounding(transcript: String)
     case planning(transcript: String, groundingChips: [GroundingChip])
+    case readyForCorrection(objective: String, version: Int, groundingChips: [GroundingChip])
+    case correctionListening(transcript: String, planVersion: Int, groundingChips: [GroundingChip])
     case awaitingApproval(description: String, groundingChips: [GroundingChip])
     case acting(description: String, groundingChips: [GroundingChip])
     case verifying
@@ -24,6 +26,7 @@ public enum SessionEvent: Equatable, Sendable {
     case finalTranscript(String)
     case groundingReady([GroundingChip])
     case planReady(summary: String)
+    case taskSpecReady(version: Int, objective: String)
     case approvalRequested(description: String)
     case approvalGranted
     case approvalDenied
@@ -58,6 +61,20 @@ public enum SessionStateMachine {
             return .planning(transcript: transcript, groundingChips: chips)
         case (.planning(_, let chips), .planReady(let summary)):
             return .acting(description: summary, groundingChips: chips)
+        case (.planning(_, let chips), .taskSpecReady(let version, let objective)):
+            return .readyForCorrection(
+                objective: objective, version: version, groundingChips: chips)
+        case (.readyForCorrection(_, let version, let chips), .hotkeyTapped):
+            return .correctionListening(
+                transcript: "", planVersion: version, groundingChips: chips)
+        case (.correctionListening(_, let version, let chips), .partialTranscript(let text)):
+            return .correctionListening(
+                transcript: text, planVersion: version, groundingChips: chips)
+        case (.correctionListening(_, _, let chips), .hotkeyTapped),
+             (.correctionListening(_, _, let chips), .finalTranscript):
+            return .acting(
+                description: "Applying correction to the existing plan",
+                groundingChips: chips)
         case (.planning(_, let chips), .approvalRequested(let description)):
             return .awaitingApproval(description: description, groundingChips: chips)
         case (.awaitingApproval(let description, let chips), .approvalGranted):
@@ -74,6 +91,8 @@ public enum SessionStateMachine {
 
         case (.listening, .taskFailed(let reason)),
              (.planning, .taskFailed(let reason)),
+             (.readyForCorrection, .taskFailed(let reason)),
+             (.correctionListening, .taskFailed(let reason)),
              (.awaitingApproval, .taskFailed(let reason)),
              (.grounding, .taskFailed(let reason)),
              (.acting, .taskFailed(let reason)),
@@ -82,6 +101,8 @@ public enum SessionStateMachine {
 
         case (.grounding, .stopRequested),
              (.planning, .stopRequested),
+             (.readyForCorrection, .stopRequested),
+             (.correctionListening, .stopRequested),
              (.awaitingApproval, .stopRequested),
              (.acting, .stopRequested),
              (.verifying, .stopRequested):

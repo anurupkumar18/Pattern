@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from .grounding import (
@@ -36,9 +37,22 @@ from .schemas import (
     TaskStep,
     VerificationResult,
     VerifierSpec,
+    VersionedTaskSpec,
     VoiceRequest,
     make_envelope,
     parse_envelope,
+)
+from .workflows.order_rescue import (
+    OrderRescueFixture,
+    OrderRescuePlanningError,
+    apply_plan_patch,
+    build_customer_choice_patch,
+    compile_order_rescue_task,
+)
+from .workflows.order_rescue_execution import (
+    FixtureOrderRescueExecutor,
+    OrderRescueExecutionError,
+    verify_order_rescue,
 )
 from .workflows.reminders import ReminderPlanningError, build_reminder_plan
 from .workflows.meeting_briefing import build_meeting_briefing_plan
@@ -101,6 +115,7 @@ class SidecarRuntime:
         self,
         grounding_adapter: MultimodalGroundingAdapter | None = None,
         research_adapter: CompanyResearchAdapter | None = None,
+        order_rescue_fixture: OrderRescueFixture | None = None,
     ) -> None:
         self._observations: dict[UUID, Observation] = {}
         self._grounding_adapter = grounding_adapter or build_grounding_adapter()
@@ -108,6 +123,8 @@ class SidecarRuntime:
         self._plans: dict[UUID, TaskPlan] = {}
         self._actions: dict[UUID, dict[str, ActionResult]] = {}
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
+        self._order_rescue_fixture = order_rescue_fixture or load_order_rescue_fixture()
+        self._order_rescue_tasks: dict[UUID, VersionedTaskSpec] = {}
 
     def handle_line(self, line: str) -> list[Envelope]:
         try:
@@ -128,6 +145,11 @@ class SidecarRuntime:
 
         if envelope.type is EventType.VERIFICATION_FINISHED:
             return self._handle_verification_finished(
+                envelope.task_id, envelope.payload
+            )
+
+        if envelope.type is EventType.VOICE_CORRECTION:
+            return self._handle_order_rescue_correction(
                 envelope.task_id, envelope.payload
             )
 
@@ -153,6 +175,17 @@ class SidecarRuntime:
             events.append(
                 make_envelope(EventType.GROUNDING_READY, envelope.task_id, grounding)
             )
+
+            if self._is_order_rescue(envelope.payload, observation):
+                task = compile_order_rescue_task(
+                    envelope.task_id,
+                    envelope.payload.transcript,
+                    self._order_rescue_fixture,
+                )
+                self._order_rescue_tasks[envelope.task_id] = task
+                return events + [
+                    make_envelope(EventType.TASK_SPEC_READY, envelope.task_id, task)
+                ]
 
             if self._is_screen_to_reminder(envelope.payload):
                 try:
@@ -234,6 +267,15 @@ class SidecarRuntime:
                 make_envelope(EventType.TASK_FAILED, envelope.task_id, failure)
             ]
 
+        if self._is_order_rescue(envelope.payload):
+            task = compile_order_rescue_task(
+                envelope.task_id,
+                envelope.payload.transcript,
+                self._order_rescue_fixture,
+            )
+            self._order_rescue_tasks[envelope.task_id] = task
+            return [make_envelope(EventType.TASK_SPEC_READY, envelope.task_id, task)]
+
         # Retained only for the voice-only Phase 0 protocol fixture. Every
         # grounded app request above must route to a real workflow or fail
         # closed; it may never inherit this schema-only success path.
@@ -259,6 +301,93 @@ class SidecarRuntime:
             make_envelope(EventType.PLAN_READY, envelope.task_id, plan),
             make_envelope(EventType.TASK_COMPLETED, envelope.task_id, completed),
         ]
+
+    def _handle_order_rescue_correction(
+        self, task_id: UUID, correction: VoiceRequest
+    ) -> list[Envelope]:
+        current = self._order_rescue_tasks.get(task_id)
+        if current is None:
+            return [make_envelope(
+                EventType.TASK_FAILED,
+                task_id,
+                TaskFailure(
+                    error=StructuredError(
+                        code=FailureCode.TARGET_NOT_FOUND,
+                        message="No active Order Rescue task matches this correction.",
+                    ),
+                    summary="The correction was not applied",
+                ),
+            )]
+        if not self._is_customer_choice_correction(correction):
+            return [make_envelope(
+                EventType.TASK_FAILED,
+                task_id,
+                TaskFailure(
+                    error=StructuredError(
+                        code=FailureCode.AMBIGUOUS_STATE,
+                        message=(
+                            "The correction must explicitly defer the replacement, ask "
+                            "replacement-or-refund preference, authorize the $20 credit, "
+                            "and request the Sarah Slack escalation."
+                        ),
+                    ),
+                    summary="The active plan was preserved without changes",
+                ),
+            )]
+
+        try:
+            patch = build_customer_choice_patch(current.version, correction.transcript)
+            updated = apply_plan_patch(current, patch)
+            approved = {
+                action.id
+                for action in updated.actions.values()
+                if action.requires_confirmation and action.status == "pending"
+            }
+            execution = FixtureOrderRescueExecutor().execute(
+                updated,
+                self._order_rescue_fixture,
+                approved_action_ids=approved,
+            )
+            report = verify_order_rescue(
+                updated, self._order_rescue_fixture, execution
+            )
+        except (OrderRescuePlanningError, OrderRescueExecutionError) as error:
+            return [make_envelope(
+                EventType.TASK_FAILED,
+                task_id,
+                TaskFailure(
+                    error=StructuredError(
+                        code=FailureCode.AMBIGUOUS_STATE,
+                        message=str(error),
+                    ),
+                    summary="The active plan was preserved without unsafe execution",
+                ),
+            )]
+
+        self._order_rescue_tasks[task_id] = updated
+        events = [
+            make_envelope(
+                EventType.PLAN_PATCH_APPLIED,
+                task_id,
+                updated.patch_history[-1],
+            ),
+            make_envelope(EventType.TASK_SPEC_READY, task_id, updated),
+        ]
+        events.extend(
+            make_envelope(EventType.LEDGER_EVENT, task_id, item)
+            for item in report.ledger
+        )
+        events.append(make_envelope(
+            EventType.TASK_COMPLETED,
+            task_id,
+            TaskCompleted(
+                state=report.state,
+                summary=report.headline,
+                verification=report.core_checks + report.negative_checks,
+            ),
+        ))
+        self._cleanup(task_id)
+        return events
 
     def _handle_action_finished(
         self, task_id: UUID, action: ActionResult
@@ -382,6 +511,7 @@ class SidecarRuntime:
         self._plans.pop(task_id, None)
         self._actions.pop(task_id, None)
         self._verifications.pop(task_id, None)
+        self._order_rescue_tasks.pop(task_id, None)
 
     @staticmethod
     def _is_screen_to_reminder(request: VoiceRequest) -> bool:
@@ -404,10 +534,61 @@ class SidecarRuntime:
             and "follow" in transcript
         )
 
+    @staticmethod
+    def _is_order_rescue(
+        request: VoiceRequest, observation: Observation | None = None
+    ) -> bool:
+        transcript = request.transcript.casefold()
+        if "delayed order" not in transcript:
+            return False
+        if any(token in transcript for token in ("#1842", "order 1842", "maya")):
+            return True
+        if observation is None:
+            return False
+        visible = " ".join(
+            value
+            for element in observation.elements
+            for value in (element.label, element.value)
+            if value
+        ).casefold()
+        return "#1842" in visible and "maya" in visible
+
+    @staticmethod
+    def _is_customer_choice_correction(correction: VoiceRequest) -> bool:
+        transcript = correction.transcript.casefold()
+        deferring = any(
+            phrase in transcript
+            for phrase in (
+                "don't create the replacement",
+                "don’t create the replacement",
+                "do not create the replacement",
+            )
+        )
+        return (
+            deferring
+            and "refund" in transcript
+            and "credit" in transcript
+            and "sarah" in transcript
+            and "slack" in transcript
+        )
+
 
 def handle_line(line: str) -> list[Envelope]:
     """Stateless compatibility helper used by Phase 0 contract tests."""
     return SidecarRuntime().handle_line(line)
+
+
+def load_order_rescue_fixture(path: Path | None = None) -> OrderRescueFixture:
+    configured = os.environ.get("VOICEOPS_ORDER_RESCUE_FIXTURE", "").strip()
+    fixture_path = path or (
+        Path(configured).expanduser()
+        if configured
+        else Path(__file__).resolve().parents[2]
+        / "fixtures"
+        / "order_rescue"
+        / "golden_order_1842.json"
+    )
+    return OrderRescueFixture.model_validate_json(fixture_path.read_text())
 
 
 def build_grounding_adapter() -> MultimodalGroundingAdapter:

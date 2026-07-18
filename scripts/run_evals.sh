@@ -14,7 +14,7 @@ echo "==> End-to-end mock exchange"
 (cd "$ROOT" && swift run -q --package-path "$ROOT/macos" voiceops-mock-client)
 
 echo "==> Deterministic 20-case evaluation report"
-(cd "$ROOT/agent" && uv run voiceops-eval \
+(cd "$ROOT/agent" && uv run python -m voiceops_agent.evaluation \
   --repo-root "$ROOT" \
   --output-dir "$ROOT/evals/reports" \
   --run-id fixture-baseline-v1)
