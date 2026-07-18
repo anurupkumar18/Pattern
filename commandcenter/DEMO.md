@@ -110,7 +110,42 @@ HERDR_SOCKET_PATH=/path/to/herdr.sock \
 npm test -- herdr.integration.test.ts
 ```
 
-## Recommended cascade via Ollama HTTP
+## Hackathon configuration: Gemma 4 on Cactus
+
+Install Cactus and download the prebuilt Gemma 4 E2B CQ4 bundle:
+
+```bash
+brew install cactus-compute/cactus/cactus
+cactus download google/gemma-4-E2B-it --bits 4
+```
+
+Start the persistent, local-only Cactus server in one terminal. Disabling cloud
+handoff and cloud telemetry keeps every completion on the Mac:
+
+```bash
+cactus serve google/gemma-4-E2B-it \
+  --bits 4 \
+  --backend metal \
+  --no-cloud-handoff \
+  --no-cloud-tele
+```
+
+In another terminal, route the command center through the included
+stdin/stdout bridge. The existing `ExecGemmaTransport` invokes the bridge,
+which calls Cactus's OpenAI-compatible local endpoint:
+
+```bash
+GEMMA_COMMAND=python3 \
+GEMMA_ARGS='["scripts/cactus-complete.py"]' \
+CACTUS_MODEL=google/gemma-4-E2B-it \
+npm run eval
+```
+
+Use the same environment with `npm run dev` for the live demo. Gemma
+configuration enables the cascade by default. Set `GEMMA_CASCADE=off` for a
+pure Cactus/Gemma measurement.
+
+## Development alternative: Ollama HTTP
 
 Start `ollama serve`, ensure `gemma4` is installed, then use the persistent
 HTTP transport. With Gemma configured, the command center defaults to the
@@ -140,32 +175,3 @@ For ablation runs, omit all `GEMMA_*` variables for pure deterministic mode.
 Set `GEMMA_CASCADE=off` alongside the Gemma variables for pure Gemma mode. The
 cascade fallback deadline defaults to 20 seconds and can be changed with
 `GEMMA_CASCADE_TIMEOUT_MS`.
-
-## Gemma on Cactus
-
-Install and warm the documented model:
-
-```bash
-brew install cactus-compute/cactus/cactus
-cactus run google/gemma-4-E2B-it
-```
-
-Point the app at a non-interactive local wrapper or HTTP bridge:
-
-```bash
-GEMMA_COMMAND=/path/to/cactus-wrapper \
-GEMMA_ARGS='["--model","google/gemma-4-E2B-it"]' \
-npm run dev
-```
-
-or:
-
-```bash
-GEMMA_HTTP_ENDPOINT=http://127.0.0.1:8080/complete npm run dev
-```
-
-Run model-backed evals with the same environment variable:
-
-```bash
-GEMMA_HTTP_ENDPOINT=http://127.0.0.1:8080/complete npm run eval
-```

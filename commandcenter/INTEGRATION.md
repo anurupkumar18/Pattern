@@ -13,8 +13,17 @@ npm run dev
 # Real Herdr fleet:
 HERDR_MODE=real HERDR_SOCKET_PATH=~/.config/herdr/herdr.sock npm run dev
 
-# Recommended cascade path. Deterministic answers return immediately and
-# deterministic noise escalates to the warmed Ollama model:
+# Hackathon-compliant Cactus path. Start the local model server separately:
+# cactus serve google/gemma-4-E2B-it --bits 4 --backend metal \
+#   --no-cloud-handoff --no-cloud-tele
+# Then deterministic answers return immediately and unresolved/noise speech
+# escalates to Gemma 4 running in Cactus:
+GEMMA_COMMAND=python3 \
+GEMMA_ARGS='["scripts/cactus-complete.py"]' \
+CACTUS_MODEL=google/gemma-4-E2B-it \
+npm run dev
+
+# Development alternative using Ollama:
 GEMMA_OLLAMA_MODEL=gemma4 \
 GEMMA_OLLAMA_TEMPERATURE=0 \
 GEMMA_OLLAMA_NUM_PREDICT=200 \
@@ -32,6 +41,12 @@ configuration for pure deterministic mode, or add `GEMMA_CASCADE=off` for
 pure Gemma mode. `GEMMA_CASCADE_TIMEOUT_MS` controls the cascade deadline
 (default 20,000 ms); timeout or model failure returns the deterministic noise
 result with `routedBy: "cascade-fallback-failed"` instead of throwing.
+
+The Cactus bridge reads one prompt from stdin, POSTs it to Cactus's
+OpenAI-compatible `/v1/chat/completions` endpoint, and writes only the
+completion to stdout, so no Cactus-specific TypeScript transport is needed.
+Override `CACTUS_ENDPOINT`, `CACTUS_MODEL`, `CACTUS_TEMPERATURE`,
+`CACTUS_MAX_TOKENS`, or `CACTUS_TIMEOUT_SECONDS` when needed.
 
 Server listens at `http://127.0.0.1:${PORT:-4173}`; the console UI and the
 programmatic WebSocket share the port.
