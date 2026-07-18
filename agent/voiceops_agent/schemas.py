@@ -311,7 +311,8 @@ def make_envelope(type: EventType, task_id: UUID, payload: VoiceOpsModel) -> Env
         id=uuid4(),
         type=type,
         task_id=task_id,
-        timestamp=datetime.now(UTC),
+        # Whole seconds keep the wire format inside strict ISO-8601 parsers (Swift).
+        timestamp=datetime.now(UTC).replace(microsecond=0),
         payload=payload,
     )
 

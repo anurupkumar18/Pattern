@@ -1,0 +1,103 @@
+import XCTest
+@testable import VoiceOpsCore
+
+/// Contract tests against the shared wire fixture in fixtures/ipc/.
+/// The Python suite round-trips the same file; a change that breaks either side
+/// is a protocol change and must update both suites plus schemas/.
+final class EnvelopeTests: XCTestCase {
+    static let fixtureURL = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()  // VoiceOpsCoreTests
+        .deletingLastPathComponent()  // Tests
+        .deletingLastPathComponent()  // macos
+        .deletingLastPathComponent()  // repo root
+        .appendingPathComponent("fixtures/ipc/voice_final.json")
+
+    private func fixtureData() throws -> Data {
+        try Data(contentsOf: Self.fixtureURL)
+    }
+
+    private func fixtureObject(mutating mutate: (inout [String: Any]) -> Void = { _ in }) throws -> Data {
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: fixtureData()) as? [String: Any])
+        mutate(&object)
+        return try JSONSerialization.data(withJSONObject: object)
+    }
+
+    func testDecodesVoiceFinalFixtureIntoTypedPayload() throws {
+        let envelope = try Envelope.decode(from: fixtureData())
+        XCTAssertEqual(envelope.type, .voiceFinal)
+        XCTAssertEqual(envelope.taskID, UUID(uuidString: "B3E9A1C2-6D4F-4A8B-9C0D-1E2F3A4B5C6D"))
+        guard case .voiceFinal(let request) = envelope.payload else {
+            return XCTFail("expected a voiceFinal payload, got \(envelope.payload)")
+        }
+        XCTAssertTrue(request.transcript.hasPrefix("Using this email"))
+        XCTAssertEqual(request.segments.count, 3)
+        XCTAssertEqual(request.locale, "en-US")
+    }
+
+    func testRoundTripIsLossless() throws {
+        let envelope = try Envelope.decode(from: fixtureData())
+        let decodedAgain = try Envelope.decode(from: envelope.encodeWire())
+        XCTAssertEqual(envelope, decodedAgain)
+    }
+
+    func testEncodesPythonCompatibleWireFormat() throws {
+        let envelope = try Envelope.decode(from: fixtureData())
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: envelope.encodeWire()) as? [String: Any]
+        )
+        XCTAssertEqual(object["version"] as? String, "1.0")
+        XCTAssertEqual(object["task_id"] as? String, "b3e9a1c2-6d4f-4a8b-9c0d-1e2f3a4b5c6d")
+        XCTAssertEqual(object["timestamp"] as? String, "2026-07-17T22:00:00Z")
+    }
+
+    func testRejectsUnknownEventType() throws {
+        let data = try fixtureObject { $0["type"] = "voice.telepathy" }
+        XCTAssertThrowsError(try Envelope.decode(from: data))
+    }
+
+    func testRejectsUnsupportedVersion() throws {
+        let data = try fixtureObject { $0["version"] = "2.0" }
+        XCTAssertThrowsError(try Envelope.decode(from: data))
+    }
+
+    func testNDJSONLineIsSingleLineWithTrailingNewline() throws {
+        let envelope = try Envelope.decode(from: fixtureData())
+        let line = try envelope.ndjsonLine()
+        XCTAssertTrue(line.hasSuffix("\n"))
+        XCTAssertFalse(line.dropLast().contains("\n"))
+    }
+
+    func testDecodesSidecarPlanReadyAndTaskCompleted() throws {
+        // Wire shapes as emitted by voiceops_agent.main.build_mock_plan.
+        let planJSON = """
+        {"version":"1.0","id":"11111111-2222-4333-8444-555555555555","type":"plan.ready",\
+        "task_id":"b3e9a1c2-6d4f-4a8b-9c0d-1e2f3a4b5c6d","timestamp":"2026-07-17T22:00:01Z",\
+        "payload":{"goal":"g","summary":"s","steps":[{"id":"step-1","description":"d",\
+        "tool":"reminders.create","arguments":{"title":"x"},"preconditions":[],\
+        "postconditions":[{"id":"p1","description":"exists","expected":{"title":"x"}}],\
+        "risk":"reversible_write","requires_confirmation":false,"fallback_tools":[],\
+        "max_attempts":2,"timeout_seconds":30,\
+        "verifier":{"kind":"structured","description":"fetch back"}}]}}
+        """
+        let plan = try Envelope.decode(from: Data(planJSON.utf8))
+        guard case .planReady(let taskPlan) = plan.payload else {
+            return XCTFail("expected planReady payload")
+        }
+        XCTAssertEqual(taskPlan.steps.count, 1)
+        XCTAssertEqual(taskPlan.steps[0].risk, .reversibleWrite)
+
+        let completedJSON = """
+        {"version":"1.0","id":"11111111-2222-4333-8444-555555555556","type":"task.completed",\
+        "task_id":"b3e9a1c2-6d4f-4a8b-9c0d-1e2f3a4b5c6d","timestamp":"2026-07-17T22:00:02Z",\
+        "payload":{"state":"succeeded","summary":"ok","verification":[{"predicate_id":"p1",\
+        "passed":true,"method":"schema_validation","confidence":1.0,"expected":{},\
+        "observed":{"steps":1},"evidence_ids":[],"failure_reason":null}]}}
+        """
+        let completed = try Envelope.decode(from: Data(completedJSON.utf8))
+        guard case .taskCompleted(let payload) = completed.payload else {
+            return XCTFail("expected taskCompleted payload")
+        }
+        XCTAssertEqual(payload.state, .succeeded)
+        XCTAssertTrue(payload.verification.allSatisfy(\.passed))
+    }
+}

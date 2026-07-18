@@ -116,6 +116,19 @@ class TestTaskObjects:
             )
 
 
+class TestWireTimestamps:
+    def test_generated_envelopes_use_second_precision_utc_z(self):
+        """Swift's ISO8601 decoding is strict; the wire contract is whole seconds + Z."""
+        from uuid import uuid4
+
+        envelope = schemas.make_envelope(
+            EventType.TASK_CANCELLED, uuid4(), schemas.TaskCancelled(reason=None)
+        )
+        timestamp = envelope.to_wire_dict()["timestamp"]
+        assert timestamp.endswith("Z")
+        assert "." not in timestamp
+
+
 class TestEventRegistry:
     def test_every_protocol_event_has_a_payload_model(self):
         assert set(EVENT_PAYLOADS) == set(EventType)
