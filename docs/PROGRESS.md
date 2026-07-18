@@ -434,3 +434,30 @@ on/off button below the sidebar agent list.
   snapshot rather than paged lifetime history; historical file-session rows
   are metadata views, while live control targets remain Herdr agents; Web
   Speech support still varies by browser.
+
+## 2026-07-18 - Read-only conversation history and live refresh
+
+- Added the backward-compatible `chat.messages.request`, `chat.messages`, and
+  `chat.messages.error` WebSocket surface for selected Cursor, Claude Code, and
+  Codex conversations. The existing `cursor.chats` metadata feed is unchanged.
+- Cursor reads the ordered, renderable `fullConversationHeadersOnly` index and
+  fetches only visible bubble text through read-only SQLite. Claude and Codex
+  readers emit only visible user/assistant text blocks from their JSONL event
+  lanes. Thinking, reasoning, system/developer instructions, tool
+  calls/results, attachments, simulated messages, and harness-injected records
+  are excluded.
+- The console requests immediately on selection and polls only that chat every
+  2.5 seconds. Claude/Codex cache by file mtime and size; Cursor caches by the
+  selected composer's `lastUpdatedAt`; overlapping reads are coalesced and
+  unchanged responses are fingerprint-deduplicated.
+- The detail pane now renders stable keyed turns with loading, empty, and local
+  error states. It preserves manual scroll position and follows new turns only
+  when already near the bottom.
+- Synthetic parser/protocol/error tests pass. Full proof: 52 tests passed in 11
+  files, 1 opt-in real-Herdr test skipped; both required TypeScript checks and
+  the production build passed.
+- Live `ws://127.0.0.1:4180/ws` proof returned Cursor 185 messages (54 user,
+  131 assistant) and Codex 9 messages (1 user, 8 assistant), with zero
+  unchanged refresh responses. Claude was unavailable in the configured
+  seven-day metadata window; its newest local session predates that window.
+  No message text was printed or captured.

@@ -1,7 +1,16 @@
-import { useState, type FormEvent } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 
 import type { CommandOutcome, FleetSnapshot } from "../../../src/contracts.js";
-import { relativeTime, type HistoryRow } from "../model.js";
+import {
+  relativeTime,
+  type ChatTranscriptState,
+  type HistoryRow,
+} from "../model.js";
 import {
   ArrowUpIcon,
   MicIcon,
@@ -15,6 +24,7 @@ interface MainPaneProps {
   connection: "connecting" | "open" | "closed";
   outcomes: CommandOutcome[];
   snapshot: FleetSnapshot | null;
+  transcript: ChatTranscriptState;
   pending: CommandOutcome | null;
   listening: boolean;
   onConfirm: (outcomeId: string) => void;
@@ -30,6 +40,7 @@ export function MainPane({
   connection,
   outcomes,
   snapshot,
+  transcript,
   pending,
   listening,
   onConfirm,
@@ -76,6 +87,7 @@ export function MainPane({
             outcomes={outcomes}
             snapshot={snapshot}
             selected={selected}
+            transcript={transcript}
           />
         </>
       ) : (
@@ -177,19 +189,20 @@ function EmptyState({
   );
 }
 
-/**
- * Chat transcripts are a protocol gap (no chat.messages event yet), so the
- * detail view shows the command activity ledger for now.
- */
 function ActivityStream({
   outcomes,
   snapshot,
   selected,
+  transcript,
 }: {
   outcomes: CommandOutcome[];
   snapshot: FleetSnapshot | null;
   selected: HistoryRow;
+  transcript: ChatTranscriptState;
 }) {
+  if (selected.kind === "chat") {
+    return <TranscriptStream selected={selected} transcript={transcript} />;
+  }
   const relevantOutcomes = outcomes.filter(
     (outcome) => outcome.command.resolvedTargetId === selected.id,
   );
@@ -207,12 +220,9 @@ function ActivityStream({
         </div>
         {relevantOutcomes.length === 0 ? (
           <div className="detail-empty">
-            <span className="detail-kicker">Conversation detail</span>
-            <h2>Message history stays in {sourceName(selected.source)}</h2>
-            <p>
-              Dictator can focus and direct this chat. Open{" "}
-              {sourceName(selected.source)} to read the full conversation.
-            </p>
+            <span className="detail-kicker">Agent activity</span>
+            <h2>No command activity yet</h2>
+            <p>Verified Dictator commands for this agent will appear here.</p>
           </div>
         ) : (
           relevantOutcomes
@@ -231,21 +241,99 @@ function ActivityStream({
   );
 }
 
-function sourceName(source: HistoryRow["source"]): string {
-  switch (source) {
-    case "cursor":
-      return "Cursor";
-    case "claude":
-      return "Claude Code";
-    case "codex":
-      return "Codex";
-    case "gemini":
-      return "Gemini";
-    case "shell":
-      return "the shell";
-    default:
-      return "the source app";
-  }
+function TranscriptStream({
+  selected,
+  transcript,
+}: {
+  selected: HistoryRow;
+  transcript: ChatTranscriptState;
+}) {
+  const streamRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
+  const selectedIdRef = useRef(selected.id);
+
+  useLayoutEffect(() => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    if (selectedIdRef.current !== selected.id) {
+      selectedIdRef.current = selected.id;
+      nearBottomRef.current = true;
+    }
+    if (nearBottomRef.current) {
+      stream.scrollTop = stream.scrollHeight;
+    }
+  }, [selected.id, transcript.messages.length, transcript.status]);
+
+  return (
+    <div
+      ref={streamRef}
+      className="stream transcript-stream"
+      aria-live="polite"
+      onScroll={(event) => {
+        const element = event.currentTarget;
+        nearBottomRef.current =
+          element.scrollHeight - element.scrollTop - element.clientHeight < 96;
+      }}
+    >
+      <div className="stream-column transcript-column">
+        <div className="stream-context">
+          <SourceGlyph source={selected.source} />
+          <span>{selected.title}</span>
+          {selected.working && (
+            <span className="stream-working">
+              <WorkingSpinner /> Working
+            </span>
+          )}
+        </div>
+        {transcript.status === "loading" ? (
+          <TranscriptSkeleton />
+        ) : transcript.status === "error" ? (
+          <div className="transcript-state transcript-error" role="status">
+            <span className="detail-kicker">Local conversation unavailable</span>
+            <p>{transcript.error}</p>
+          </div>
+        ) : transcript.messages.length === 0 ? (
+          <div className="transcript-state" role="status">
+            <span className="detail-kicker">No visible messages</span>
+            <p>
+              This local session has no user or assistant text to display.
+            </p>
+          </div>
+        ) : (
+          <div className="transcript" aria-label="Conversation history">
+            {transcript.messages.map((message) => (
+              <article
+                key={message.id}
+                className={`transcript-turn ${message.role}`}
+                aria-label={message.role === "user" ? "You" : "Assistant"}
+              >
+                <div className="turn-role">
+                  {message.role === "user" ? "You" : "Assistant"}
+                </div>
+                <div className="turn-text">{message.text}</div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TranscriptSkeleton() {
+  return (
+    <div className="transcript-skeleton" role="status" aria-label="Loading messages">
+      <div className="skeleton-turn user">
+        <span />
+        <span />
+      </div>
+      <div className="skeleton-turn assistant">
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
+  );
 }
 
 function OutcomeEvent({

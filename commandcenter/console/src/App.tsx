@@ -33,6 +33,8 @@ interface StagedState extends StagedCommand {
   targetRowId: string | null;
 }
 
+const CHAT_REFRESH_MS = 2_500;
+
 export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -134,9 +136,13 @@ export function App() {
     chats,
     outcomes,
     pending,
+    transcript,
     serverError,
     submitUtterance,
     confirm,
+    selectChatMessages,
+    refreshChatMessages,
+    clearChatMessages,
     dismissPending,
   } = protocol;
 
@@ -165,6 +171,28 @@ export function App() {
   const focusedAgent =
     snapshot?.agents.find((agent) => agent.id === snapshot.focusedAgentId) ??
     null;
+
+  useEffect(() => {
+    if (
+      selected?.kind !== "chat" ||
+      (selected.source !== "cursor" &&
+        selected.source !== "claude" &&
+        selected.source !== "codex")
+    ) {
+      clearChatMessages();
+      return;
+    }
+    selectChatMessages(selected.source, selected.id);
+    const timer = window.setInterval(refreshChatMessages, CHAT_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [
+    clearChatMessages,
+    refreshChatMessages,
+    selectChatMessages,
+    selected?.id,
+    selected?.kind,
+    selected?.source,
+  ]);
 
   function pushToast(toast: Toast) {
     setToasts((current) => [toast, ...current].slice(0, 2));
@@ -518,6 +546,7 @@ export function App() {
           connection={connection}
           outcomes={outcomes}
           snapshot={snapshot}
+          transcript={transcript}
           pending={pending}
           listening={speech.listening}
           onConfirm={confirm}

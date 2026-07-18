@@ -10,6 +10,22 @@ export interface ChatEntry {
   lastUpdatedAt: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt?: string;
+}
+
+export interface ChatTranscriptState {
+  source: ChatEntry["source"] | null;
+  chatId: string | null;
+  messages: ChatMessage[];
+  status: "idle" | "loading" | "ready" | "error";
+  error: string | null;
+  updatedAt: string | null;
+}
+
 export type RowSource = "cursor" | "claude" | "codex" | "gemini" | "shell" | "other";
 
 /** One unified sidebar row: live agents and historical chats share a shape. */

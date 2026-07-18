@@ -5,7 +5,11 @@ import type {
   FleetCommand,
   FleetSnapshot,
 } from "../../src/contracts.js";
-import type { ChatEntry } from "./model.js";
+import type {
+  ChatEntry,
+  ChatMessage,
+  ChatTranscriptState,
+} from "./model.js";
 
 export interface RoutedEvent {
   command: FleetCommand;
@@ -18,6 +22,20 @@ type ServerEvent =
   | { type: "command.routed"; command: FleetCommand; latencyMs: number }
   | { type: "command.outcome"; outcome: CommandOutcome }
   | { type: "cursor.chats"; chats: ChatEntry[] }
+  | {
+      type: "chat.messages";
+      source: ChatEntry["source"];
+      chatId: string;
+      messages: ChatMessage[];
+      updatedAt: string;
+    }
+  | {
+      type: "chat.messages.error";
+      source: ChatEntry["source"];
+      chatId: string;
+      code: "not_found" | "parse_error" | "invalid_id";
+      message: string;
+    }
   | { type: "server.error"; message: string };
 
 export interface ProtocolHandlers {
@@ -27,6 +45,10 @@ export interface ProtocolHandlers {
 
 export function useProtocol(handlers: ProtocolHandlers = {}) {
   const socketRef = useRef<WebSocket | null>(null);
+  const selectedChatRef = useRef<{
+    source: ChatEntry["source"];
+    chatId: string;
+  } | null>(null);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
@@ -38,6 +60,14 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
   const [outcomes, setOutcomes] = useState<CommandOutcome[]>([]);
   const [pending, setPending] = useState<CommandOutcome | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState<ChatTranscriptState>({
+    source: null,
+    chatId: null,
+    messages: [],
+    status: "idle",
+    error: null,
+    updatedAt: null,
+  });
 
   const send = useCallback((message: unknown) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -60,6 +90,45 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
     [send],
   );
 
+  const refreshChatMessages = useCallback(() => {
+    const selected = selectedChatRef.current;
+    if (!selected) return;
+    send({ type: "chat.messages.request", ...selected });
+  }, [send]);
+
+  const selectChatMessages = useCallback(
+    (source: ChatEntry["source"], chatId: string) => {
+      const changed =
+        selectedChatRef.current?.source !== source ||
+        selectedChatRef.current?.chatId !== chatId;
+      selectedChatRef.current = { source, chatId };
+      if (changed) {
+        setTranscript({
+          source,
+          chatId,
+          messages: [],
+          status: "loading",
+          error: null,
+          updatedAt: null,
+        });
+      }
+      send({ type: "chat.messages.request", source, chatId });
+    },
+    [send],
+  );
+
+  const clearChatMessages = useCallback(() => {
+    selectedChatRef.current = null;
+    setTranscript({
+      source: null,
+      chatId: null,
+      messages: [],
+      status: "idle",
+      error: null,
+      updatedAt: null,
+    });
+  }, []);
+
   useEffect(() => {
     let disposed = false;
     let reconnectTimer: number | undefined;
@@ -72,6 +141,14 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
       socket.onopen = () => {
         setConnection("open");
         socket.send(JSON.stringify({ type: "snapshot.request" }));
+        if (selectedChatRef.current) {
+          socket.send(
+            JSON.stringify({
+              type: "chat.messages.request",
+              ...selectedChatRef.current,
+            }),
+          );
+        }
       };
       socket.onmessage = (message) => {
         const event = JSON.parse(message.data as string) as ServerEvent;
@@ -79,6 +156,37 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
           setSnapshot(event.snapshot);
         } else if (event.type === "cursor.chats") {
           setChats(event.chats);
+        } else if (event.type === "chat.messages") {
+          const selected = selectedChatRef.current;
+          if (
+            selected?.source !== event.source ||
+            selected.chatId !== event.chatId
+          ) {
+            return;
+          }
+          setTranscript({
+            source: event.source,
+            chatId: event.chatId,
+            messages: event.messages,
+            status: "ready",
+            error: null,
+            updatedAt: event.updatedAt,
+          });
+        } else if (event.type === "chat.messages.error") {
+          const selected = selectedChatRef.current;
+          if (
+            selected?.source !== event.source ||
+            selected.chatId !== event.chatId
+          ) {
+            return;
+          }
+          setTranscript((current) => ({
+            ...current,
+            source: event.source,
+            chatId: event.chatId,
+            status: "error",
+            error: event.message,
+          }));
         } else if (event.type === "command.routed") {
           handlersRef.current.onRouted?.({
             command: event.command,
@@ -125,9 +233,13 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
     chats,
     outcomes,
     pending,
+    transcript,
     serverError,
     submitUtterance,
     confirm,
+    selectChatMessages,
+    refreshChatMessages,
+    clearChatMessages,
     dismissPending: () => setPending(null),
   };
 }

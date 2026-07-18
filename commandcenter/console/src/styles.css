@@ -666,6 +666,130 @@ kbd {
   color: var(--text-muted);
 }
 
+/* ===== Read-only transcript ===== */
+
+.transcript-stream {
+  overflow-anchor: none;
+}
+
+.transcript-column {
+  gap: 0;
+}
+
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  padding: var(--space-8) 0 var(--space-24);
+}
+
+.transcript-turn {
+  min-width: 0;
+}
+
+.transcript-turn.user {
+  align-self: flex-end;
+  width: min(88%, 660px);
+  padding: var(--space-12) var(--space-16);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-12);
+}
+
+.transcript-turn.assistant {
+  width: 100%;
+  padding: 0 var(--space-4);
+}
+
+.turn-role {
+  margin-bottom: var(--space-6);
+  color: var(--text-faint);
+  font-size: var(--text-11);
+  font-weight: var(--weight-medium);
+}
+
+.turn-text {
+  color: var(--text-primary);
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.transcript-turn.assistant .turn-text {
+  color: var(--text-secondary);
+}
+
+.transcript-state {
+  width: min(420px, 100%);
+  margin: 112px auto 0;
+  color: var(--text-muted);
+}
+
+.transcript-state p {
+  margin: 0;
+  font-size: var(--text-13);
+  line-height: var(--leading-body);
+}
+
+.transcript-error p {
+  color: var(--status-danger);
+}
+
+.transcript-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  padding: var(--space-12) 0;
+}
+
+.skeleton-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.skeleton-turn.user {
+  align-self: flex-end;
+  width: 62%;
+  padding: var(--space-12) var(--space-16);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-12);
+}
+
+.skeleton-turn.assistant {
+  width: 82%;
+  padding: 0 var(--space-4);
+}
+
+.skeleton-turn span {
+  display: block;
+  height: 10px;
+  border-radius: var(--radius-4);
+  background: linear-gradient(
+    90deg,
+    var(--bg-control) 20%,
+    var(--bg-selected) 50%,
+    var(--bg-control) 80%
+  );
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-turn span:last-child {
+  width: 68%;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 .stream-empty {
   color: var(--text-faint);
   font-size: var(--text-13);

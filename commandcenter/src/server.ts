@@ -10,6 +10,11 @@ import {
   ChatSourcesProvider,
   type ChatEntry,
 } from "./control/chat-sources.js";
+import {
+  ChatMessagesError,
+  ChatMessagesService,
+  parseChatMessagesRequest,
+} from "./control/chat-messages.js";
 import type { FleetControl } from "./control/fleet-control.js";
 import { HerdrAdapter } from "./control/herdr-adapter.js";
 import { UnixSocketHerdrTransport } from "./control/herdr-transport.js";
@@ -37,6 +42,8 @@ const router = createRouter();
 const loop = new CommandLoop({ router, control });
 const httpServer = createServer();
 const webSockets = new WebSocketServer({ server: httpServer, path: "/ws" });
+const chatMessages = new ChatMessagesService();
+const sentChatMessages = new WeakMap<WebSocket, Map<string, string>>();
 const vite = await createViteServer({
   root: resolve(root, "console"),
   server: { middlewareMode: true },
@@ -83,7 +90,13 @@ async function handleClientMessage(
   rawMessage: string,
 ): Promise<void> {
   try {
-    const message = JSON.parse(rawMessage) as {
+    const parsed = JSON.parse(rawMessage) as unknown;
+    const chatRequest = parseChatMessagesRequest(parsed);
+    if (chatRequest) {
+      await sendChatMessages(socket, chatRequest.source, chatRequest.chatId);
+      return;
+    }
+    const message = parsed as {
       type?: string;
       text?: string;
       sttMs?: number;
@@ -111,6 +124,45 @@ async function handleClientMessage(
     send(socket, {
       type: "server.error",
       message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function sendChatMessages(
+  socket: WebSocket,
+  source: "cursor" | "claude" | "codex",
+  chatId: string,
+): Promise<void> {
+  const key = `${source}:${chatId}`;
+  const sent = sentChatMessages.get(socket) ?? new Map<string, string>();
+  sentChatMessages.set(socket, sent);
+  try {
+    const result = await chatMessages.read(source, chatId);
+    if (sent.get(key) === result.fingerprint) return;
+    sent.set(key, result.fingerprint);
+    send(socket, {
+      type: "chat.messages",
+      source: result.source,
+      chatId: result.chatId,
+      messages: result.messages,
+      updatedAt: result.updatedAt,
+    });
+  } catch (error) {
+    const code =
+      error instanceof ChatMessagesError ? error.code : "parse_error";
+    const message =
+      error instanceof ChatMessagesError
+        ? error.message
+        : "The local conversation could not be read.";
+    const fingerprint = `error:${code}:${message}`;
+    if (sent.get(key) === fingerprint) return;
+    sent.set(key, fingerprint);
+    send(socket, {
+      type: "chat.messages.error",
+      source,
+      chatId,
+      code,
+      message,
     });
   }
 }
