@@ -79,7 +79,6 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
   const [chats, setChats] = useState<ChatEntry[]>([]);
   const [outcomes, setOutcomes] = useState<CommandOutcome[]>([]);
   const [pending, setPending] = useState<CommandOutcome | null>(null);
-  const [serverError, setServerError] = useState<string | null>(null);
   const [chatSend, setChatSend] = useState<ChatSendState>({
     chatId: null,
     status: "idle",
@@ -104,7 +103,6 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
     (utterance: string) => {
       const trimmed = utterance.trim();
       if (!trimmed) return;
-      setServerError(null);
       send({ type: "utterance", text: trimmed, sttMs: 0 });
     },
     [send],
@@ -261,8 +259,6 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
             );
           }
           handlersRef.current.onOutcome?.(event.outcome);
-        } else if (event.type === "server.error") {
-          setServerError(event.message);
         }
       };
       socket.onclose = () => {
@@ -288,7 +284,6 @@ export function useProtocol(handlers: ProtocolHandlers = {}) {
     pending,
     transcript,
     chatSend,
-    serverError,
     submitUtterance,
     sendChat,
     confirm,

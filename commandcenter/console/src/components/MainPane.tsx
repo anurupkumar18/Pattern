@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -30,12 +31,18 @@ interface MainPaneProps {
   transcript: ChatTranscriptState;
   pending: CommandOutcome | null;
   chatSend: ChatSendState;
-  listening: boolean;
+  voice: {
+    supported: boolean;
+    status: "idle" | "connecting" | "listening" | "error";
+    interim: string;
+    finals: string[];
+    start: () => Promise<void>;
+    stop: () => void;
+  };
   onConfirm: (outcomeId: string) => void;
   onCancelPending: () => void;
   onComposerSubmit: (text: string) => void;
   onInterrupt: (row: HistoryRow) => void;
-  onToggleVoice: () => void;
   composerRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -47,19 +54,27 @@ export function MainPane({
   transcript,
   pending,
   chatSend,
-  listening,
+  voice,
   onConfirm,
   onCancelPending,
   onComposerSubmit,
   onInterrupt,
-  onToggleVoice,
   composerRef,
 }: MainPaneProps) {
   const [draft, setDraft] = useState("");
+  const appliedFinals = useRef(0);
   const readOnlyChat =
     selected?.kind === "chat" && selected.source === "cursor";
   const selectedSend =
     chatSend.chatId === selected?.id ? chatSend : null;
+
+  useEffect(() => {
+    if (voice.finals.length <= appliedFinals.current) return;
+    const finalText = voice.finals.slice(appliedFinals.current).join(" ").trim();
+    appliedFinals.current = voice.finals.length;
+    if (!finalText) return;
+    setDraft((current) => `${current.trim()} ${finalText}`.trim());
+  }, [voice.finals]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -101,7 +116,7 @@ export function MainPane({
           />
         </>
       ) : (
-        <EmptyState listening={listening} onToggleVoice={onToggleVoice} />
+        <EmptyState />
       )}
 
       {pending && (
@@ -129,6 +144,11 @@ export function MainPane({
       )}
 
       <form className="composer" onSubmit={submit}>
+        {voice.interim && (
+          <span className="composer-interim" aria-live="polite">
+            {voice.interim}
+          </span>
+        )}
         <textarea
           ref={composerRef}
           value={draft}
@@ -138,7 +158,7 @@ export function MainPane({
               ? "Mirrored from Cursor (read-only)"
               : selected
               ? `Message ${selected.title}…`
-              : "Type a command, or say the word…"
+              : "Type a command…"
           }
           disabled={readOnlyChat}
           onChange={(event) => setDraft(event.target.value)}
@@ -167,9 +187,34 @@ export function MainPane({
           <span className="composer-actions">
             <button
               type="button"
-              className={listening ? "icon-button mic on" : "icon-button mic"}
-              aria-label="Toggle voice"
-              onClick={onToggleVoice}
+              className={
+                voice.status === "listening" || voice.status === "connecting"
+                  ? "icon-button mic on"
+                  : "icon-button mic"
+              }
+              aria-label={
+                voice.status === "listening" || voice.status === "connecting"
+                  ? "Stop voice"
+                  : "Start voice"
+              }
+              title={
+                voice.status === "listening"
+                  ? "Stop voice"
+                  : voice.status === "connecting"
+                    ? "Voice loading"
+                    : "Start voice"
+              }
+              disabled={!voice.supported}
+              onClick={() => {
+                if (
+                  voice.status === "listening" ||
+                  voice.status === "connecting"
+                ) {
+                  voice.stop();
+                } else {
+                  void voice.start();
+                }
+              }}
             >
               <MicIcon size={14} />
             </button>
@@ -190,26 +235,10 @@ export function MainPane({
   );
 }
 
-function EmptyState({
-  listening,
-  onToggleVoice,
-}: {
-  listening: boolean;
-  onToggleVoice: () => void;
-}) {
+function EmptyState() {
   return (
     <div className="empty-state">
-      <span className="empty-wordmark">Dictator</span>
-      <span className="empty-tagline">Your word is their command.</span>
-      <span className="empty-cta">say the word.</span>
-      <button
-        type="button"
-        className={listening ? "voice-pill on large" : "voice-pill large"}
-        onClick={onToggleVoice}
-      >
-        <MicIcon />
-        <span>{listening ? "Listening" : "Turn on voice"}</span>
-      </button>
+      <span>Select a conversation</span>
     </div>
   );
 }
@@ -243,13 +272,7 @@ function ActivityStream({
             </span>
           )}
         </div>
-        {relevantOutcomes.length === 0 ? (
-          <div className="detail-empty">
-            <span className="detail-kicker">Agent activity</span>
-            <h2>No command activity yet</h2>
-            <p>Verified Dictator commands for this agent will appear here.</p>
-          </div>
-        ) : (
+        {relevantOutcomes.length > 0 &&
           relevantOutcomes
             .slice()
             .reverse()
@@ -259,8 +282,7 @@ function ActivityStream({
                 outcome={outcome}
                 snapshot={snapshot}
               />
-            ))
-        )}
+            ))}
       </div>
     </div>
   );

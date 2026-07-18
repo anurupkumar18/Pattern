@@ -6,61 +6,7 @@ export type ChipId =
   | "send"
   | "attention"
   | "interrupt"
-  | "new"
-  | "voice";
-
-export interface ChipSpec {
-  id: ChipId;
-  label: string;
-  shortcut: string;
-  hint: string;
-  primary: boolean;
-}
-
-export const CHIPS: ChipSpec[] = [
-  {
-    id: "move",
-    label: "Move",
-    shortcut: "⌘K",
-    hint: "say “move to <chat>” to switch",
-    primary: true,
-  },
-  {
-    id: "send",
-    label: "Send",
-    shortcut: "⌘↩",
-    hint: "say “tell <chat> …”, then “send”",
-    primary: true,
-  },
-  {
-    id: "attention",
-    label: "What needs me",
-    shortcut: "N",
-    hint: "ask “what needs me?”",
-    primary: true,
-  },
-  {
-    id: "interrupt",
-    label: "Interrupt",
-    shortcut: "⌘.",
-    hint: "say “interrupt <chat>” to stop it",
-    primary: false,
-  },
-  {
-    id: "new",
-    label: "New chat",
-    shortcut: "⌘N",
-    hint: "say “start a Claude chat”",
-    primary: false,
-  },
-  {
-    id: "voice",
-    label: "Voice off",
-    shortcut: "⌥Space",
-    hint: "say “stop listening”",
-    primary: false,
-  },
-];
+  | "new";
 
 /** Maps an authoritative routed verb onto its HUD chip. */
 export function chipForVerb(verb: FleetCommand["verb"]): ChipId | null {
@@ -77,7 +23,6 @@ export function chipForVerb(verb: FleetCommand["verb"]): ChipId | null {
     case "spawn":
       return "new";
     case "listen_ctl":
-      return "voice";
     case "noise":
       return null;
   }
@@ -146,15 +91,6 @@ export function previewParse(
   };
   if (!normalized) return none;
 
-  if (/\b(stop|pause) listening\b/.test(normalized)) {
-    return {
-      chip: "voice",
-      preview: "Voice off",
-      targetRowId: null,
-      targetName: null,
-      holdMs: 0,
-    };
-  }
   if (
     /\b(spawn|open a new|start a)\b/.test(normalized) &&
     /\b(claude|codex|gemini|cursor)\b/.test(normalized)

@@ -2,23 +2,18 @@ import { useState } from "react";
 
 import {
   relativeTime,
-  type AttentionItem,
   type HistoryRow,
   type HistorySection,
 } from "../model.js";
 import {
-  GearIcon,
-  MicIcon,
   PlusIcon,
   SearchIcon,
   SourceGlyph,
-  Waveform,
   WorkingSpinner,
 } from "./icons.js";
 
 interface SidebarProps {
   sections: HistorySection[];
-  attention: AttentionItem[];
   selectedId: string | null;
   glowRowId: string | null;
   glowKey: number;
@@ -26,13 +21,6 @@ interface SidebarProps {
   onQueryChange: (value: string) => void;
   onSelect: (row: HistoryRow) => void;
   onNewChat: () => void;
-  onAttention: () => void;
-  voice: {
-    supported: boolean;
-    listening: boolean;
-    error: string | null;
-    toggle: () => void;
-  };
   searchRef: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -45,7 +33,6 @@ export function Sidebar({
   onQueryChange,
   onSelect,
   onNewChat,
-  voice,
   searchRef,
 }: SidebarProps) {
   return (
@@ -87,13 +74,6 @@ export function Sidebar({
           />
         ))}
       </nav>
-
-      <footer className="sidebar-footer">
-        <VoiceControl voice={voice} />
-        <button type="button" className="icon-button" aria-label="Settings">
-          <GearIcon />
-        </button>
-      </footer>
     </aside>
   );
 }
@@ -197,62 +177,5 @@ function ChatRow({
       </span>
       <span className="row-time">{relativeTime(row.timestamp)}</span>
     </button>
-  );
-}
-
-function VoiceControl({
-  voice,
-}: {
-  voice: SidebarProps["voice"];
-}) {
-  const [helpOpen, setHelpOpen] = useState(false);
-  const label = !voice.supported
-    ? "Mic unavailable"
-    : voice.listening
-      ? "Listening"
-      : "Voice off";
-  return (
-    <div className="voice-wrap">
-      <button
-        type="button"
-        className={voice.listening ? "voice-pill on" : "voice-pill"}
-        onClick={voice.toggle}
-        disabled={!voice.supported}
-        title="Turn voice on  ⌥Space"
-      >
-        <MicIcon />
-        <span>{label}</span>
-        {voice.listening && <Waveform />}
-      </button>
-      <button
-        type="button"
-        className="icon-button"
-        aria-label="Voice help"
-        onClick={() => setHelpOpen((value) => !value)}
-        onBlur={() => setHelpOpen(false)}
-      >
-        ?
-      </button>
-      {helpOpen && (
-        <div className="voice-help" role="dialog" aria-label="Voice commands">
-          <HelpRow speech="Say a chat name to focus it" keys="⌘K" />
-          <HelpRow speech="Say “send” to send" keys="⌘↩" />
-          <HelpRow speech="Say “interrupt” to stop the focused chat" keys="⌘." />
-          <HelpRow speech="Say “new Claude chat” to start one" keys="⌘N" />
-          <HelpRow speech="Ask “what needs me?”" keys="N" />
-          <HelpRow speech="Say “voice off” to stop listening" keys="⌥Space" />
-        </div>
-      )}
-      {voice.error && <span className="voice-error">{voice.error}</span>}
-    </div>
-  );
-}
-
-function HelpRow({ speech, keys }: { speech: string; keys: string }) {
-  return (
-    <div className="help-row">
-      <span>{speech}</span>
-      <kbd>{keys}</kbd>
-    </div>
   );
 }

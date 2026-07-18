@@ -608,3 +608,19 @@ on/off button below the sidebar agent list.
 - Added the AudioWorklet plus `useLocalSTT` API: `status`, `interim`, `finals`, `amplitude`, `start`, `stop`, and `setHints`.
 - Harness `/stt-test.html` renders; shared-client WAV proof emitted `Move.` interim then `Move to evals.` final; TypeScript passes.
 - `base.en` plus hints stayed 2/3 exact at 910/1839 ms; `small.en` plus 700 ms VAD stayed 3/3 at 1493/2629 ms, so small remains the demo model.
+
+## 2026-07-18 - Console promise strip
+
+- Removed browser Web Speech recognition because its network-backed failure path
+  surfaced a red `network` error during the demo.
+- Removed the top verb-chip HUD, sidebar voice/help/settings footer, marketing
+  hero, stale voice indicators, server-error banner, and empty agent placeholder
+  panel. These controls either duplicated the composer, had no working action,
+  or promised behavior the current build could not reliably deliver.
+- Kept live chat/activity rows, transcript rendering, typed command routing,
+  Claude/Codex composer sends, confirmation and interrupt controls, chat search
+  and switching, and the Automations collapse.
+- The local STT browser client landed during the strip pass. The composer mic
+  is now the sole voice affordance: it toggles local capture, shows interim
+  text inside the composer, and appends final text to the draft without
+  auto-sending. STT failures remain quiet rather than rendering error chrome.

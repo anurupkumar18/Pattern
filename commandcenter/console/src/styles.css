@@ -347,102 +347,6 @@ kbd {
   text-align: right;
 }
 
-.sidebar-footer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  height: 48px;
-  padding: 0 var(--space-8);
-  border-top: 1px solid var(--border-subtle);
-  flex: none;
-}
-
-/* ===== Voice control ===== */
-
-.voice-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex: 1;
-}
-
-.voice-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  height: 28px;
-  padding: 0 var(--space-10);
-  border-radius: var(--radius-round);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-control);
-  color: var(--text-muted);
-  font-size: var(--text-12);
-  transition:
-    color var(--duration-ui) var(--ease-standard),
-    border-color var(--duration-ui) var(--ease-standard);
-}
-
-.voice-pill:hover:not(:disabled) {
-  color: var(--text-secondary);
-  border-color: var(--border-default);
-}
-
-.voice-pill:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.voice-pill.on {
-  color: var(--accent);
-  border-color: rgba(138, 180, 248, 0.4);
-  background: var(--accent-soft);
-}
-
-.voice-pill.large {
-  height: 34px;
-  padding: 0 var(--space-16);
-  font-size: var(--text-13);
-}
-
-.waveform {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 10px;
-}
-
-.waveform span {
-  width: 2px;
-  border-radius: 1px;
-  background: currentColor;
-  animation: wave 900ms ease-in-out infinite;
-}
-
-.waveform span:nth-child(1) {
-  height: 5px;
-}
-
-.waveform span:nth-child(2) {
-  height: 9px;
-  animation-delay: 150ms;
-}
-
-.waveform span:nth-child(3) {
-  height: 6px;
-  animation-delay: 300ms;
-}
-
-@keyframes wave {
-  0%,
-  100% {
-    transform: scaleY(0.55);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
 .icon-button {
   display: flex;
   align-items: center;
@@ -454,27 +358,19 @@ kbd {
   font-size: var(--text-12);
 }
 
-.icon-button:hover {
+.icon-button:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--text-secondary);
 }
 
-.icon-button.mic.on {
-  color: var(--accent);
+.icon-button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
-.voice-help {
-  position: absolute;
-  bottom: 38px;
-  left: 0;
-  width: 252px;
-  background: var(--bg-overlay);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-8);
-  box-shadow: var(--shadow-popover);
-  padding: var(--space-8);
-  z-index: 30;
-  animation: pop-in var(--duration-ui) var(--ease-out);
+.icon-button.mic.on {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 @keyframes pop-in {
@@ -486,21 +382,6 @@ kbd {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.help-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  padding: var(--space-4) var(--space-6);
-  font-size: var(--text-12);
-  color: var(--text-secondary);
-}
-
-.voice-error {
-  font-size: var(--text-10);
-  color: var(--status-danger);
 }
 
 /* ===== Main pane ===== */
@@ -601,29 +482,10 @@ kbd {
 .empty-state {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-10);
-}
-
-.empty-wordmark {
-  font-size: 26px;
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.01em;
-  color: var(--text-primary);
-}
-
-.empty-tagline {
-  font-size: var(--text-13);
-  color: var(--text-muted);
-}
-
-.empty-cta {
   font-size: var(--text-12);
   color: var(--text-faint);
-  font-style: italic;
-  margin-bottom: var(--space-8);
 }
 
 /* ===== Activity stream ===== */
@@ -933,6 +795,15 @@ kbd {
   max-height: 160px;
 }
 
+.composer-interim {
+  display: block;
+  min-height: 20px;
+  margin-bottom: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-14);
+  line-height: var(--leading-ui);
+}
+
 .composer textarea::placeholder {
   color: var(--text-faint);
 }
@@ -983,164 +854,6 @@ kbd {
   cursor: default;
 }
 
-/* ===== Verb-chip HUD ===== */
-
-.chip-hud {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-6);
-  flex-wrap: wrap;
-  max-width: 60%;
-  padding: var(--space-2);
-  border-radius: var(--radius-8);
-  transition: background var(--duration-ui) var(--ease-standard);
-}
-
-.chip-hud.expanded {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 var(--space-8);
-  border-radius: var(--radius-round);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-control);
-  color: var(--text-muted);
-  font-size: var(--text-11);
-  white-space: nowrap;
-  overflow: hidden;
-  transition:
-    max-width 150ms var(--ease-out),
-    opacity 150ms var(--ease-out),
-    border-color var(--duration-ui) var(--ease-standard),
-    color var(--duration-ui) var(--ease-standard);
-  max-width: 320px;
-}
-
-.chip:hover {
-  color: var(--text-secondary);
-  border-color: var(--border-default);
-}
-
-/* Progressive disclosure: secondary chips collapse out of the cluster. */
-.chip.chip-hidden {
-  max-width: 0;
-  padding: 0;
-  border-width: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.chip-main {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
-}
-
-.chip-key {
-  font-size: var(--text-10);
-  color: var(--text-faint);
-}
-
-/* Hover a chip: it expands in place to reveal its one-line explanation. */
-.chip-hint {
-  display: inline-block;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: var(--text-10);
-  color: var(--text-faint);
-  transition:
-    max-width 150ms var(--ease-out),
-    opacity 150ms var(--ease-out),
-    margin-left 150ms var(--ease-out);
-}
-
-.chip:hover .chip-hint {
-  max-width: 240px;
-  opacity: 1;
-  margin-left: var(--space-6);
-}
-
-/* Voice matched this verb: single subtle scale+glow pulse. */
-.chip[data-pulse] {
-  animation: chip-pulse 600ms var(--ease-out);
-}
-
-@keyframes chip-pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(138, 180, 248, 0);
-  }
-  30% {
-    transform: scale(1.06);
-    box-shadow: 0 0 10px 1px rgba(138, 180, 248, 0.35);
-    border-color: rgba(138, 180, 248, 0.5);
-    color: var(--accent);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(138, 180, 248, 0);
-  }
-}
-
-/* Heard the verb, couldn't resolve the target: wrong-password shake. */
-.chip[data-shake] {
-  animation: chip-shake 400ms var(--ease-standard);
-  border-color: rgba(228, 173, 91, 0.5);
-}
-
-@keyframes chip-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  12% {
-    transform: translateX(-4px);
-  }
-  28% {
-    transform: translateX(4px);
-  }
-  45% {
-    transform: translateX(-4px);
-  }
-  62% {
-    transform: translateX(4px);
-  }
-  80% {
-    transform: translateX(-2px);
-  }
-}
-
-/* Verb armed, listening for a target. */
-.chip.chip-armed {
-  color: var(--accent);
-  border-color: rgba(138, 180, 248, 0.4);
-  animation: chip-armed 1200ms ease-in-out infinite;
-}
-
-@keyframes chip-armed {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(138, 180, 248, 0);
-  }
-  50% {
-    box-shadow: 0 0 8px 1px rgba(138, 180, 248, 0.3);
-  }
-}
-
-/* Parse-before-act beat: chip shows the parsed result before execution. */
-.chip.chip-staged {
-  color: var(--text-primary);
-  background: var(--accent-soft);
-  border-color: rgba(138, 180, 248, 0.5);
-}
-
 /* ===== Command bar ===== */
 
 .command-bar {
@@ -1181,10 +894,6 @@ kbd {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.bar-interim {
-  color: var(--text-muted);
 }
 
 .bar-staged {
@@ -1434,21 +1143,6 @@ kbd {
   to {
     transform: translateY(0.25px) rotate(360deg);
   }
-}
-
-/* ===== Server error ===== */
-
-.server-error {
-  position: fixed;
-  bottom: var(--space-16);
-  right: var(--space-16);
-  font-size: var(--text-12);
-  color: var(--status-danger);
-  background: var(--bg-overlay);
-  border: 1px solid rgba(220, 123, 123, 0.35);
-  border-radius: var(--radius-8);
-  padding: var(--space-8) var(--space-12);
-  z-index: 50;
 }
 
 @media (prefers-reduced-motion: reduce) {
