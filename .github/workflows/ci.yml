@@ -20,7 +20,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --project agent
-      - run: uv run --project agent pytest agent/tests
+      - name: Run Python tests
+        working-directory: agent
+        run: uv run python -m pytest
 
   swift:
     name: Swift build and tests

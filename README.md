@@ -45,7 +45,7 @@ Phase 1’s voice shell remains intact: global hotkey (⌃⌥V), streaming syste
 scripts/bootstrap.sh          # uv sync + swift build
 scripts/run_sidecar.sh        # start the Python sidecar (NDJSON on stdio)
 
-cd agent && uv run pytest     # Python tests
+cd agent && uv run python -m pytest     # Python tests
 cd macos && swift test        # Swift tests
 cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 scripts/run_evals.sh          # all checks + 20-case JSON/Markdown report
@@ -102,7 +102,7 @@ VoiceOps works without a network credential using Apple Speech and its determini
 2. Open the VoiceOps menu-bar item and choose **Voice & Intelligence Settings…**.
 3. Paste the key, keep the flagship `gpt-5.6-sol` vision model (or enter another image-capable model), and select **Save**.
 
-The secret is stored in the macOS login Keychain, never in UserDefaults or the repository. During hotkey capture, microphone PCM is streamed to the transcription-only Realtime session; on commit, up to 10 MiB of in-memory PCM may be sent once to `gpt-4o-transcribe` for bounded final refinement and is then released. Any provider outage fails over to Apple Speech, while a failed refinement retains the completed Realtime transcript. The companion and task timeline distinguish `LIVE`, `FINALIZING`, `REFINED`, `RECOVERED`, and `FALLBACK` outcomes. Live grounding sends the task-scoped active-window image and pruned Accessibility candidates to OpenAI, and the capture is deleted at the terminal state. The app does not play TTS into an open microphone. Production distribution should exchange the long-lived API key for short-lived ephemeral Realtime credentials.
+The settings window also shows live readiness for Microphone, Apple Speech fallback, Screen Recording, and Accessibility, with a direct route to macOS Privacy Settings. The secret is stored in the macOS login Keychain, never in UserDefaults or the repository. During hotkey capture, microphone PCM is streamed to the transcription-only Realtime session; on commit, up to 10 MiB of in-memory PCM may be sent once to `gpt-4o-transcribe` for bounded final refinement and is then released. Any provider outage fails over to Apple Speech, while a failed refinement retains the completed Realtime transcript. The companion and task timeline distinguish `LIVE`, `FINALIZING`, `REFINED`, `RECOVERED`, and `FALLBACK` outcomes. Live grounding sends the task-scoped active-window image and pruned Accessibility candidates to OpenAI, and the capture is deleted at the terminal state. The app does not play TTS into an open microphone. Production distribution should exchange the long-lived API key for short-lived ephemeral Realtime credentials.
 
 ## Layout
 

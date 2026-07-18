@@ -1,4 +1,16 @@
+import AVFoundation
+import ApplicationServices
+import AppKit
+import CoreGraphics
+import Speech
 import SwiftUI
+
+struct DemoPermissionReadiness: Identifiable {
+    let id: String
+    let label: String
+    let detail: String
+    let isReady: Bool
+}
 
 @MainActor
 final class VLMSettingsModel: ObservableObject {
@@ -7,6 +19,7 @@ final class VLMSettingsModel: ObservableObject {
     @Published private(set) var isConfigured = false
     @Published private(set) var statusMessage: String?
     @Published private(set) var statusIsError = false
+    @Published private(set) var demoPermissions: [DemoPermissionReadiness] = []
 
     private let store = VLMCredentialStore()
 
@@ -15,6 +28,7 @@ final class VLMSettingsModel: ObservableObject {
             forKey: VLMConfiguration.modelDefaultsKey)
             ?? VLMConfiguration.defaultModel
         refresh()
+        refreshDemoReadiness()
     }
 
     func save() {
@@ -51,6 +65,38 @@ final class VLMSettingsModel: ObservableObject {
         }
     }
 
+    func refreshDemoReadiness() {
+        let microphone = AVCaptureDevice.authorizationStatus(for: .audio)
+        let speech = SFSpeechRecognizer.authorizationStatus()
+        let screenCaptureReady = CGPreflightScreenCaptureAccess()
+        let accessibilityReady = AXIsProcessTrusted()
+        demoPermissions = [
+            DemoPermissionReadiness(
+                id: "microphone", label: "Microphone",
+                detail: Self.captureAuthorizationLabel(microphone),
+                isReady: microphone == .authorized),
+            DemoPermissionReadiness(
+                id: "speech", label: "Apple Speech fallback",
+                detail: Self.speechAuthorizationLabel(speech),
+                isReady: speech == .authorized),
+            DemoPermissionReadiness(
+                id: "screen", label: "Screen Recording",
+                detail: screenCaptureReady ? "Ready" : "Enable in System Settings",
+                isReady: screenCaptureReady),
+            DemoPermissionReadiness(
+                id: "accessibility", label: "Accessibility / global stop",
+                detail: accessibilityReady ? "Ready" : "Enable in System Settings",
+                isReady: accessibilityReady),
+        ]
+    }
+
+    func openPrivacySettings() {
+        guard let url = URL(string:
+            "x-apple.systempreferences:com.apple.preference.security?Privacy")
+        else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     private func refresh() {
         statusMessage = nil
         statusIsError = false
@@ -64,6 +110,28 @@ final class VLMSettingsModel: ObservableObject {
             isConfigured = false
             statusIsError = true
             statusMessage = error.localizedDescription
+        }
+    }
+
+    private static func captureAuthorizationLabel(
+        _ status: AVAuthorizationStatus
+    ) -> String {
+        switch status {
+        case .authorized: "Ready"
+        case .notDetermined: "Ask on first use"
+        case .denied, .restricted: "Enable in System Settings"
+        @unknown default: "Check System Settings"
+        }
+    }
+
+    private static func speechAuthorizationLabel(
+        _ status: SFSpeechRecognizerAuthorizationStatus
+    ) -> String {
+        switch status {
+        case .authorized: "Ready"
+        case .notDetermined: "Ask on first use"
+        case .denied, .restricted: "Enable in System Settings"
+        @unknown default: "Check System Settings"
         }
     }
 }
@@ -103,6 +171,27 @@ struct VLMSettingsView: View {
                     .font(.callout)
             }
 
+            Section("Live demo readiness") {
+                ForEach(model.demoPermissions) { permission in
+                    LabeledContent(permission.label) {
+                        Label(
+                            permission.detail,
+                            systemImage: permission.isReady
+                                ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(permission.isReady ? .green : .orange)
+                    }
+                }
+                Text("OpenAI Realtime needs Microphone access. The zero-credential Apple fallback also needs Speech Recognition. Screen Recording grounds the active window; Accessibility enables the global Escape stop.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Refresh Readiness") { model.refreshDemoReadiness() }
+                    Spacer()
+                    Button("Open Privacy Settings") { model.openPrivacySettings() }
+                }
+            }
+
             if let statusMessage = model.statusMessage {
                 Text(statusMessage)
                     .foregroundStyle(model.statusIsError ? .red : .secondary)
@@ -123,6 +212,7 @@ struct VLMSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
-        .frame(width: 560, height: 430)
+        .frame(width: 620, height: 650)
+        .onAppear { model.refreshDemoReadiness() }
     }
 }

@@ -13,7 +13,9 @@ In under four minutes, prove all eligibility requirements and visibly map the pr
   external credentials or network requests.
 - Keep the exact initial request and correction below available only as presenter backup; speak naturally during the demo.
 - Open `evals/dashboard.html` on a secondary Space or tab.
-- Verify microphone, Screen Recording, and Accessibility permissions. Calendar,
+- Open **Voice & Intelligence Settings…** and require the live-readiness rows for
+  Microphone, Screen Recording, and Accessibility to say **Ready**. Apple Speech
+  should also say **Ready** when it is the zero-credential fallback. Calendar,
   Reminders, and Automation are not required for the fixture-backed hero path.
 - Run `scripts/rehearse_order_rescue.sh`; require 20/20 in both deterministic reports before presenting.
 - Run `scripts/replay_order_rescue_app.sh`; require `NATIVE ORDER RESCUE REPLAY VERIFIED`.
