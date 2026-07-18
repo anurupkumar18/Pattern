@@ -24,8 +24,8 @@ final class CompanionPanelController {
             ],
             backing: .buffered,
             defer: true)
-        panel.isFloatingPanel = true
-        panel.level = .floating
+        panel.isFloatingPanel = false
+        panel.level = .normal
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
