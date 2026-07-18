@@ -13,7 +13,8 @@ npm run dev
 # Real Herdr fleet:
 HERDR_MODE=real HERDR_SOCKET_PATH=~/.config/herdr/herdr.sock npm run dev
 
-# Recommended Ollama HTTP path. The model stays loaded for 30 minutes:
+# Recommended cascade path. Deterministic answers return immediately and
+# deterministic noise escalates to the warmed Ollama model:
 GEMMA_OLLAMA_MODEL=gemma4 \
 GEMMA_OLLAMA_TEMPERATURE=0 \
 GEMMA_OLLAMA_NUM_PREDICT=200 \
@@ -25,6 +26,12 @@ GEMMA_COMMAND=/path/to/model-wrapper GEMMA_ARGS='["--model","<model>"]' npm run 
 # Generic HTTP inference server accepting {"prompt"} and returning {"output"}:
 GEMMA_HTTP_ENDPOINT=http://127.0.0.1:8080/complete npm run dev
 ```
+
+Gemma configuration enables `CascadeRouter` by default. Omit Gemma
+configuration for pure deterministic mode, or add `GEMMA_CASCADE=off` for
+pure Gemma mode. `GEMMA_CASCADE_TIMEOUT_MS` controls the cascade deadline
+(default 20,000 ms); timeout or model failure returns the deterministic noise
+result with `routedBy: "cascade-fallback-failed"` instead of throwing.
 
 Server listens at `http://127.0.0.1:${PORT:-4173}`; the console UI and the
 programmatic WebSocket share the port.
@@ -44,7 +51,7 @@ Server -> client events:
 | Event | Payload |
 | --- | --- |
 | `fleet.snapshot` | `snapshot`: agents (id, name, harness, status working/idle/blocked/done, cwd, lastActivity), `focusedAgentId`, `listening` |
-| `command.routed` | `command`: the typed FleetCommand (verb, payload, confidence, resolvedTargetId, rawUtterance), `latencyMs` |
+| `command.routed` | `command`: the typed FleetCommand (verb, payload, confidence, resolvedTargetId, rawUtterance, optional `routedBy` provenance), `latencyMs` |
 | `command.outcome` | `outcome`: id, command, `state` (`AWAITING_CONFIRMATION`, `EXECUTED`, `SUCCEEDED`, `UNVERIFIED`, `FAILED`), executor evidence, verification predicates with pass/fail and observed values, per-stage `latencyMs` (stt/route/act/verify) |
 | `server.error` | `message` |
 
@@ -65,7 +72,7 @@ in-process than over WebSocket:
 
 ```ts
 import {
-  CommandLoop, DeterministicRouter, GemmaRouter,
+  CommandLoop, CascadeRouter, DeterministicRouter, GemmaRouter,
   HerdrAdapter, UnixSocketHerdrTransport, MockHerdr,
 } from "voice-command-center";
 

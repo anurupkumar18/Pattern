@@ -110,11 +110,13 @@ HERDR_SOCKET_PATH=/path/to/herdr.sock \
 npm test -- herdr.integration.test.ts
 ```
 
-## Recommended real Gemma via Ollama HTTP
+## Recommended cascade via Ollama HTTP
 
 Start `ollama serve`, ensure `gemma4` is installed, then use the persistent
-HTTP transport. The eval runner makes an untimed warm-up request before
-collecting route latency:
+HTTP transport. With Gemma configured, the command center defaults to the
+cascade: deterministic commands return in milliseconds, while deterministic
+noise (including unresolved command-shaped speech) escalates to Gemma. The
+eval runner makes one untimed warm-up request before collecting route latency:
 
 ```bash
 GEMMA_OLLAMA_MODEL=gemma4 \
@@ -133,6 +135,11 @@ GEMMA_OLLAMA_NUM_PREDICT=200 \
 GEMMA_OLLAMA_THINK=false \
 npm run dev
 ```
+
+For ablation runs, omit all `GEMMA_*` variables for pure deterministic mode.
+Set `GEMMA_CASCADE=off` alongside the Gemma variables for pure Gemma mode. The
+cascade fallback deadline defaults to 20 seconds and can be changed with
+`GEMMA_CASCADE_TIMEOUT_MS`.
 
 ## Gemma on Cactus
 

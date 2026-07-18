@@ -256,3 +256,31 @@ blockers for `cursor/voice-command-center`.
   `GEMMA_OLLAMA_MODEL=gemma4 GEMMA_OLLAMA_TEMPERATURE=0 GEMMA_OLLAMA_NUM_PREDICT=200 GEMMA_OLLAMA_THINK=false npm run eval`
   (or `npm run dev`). The retained final measurement is 27/28, 0% noise
   false-fire, p50 10.03s, p95 12.99s.
+
+## 2026-07-18 (cascade routing) - Fast path plus honest fallback numbers
+
+- Added a provenance-stamped `CascadeRouter`: deterministic actionable
+  commands return immediately; every deterministic noise result escalates,
+  including unresolved command-shaped speech and no-grammar matches. Gemma
+  errors or the configurable 20-second deadline fall back to deterministic
+  noise without throwing.
+- Full warmed-model command:
+  `GEMMA_OLLAMA_MODEL=gemma4 GEMMA_OLLAMA_TEMPERATURE=0 GEMMA_OLLAMA_NUM_PREDICT=200 GEMMA_OLLAMA_THINK=false npm run eval`.
+- Cascade accuracy: 28/28 overall; clear 15/15, fuzzy 5/5, noise 6/6,
+  destructive 2/2; 0% noise false-fire; 28/28 end-to-end verified.
+- The deterministic tier answered 22/28 with route p50 0.09ms and p95 2.03ms.
+  Six cases escalated, all ambient-noise fixtures in this matrix; Gemma-tier
+  route p50 was 9.36s and p95 was 10.60s. No Gemma call failed or timed out.
+- Pure Gemma remained 27/28: clear 14/15, fuzzy 5/5, noise 6/6, destructive
+  2/2; route p50 10.50s and p95 13.52s. The unchanged miss was
+  `spawn-clear-3`, where Gemma emitted `initialMessage: ""` and strict schema
+  validation rejected it.
+- Important fixture limitation: the current five fuzzy fixtures are already
+  resolved by the deterministic grammar, so this run does not show a
+  Gemma-rescued fuzzy case. It proves the cascade fast path, provenance,
+  escalation, and safe fallback contract; broader unusual-wording fixtures
+  are still needed to measure semantic rescue lift.
+- Proof: `npm test` passes 28 tests in 8 files with 1 real-Herdr test skipped;
+  `npm run build` passes. Generated reports:
+  `commandcenter/eval-report.json` and `commandcenter/eval-report.md`
+  (`2026-07-18T11:47:53.806Z`).

@@ -41,10 +41,7 @@ export class CascadeRouter implements Router {
     );
     if (deterministic.verb !== "noise") return deterministic;
 
-    // Both command-shaped misses and no-grammar matches escalate. The
-    // classification is retained so the policy remains explicit and can be
-    // measured later without making ambient speech actionable.
-    classifyEscalation(deterministic);
+    if (!shouldEscalate(deterministic)) return deterministic;
 
     try {
       const gemma = await withTimeout(
@@ -72,6 +69,20 @@ export function classifyEscalation(
     return "no-grammar-match";
   }
   return "other-noise";
+}
+
+export function shouldEscalate(
+  command: Extract<FleetCommand, { verb: "noise" }>,
+): boolean {
+  switch (classifyEscalation(command)) {
+    // Command-shaped misses need semantic target/text resolution. No-grammar
+    // matches may be fuzzy commands. Other noise is safe to escalate because
+    // a returned noise command cannot mutate the fleet.
+    case "unresolved-command":
+    case "no-grammar-match":
+    case "other-noise":
+      return true;
+  }
 }
 
 function stamp(

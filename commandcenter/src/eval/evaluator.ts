@@ -14,7 +14,7 @@ export interface EvalCaseResult {
   expected: ExpectedCommand;
   actual: Pick<
     FleetCommand,
-    "verb" | "resolvedTargetId" | "payload"
+    "verb" | "resolvedTargetId" | "payload" | "routedBy"
   > | null;
   correct: boolean;
   outcome: CommandOutcome["state"] | "ROUTER_ERROR";
@@ -154,11 +154,15 @@ export async function evaluateRouter(
 
 function pickCommand(
   command: FleetCommand,
-): Pick<FleetCommand, "verb" | "resolvedTargetId" | "payload"> {
+): Pick<
+  FleetCommand,
+  "verb" | "resolvedTargetId" | "payload" | "routedBy"
+> {
   return {
     verb: command.verb,
     resolvedTargetId: command.resolvedTargetId,
     payload: command.payload,
+    routedBy: command.routedBy,
   };
 }
 

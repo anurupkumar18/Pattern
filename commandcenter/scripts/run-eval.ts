@@ -2,11 +2,16 @@ import { writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { evaluateRouter, type RouterEvalReport } from "../src/eval/evaluator.js";
+import {
+  evaluateRouter,
+  type LatencySummary,
+  type RouterEvalReport,
+} from "../src/eval/evaluator.js";
 import {
   loadUtteranceFixtures,
   type UtteranceFixture,
 } from "../src/eval/fixtures.js";
+import { CascadeRouter } from "../src/router/cascade-router.js";
 import { DeterministicRouter } from "../src/router/deterministic-router.js";
 import { GemmaRouter } from "../src/router/gemma-router.js";
 import {
@@ -43,6 +48,23 @@ const gemma = await evaluateRouter(fixtures, gemmaMode.routerFor, {
   backend: gemmaMode.backend,
   modelEvidence: gemmaMode.modelEvidence,
 });
+const cascade = gemmaMode.configured
+  ? addCascadeMetrics(
+      await evaluateRouter(
+        fixtures,
+        (fixture) =>
+          new CascadeRouter({
+            deterministic: new DeterministicRouter(),
+            gemma: gemmaMode.routerFor(fixture),
+            timeoutMs: optionalNumber("GEMMA_CASCADE_TIMEOUT_MS") ?? 20_000,
+          }),
+        {
+          backend: `cascade:${gemmaMode.backend}`,
+          modelEvidence: true,
+        },
+      ),
+    )
+  : null;
 
 const report = {
   generatedAt,
@@ -50,7 +72,11 @@ const report = {
   caveat: gemmaMode.modelEvidence
     ? "Gemma results came from the configured local runtime."
     : "Gemma results use a fixture-oracle mock to validate the prompt, parser, retry seam, command loop, and verifier. They are not model-quality evidence.",
-  routers: { deterministic, gemma },
+  routers: {
+    deterministic,
+    gemma,
+    ...(cascade ? { cascade } : {}),
+  },
 };
 
 await writeFile(
@@ -59,7 +85,14 @@ await writeFile(
 );
 await writeFile(
   resolve(root, "eval-report.md"),
-  renderMarkdown(generatedAt, fixtures.length, deterministic, gemma, report.caveat),
+  renderMarkdown(
+    generatedAt,
+    fixtures.length,
+    deterministic,
+    gemma,
+    cascade,
+    report.caveat,
+  ),
 );
 
 console.log(
@@ -67,12 +100,32 @@ console.log(
     `Evaluated ${fixtures.length} fixtures`,
     `Deterministic: ${percent(deterministic.summary.accuracy)} accuracy, ${percent(deterministic.falseFireRate)} noise false-fire`,
     `Gemma (${gemma.backend}): ${percent(gemma.summary.accuracy)} accuracy, ${percent(gemma.falseFireRate)} noise false-fire`,
+    ...(cascade
+      ? [
+          `Cascade: ${percent(cascade.summary.accuracy)} accuracy, ${cascade.cascadeMetrics.escalationCount} escalated`,
+          `Cascade deterministic tier: ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.deterministicAnswered.p50)} p50 / ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.deterministicAnswered.p95)} p95`,
+          `Cascade Gemma tier: ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.gemmaAnswered.p50)} p50 / ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.gemmaAnswered.p95)} p95`,
+        ]
+      : []),
     `Wrote ${resolve(root, "eval-report.json")} and eval-report.md`,
   ].join("\n"),
 );
 
+interface CascadeEvalReport extends RouterEvalReport {
+  cascadeMetrics: {
+    escalationCount: number;
+    fallbackFailureCount: number;
+    routeLatencyMs: {
+      deterministicAnswered: LatencySummary;
+      gemmaAnswered: LatencySummary;
+      fallbackFailed: LatencySummary;
+    };
+  };
+}
+
 function createGemmaMode(): {
   backend: string;
+  configured: boolean;
   modelEvidence: boolean;
   routerFor: (fixture: UtteranceFixture) => Router;
   warmUp?: () => Promise<void>;
@@ -110,6 +163,7 @@ function createGemmaMode(): {
 
   return {
     backend,
+    configured: transport !== null,
     modelEvidence,
     warmUp: transport
       ? async () => {
@@ -154,6 +208,7 @@ function renderMarkdown(
   count: number,
   deterministic: RouterEvalReport,
   gemma: RouterEvalReport,
+  cascade: CascadeEvalReport | null,
   caveat: string,
 ): string {
   return `# Voice Command Center Eval
@@ -166,10 +221,13 @@ Fixtures: ${count}
 
 - Deterministic router: ${deterministic.summary.correct}/${deterministic.summary.cases} (${percent(deterministic.summary.accuracy)})
 - Gemma router (${gemma.backend}): ${gemma.summary.correct}/${gemma.summary.cases} (${percent(gemma.summary.accuracy)})
+${cascade ? `- Cascade router: ${cascade.summary.correct}/${cascade.summary.cases} (${percent(cascade.summary.accuracy)})\n- Cascade escalations: ${cascade.cascadeMetrics.escalationCount}/${cascade.summary.cases} (${cascade.cascadeMetrics.fallbackFailureCount} fallback failures)` : "- Cascade router: not run because no Gemma environment was configured"}
 - Deterministic noise false-fire rate: ${percent(deterministic.falseFireRate)}
 - Gemma noise false-fire rate: ${percent(gemma.falseFireRate)}
+${cascade ? `- Cascade noise false-fire rate: ${percent(cascade.falseFireRate)}` : ""}
 - Deterministic end-to-end verified: ${percent(deterministic.endToEndSuccessRate)}
 - Gemma end-to-end verified: ${percent(gemma.endToEndSuccessRate)}
+${cascade ? `- Cascade end-to-end verified: ${percent(cascade.endToEndSuccessRate)}` : ""}
 
 > ${caveat}
 
@@ -179,6 +237,7 @@ Fixtures: ${count}
 | --- | ---: | ---: | ---: | ---: |
 | Deterministic | ${category(deterministic, "clear")} | ${category(deterministic, "fuzzy")} | ${category(deterministic, "noise")} | ${category(deterministic, "destructive")} |
 | Gemma | ${category(gemma, "clear")} | ${category(gemma, "fuzzy")} | ${category(gemma, "noise")} | ${category(gemma, "destructive")} |
+${cascade ? `| Cascade | ${category(cascade, "clear")} | ${category(cascade, "fuzzy")} | ${category(cascade, "noise")} | ${category(cascade, "destructive")} |` : ""}
 
 ## Latency
 
@@ -186,9 +245,67 @@ Fixtures: ${count}
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Deterministic | ${milliseconds(deterministic.latencyMs.route.p50)} | ${milliseconds(deterministic.latencyMs.route.p95)} | ${milliseconds(deterministic.latencyMs.act.p50)} | ${milliseconds(deterministic.latencyMs.verify.p50)} | ${milliseconds(deterministic.latencyMs.total.p50)} |
 | Gemma | ${milliseconds(gemma.latencyMs.route.p50)} | ${milliseconds(gemma.latencyMs.route.p95)} | ${milliseconds(gemma.latencyMs.act.p50)} | ${milliseconds(gemma.latencyMs.verify.p50)} | ${milliseconds(gemma.latencyMs.total.p50)} |
+${cascade ? `| Cascade | ${milliseconds(cascade.latencyMs.route.p50)} | ${milliseconds(cascade.latencyMs.route.p95)} | ${milliseconds(cascade.latencyMs.act.p50)} | ${milliseconds(cascade.latencyMs.verify.p50)} | ${milliseconds(cascade.latencyMs.total.p50)} |` : ""}
 
-Per-case expected/actual commands, errors, outcomes, and stage timings are in \`eval-report.json\`.
+${cascade ? `## Cascade tier latency
+
+| Answering tier | Cases | Route p50 | Route p95 |
+| --- | ---: | ---: | ---: |
+| Deterministic answered | ${cascade.cascadeMetrics.routeLatencyMs.deterministicAnswered.samples} | ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.deterministicAnswered.p50)} | ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.deterministicAnswered.p95)} |
+| Gemma answered | ${cascade.cascadeMetrics.routeLatencyMs.gemmaAnswered.samples} | ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.gemmaAnswered.p50)} | ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.gemmaAnswered.p95)} |
+| Gemma failed, deterministic noise fallback | ${cascade.cascadeMetrics.routeLatencyMs.fallbackFailed.samples} | ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.fallbackFailed.p50)} | ${milliseconds(cascade.cascadeMetrics.routeLatencyMs.fallbackFailed.p95)} |
+
+` : ""}Per-case expected/actual commands, errors, outcomes, and stage timings are in \`eval-report.json\`.
 `;
+}
+
+function addCascadeMetrics(report: RouterEvalReport): CascadeEvalReport {
+  const deterministicAnswered = report.results.filter(
+    ({ actual }) => actual?.routedBy === "deterministic",
+  );
+  const gemmaAnswered = report.results.filter(
+    ({ actual }) => actual?.routedBy === "gemma",
+  );
+  const fallbackFailed = report.results.filter(
+    ({ actual }) => actual?.routedBy === "cascade-fallback-failed",
+  );
+  return {
+    ...report,
+    cascadeMetrics: {
+      escalationCount: gemmaAnswered.length + fallbackFailed.length,
+      fallbackFailureCount: fallbackFailed.length,
+      routeLatencyMs: {
+        deterministicAnswered: routeLatency(deterministicAnswered),
+        gemmaAnswered: routeLatency(gemmaAnswered),
+        fallbackFailed: routeLatency(fallbackFailed),
+      },
+    },
+  };
+}
+
+function routeLatency(
+  results: RouterEvalReport["results"],
+): LatencySummary {
+  const values = results
+    .flatMap(({ latencyMs }) => (latencyMs ? [latencyMs.route] : []))
+    .sort((left, right) => left - right);
+  return {
+    samples: values.length,
+    mean: values.length
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : 0,
+    p50: percentile(values, 0.5),
+    p95: percentile(values, 0.95),
+  };
+}
+
+function percentile(values: number[], quantile: number): number {
+  if (!values.length) return 0;
+  const index = Math.min(
+    values.length - 1,
+    Math.ceil(values.length * quantile) - 1,
+  );
+  return values[index] ?? 0;
 }
 
 function category(

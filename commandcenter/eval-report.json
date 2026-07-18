@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T11:33:11.879Z",
+  "generatedAt": "2026-07-18T11:47:53.806Z",
   "fixtureCount": 28,
   "caveat": "Gemma results came from the configured local runtime.",
   "routers": {
@@ -44,27 +44,27 @@
         },
         "route": {
           "samples": 28,
-          "mean": 0.19517999999999652,
-          "p50": 0.09970900000001848,
-          "p95": 0.7450419999999838
+          "mean": 0.1850506071428575,
+          "p50": 0.07004099999997493,
+          "p95": 0.5892920000000004
         },
         "act": {
           "samples": 28,
-          "mean": 0.017915107142856965,
-          "p50": 0.012875000000008185,
-          "p95": 0.06083399999999983
+          "mean": 0.01738682142857024,
+          "p50": 0.012208000000015318,
+          "p95": 0.05725000000001046
         },
         "verify": {
           "samples": 28,
-          "mean": 0.01914739285714059,
-          "p50": 0.012915999999989936,
-          "p95": 0.029958999999990965
+          "mean": 0.018598249999998626,
+          "p50": 0.011249999999989768,
+          "p95": 0.04129100000000108
         },
         "total": {
           "samples": 28,
-          "mean": 0.23224249999999408,
-          "p50": 0.12783400000003553,
-          "p95": 0.8335009999999841
+          "mean": 0.2210356785714264,
+          "p50": 0.1033750000000282,
+          "p95": 0.6763749999999789
         }
       },
       "results": [
@@ -79,16 +79,17 @@
           "actual": {
             "verb": "status",
             "resolvedTargetId": null,
-            "payload": {}
+            "payload": {},
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 1.1334579999999903,
-            "act": 0.03520799999998303,
-            "verify": 0.16516700000002515,
-            "total": 1.3338329999999985
+            "route": 1.5255000000000223,
+            "act": 0.035042000000004236,
+            "verify": 0.15520799999998758,
+            "total": 1.715750000000014
           }
         },
         {
@@ -102,16 +103,17 @@
           "actual": {
             "verb": "status",
             "resolvedTargetId": null,
-            "payload": {}
+            "payload": {},
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.24937499999998636,
-            "act": 0.013958000000002357,
-            "verify": 0.027124999999983856,
-            "total": 0.29045799999997257
+            "route": 0.26191699999998264,
+            "act": 0.01141699999999446,
+            "verify": 0.018709000000001197,
+            "total": 0.2920429999999783
           }
         },
         {
@@ -125,16 +127,17 @@
           "actual": {
             "verb": "status",
             "resolvedTargetId": "migration",
-            "payload": {}
+            "payload": {},
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.08741700000001629,
-            "act": 0.0019159999999942556,
-            "verify": 0.017499999999984084,
-            "total": 0.10683299999999463
+            "route": 0.063083000000006,
+            "act": 0.0015839999999798238,
+            "verify": 0.015541999999982181,
+            "total": 0.080208999999968
           }
         },
         {
@@ -152,16 +155,17 @@
             "resolvedTargetId": "migration",
             "payload": {
               "agentId": "migration"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.7450419999999838,
-            "act": 0.07229200000000446,
-            "verify": 0.016166999999995824,
-            "total": 0.8335009999999841
+            "route": 0.5892920000000004,
+            "act": 0.07024999999998727,
+            "verify": 0.016832999999991216,
+            "total": 0.6763749999999789
           }
         },
         {
@@ -179,16 +183,17 @@
             "resolvedTargetId": "tests",
             "payload": {
               "agentId": "tests"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.19487499999999613,
-            "act": 0.012665999999995847,
-            "verify": 0.012124999999997499,
-            "total": 0.21966599999998948
+            "route": 0.15399999999999636,
+            "act": 0.012582999999978028,
+            "verify": 0.011458000000004631,
+            "total": 0.17804099999997902
           }
         },
         {
@@ -206,16 +211,17 @@
             "resolvedTargetId": "migration",
             "payload": {
               "agentId": "migration"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.04804099999998357,
-            "act": 0.02854199999998741,
-            "verify": 0.01841699999999946,
-            "total": 0.09499999999997044
+            "route": 0.02616700000001515,
+            "act": 0.010333000000002812,
+            "verify": 0.011249999999989768,
+            "total": 0.04775000000000773
           }
         },
         {
@@ -233,16 +239,17 @@
             "resolvedTargetId": "tests",
             "payload": {
               "agentId": "tests"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.17641599999998903,
-            "act": 0.015957999999983485,
-            "verify": 0.01387500000001296,
-            "total": 0.20624899999998547
+            "route": 0.045000000000015916,
+            "act": 0.009832999999986214,
+            "verify": 0.011124999999992724,
+            "total": 0.06595799999999485
           }
         },
         {
@@ -262,16 +269,17 @@
             "payload": {
               "agentId": "tests",
               "text": "rerun the auth suite"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.3072090000000003,
-            "act": 0.04329100000001063,
-            "verify": 0.02245800000000031,
-            "total": 0.3729580000000112
+            "route": 0.2745840000000044,
+            "act": 0.03804199999999014,
+            "verify": 0.04129100000000108,
+            "total": 0.3539169999999956
           }
         },
         {
@@ -291,16 +299,17 @@
             "payload": {
               "agentId": "migration",
               "text": "use staging not production"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.20212499999999523,
-            "act": 0.01474999999999227,
-            "verify": 0.013999999999981583,
-            "total": 0.23087499999996908
+            "route": 0.30429199999997536,
+            "act": 0.03812500000000796,
+            "verify": 0.025208000000020547,
+            "total": 0.36762500000000387
           }
         },
         {
@@ -320,16 +329,17 @@
             "payload": {
               "agentId": "deploy",
               "text": "only make a plan"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.0685410000000104,
-            "act": 0.011792000000014013,
-            "verify": 0.014542000000005828,
-            "total": 0.09487500000003024
+            "route": 0.10258300000000986,
+            "act": 0.017291000000000167,
+            "verify": 0.020041999999989457,
+            "total": 0.13991599999999949
           }
         },
         {
@@ -349,16 +359,17 @@
             "payload": {
               "agentId": "migration",
               "text": "use staging"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.024583000000006905,
-            "act": 0.012875000000008185,
-            "verify": 0.012833000000000538,
-            "total": 0.05029100000001563
+            "route": 0.0579580000000135,
+            "act": 0.02750000000000341,
+            "verify": 0.017917000000011285,
+            "total": 0.1033750000000282
           }
         },
         {
@@ -378,16 +389,17 @@
             "payload": {
               "agentId": "tests",
               "text": "continue"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.09970900000001848,
-            "act": 0.015542000000010603,
-            "verify": 0.01258300000000645,
-            "total": 0.12783400000003553
+            "route": 0.1335420000000056,
+            "act": 0.019333000000017364,
+            "verify": 0.00995800000001168,
+            "total": 0.16283300000003464
           }
         },
         {
@@ -407,16 +419,17 @@
             "payload": {
               "harness": "codex",
               "cwd": "/repos/docs"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.5271249999999839,
-            "act": 0.06083399999999983,
-            "verify": 0.027375000000006366,
-            "total": 0.6153339999999901
+            "route": 0.4077910000000031,
+            "act": 0.05725000000001046,
+            "verify": 0.024374999999992042,
+            "total": 0.4894160000000056
           }
         },
         {
@@ -436,16 +449,17 @@
             "payload": {
               "harness": "claude",
               "cwd": "/repos/api"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.1267919999999947,
-            "act": 0.013540999999975156,
-            "verify": 0.008333999999990738,
-            "total": 0.14866699999996058
+            "route": 0.13187500000000796,
+            "act": 0.013125000000002274,
+            "verify": 0.008207999999996218,
+            "total": 0.15320800000000645
           }
         },
         {
@@ -467,16 +481,17 @@
               "harness": "codex",
               "cwd": "/repos/docs",
               "name": "Docs Agent"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.17020799999997394,
-            "act": 0.012666999999993322,
-            "verify": 0.007375000000024556,
-            "total": 0.19024999999999181
+            "route": 0.07004099999997493,
+            "act": 0.012208000000015318,
+            "verify": 0.007082999999994399,
+            "total": 0.08933199999998465
           }
         },
         {
@@ -498,16 +513,17 @@
               "harness": "claude",
               "cwd": "/repos/web",
               "initialMessage": "inspect the build"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.02950000000001296,
-            "act": 0.012375000000020009,
-            "verify": 0.007791999999994914,
-            "total": 0.04966700000002788
+            "route": 0.030875000000008868,
+            "act": 0.012291000000004715,
+            "verify": 0.006666999999993095,
+            "total": 0.04983300000000668
           }
         },
         {
@@ -525,16 +541,17 @@
             "resolvedTargetId": "deploy",
             "payload": {
               "agentId": "deploy"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.18491699999998445,
-            "act": 0.04512499999998454,
-            "verify": 0.029958999999990965,
-            "total": 0.26000099999995996
+            "route": 0.19183300000000258,
+            "act": 0.03129200000000765,
+            "verify": 0.022374999999982492,
+            "total": 0.24549999999999272
           }
         },
         {
@@ -552,16 +569,17 @@
             "resolvedTargetId": "migration",
             "payload": {
               "agentId": "migration"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.05508299999999622,
-            "act": 0.012958999999995058,
-            "verify": 0.01587499999999409,
-            "total": 0.08391699999998536
+            "route": 0.02349999999998431,
+            "act": 0.010667000000012195,
+            "verify": 0.015375000000005912,
+            "total": 0.04954200000000242
           }
         },
         {
@@ -579,16 +597,17 @@
             "resolvedTargetId": null,
             "payload": {
               "action": "stop"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.18216599999999517,
-            "act": 0.02854199999998741,
-            "verify": 0.012915999999989936,
-            "total": 0.2236239999999725
+            "route": 0.231583999999998,
+            "act": 0.02691599999999994,
+            "verify": 0.011209000000008018,
+            "total": 0.26970900000000597
           }
         },
         {
@@ -606,16 +625,17 @@
             "resolvedTargetId": null,
             "payload": {
               "action": "start"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.014499999999998181,
-            "act": 0.005832999999995536,
-            "verify": 0.004874999999998408,
-            "total": 0.025207999999992126
+            "route": 0.012958999999995058,
+            "act": 0.005624999999980673,
+            "verify": 0.004667000000011967,
+            "total": 0.023250999999987698
           }
         },
         {
@@ -635,16 +655,17 @@
             "payload": {
               "agentId": "tests",
               "text": "check the failing assertion"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.5533750000000168,
-            "act": 0.016041000000001304,
-            "verify": 0.014999999999986358,
-            "total": 0.5844160000000045
+            "route": 0.2917500000000075,
+            "act": 0.012416000000001759,
+            "verify": 0.014499999999998181,
+            "total": 0.31866600000000744
           }
         },
         {
@@ -664,16 +685,17 @@
             "payload": {
               "agentId": "tests",
               "text": "run npm test"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.07254199999999855,
-            "act": 0.010416000000020631,
-            "verify": 0.009000000000014552,
-            "total": 0.09195800000003373
+            "route": 0.0635830000000226,
+            "act": 0.009417000000013331,
+            "verify": 0.00837500000000091,
+            "total": 0.08137500000003683
           }
         },
         {
@@ -689,16 +711,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "no fleet command grammar matched"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.16737499999999272,
+            "route": 0.14570799999998485,
             "act": 0.0013329999999882602,
-            "verify": 0.026250000000004547,
-            "total": 0.19495799999998553
+            "verify": 0.021167000000019698,
+            "total": 0.1682079999999928
           }
         },
         {
@@ -714,16 +737,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "no fleet command grammar matched"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.009832999999986214,
-            "act": 0.0012080000000196378,
-            "verify": 0.005249999999989541,
-            "total": 0.016290999999995392
+            "route": 0.00883300000000986,
+            "act": 0.001125000000001819,
+            "verify": 0.004958999999985281,
+            "total": 0.01491699999999696
           }
         },
         {
@@ -739,16 +763,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "no fleet command grammar matched"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.00829199999998309,
-            "act": 0.0005840000000034706,
-            "verify": 0.00433400000000006,
-            "total": 0.013209999999986621
+            "route": 0.007749999999987267,
+            "act": 0.0004999999999881766,
+            "verify": 0.004250000000013188,
+            "total": 0.012499999999988631
           }
         },
         {
@@ -764,16 +789,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "no fleet command grammar matched"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.012000000000000455,
-            "act": 0.0005000000000165983,
-            "verify": 0.004916999999977634,
-            "total": 0.017416999999994687
+            "route": 0.011291999999997415,
+            "act": 0.0004160000000013042,
+            "verify": 0.0047089999999911925,
+            "total": 0.016416999999989912
           }
         },
         {
@@ -789,16 +815,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "no fleet command grammar matched"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.0072499999999990905,
-            "act": 0.00045800000000895125,
-            "verify": 0.006000000000000227,
-            "total": 0.013708000000008269
+            "route": 0.0072079999999914435,
+            "act": 0.0004590000000064265,
+            "verify": 0.004290999999994938,
+            "total": 0.011957999999992808
           }
         },
         {
@@ -814,16 +841,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "no fleet command grammar matched"
-            }
+            },
+            "routedBy": "deterministic"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 0.007291000000009262,
-            "act": 0.00041699999999877946,
-            "verify": 0.004082999999980075,
-            "total": 0.011790999999988117
+            "route": 0.006916999999987183,
+            "act": 0.00045799999998052954,
+            "verify": 0.003999999999990678,
+            "total": 0.01137499999995839
           }
         }
       ]
@@ -869,27 +897,27 @@
         },
         "route": {
           "samples": 27,
-          "mean": 11061.367620444447,
-          "p50": 10027.650250000006,
-          "p95": 12986.59399999999
+          "mean": 11428.870416629628,
+          "p50": 10496.361291000008,
+          "p95": 13520.82904099999
         },
         "act": {
           "samples": 27,
-          "mean": 0.3141697407447484,
-          "p50": 0.1883339999767486,
-          "p95": 1.2460409999985131
+          "mean": 0.5835155185206397,
+          "p50": 0.34704199999396224,
+          "p95": 1.7711249999993015
         },
         "verify": {
           "samples": 27,
-          "mean": 0.23220837037027836,
-          "p50": 0.09462499999790452,
-          "p95": 0.5595000000030268
+          "mean": 0.35573777777743226,
+          "p50": 0.17283300000417512,
+          "p95": 1.7128749999974389
         },
         "total": {
           "samples": 27,
-          "mean": 11061.913998555565,
-          "p50": 10027.82904099999,
-          "p95": 12987.326415999989
+          "mean": 11429.809669925926,
+          "p50": 10501.033208000008,
+          "p95": 13522.704540999985
         }
       },
       "results": [
@@ -904,16 +932,17 @@
           "actual": {
             "verb": "status",
             "resolvedTargetId": null,
-            "payload": {}
+            "payload": {},
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 12019.042333,
-            "act": 0.017916999999215477,
-            "verify": 0.241915999999037,
-            "total": 12019.302165999998
+            "route": 10960.965124999999,
+            "act": 0.02933399999892572,
+            "verify": 0.12374999999883585,
+            "total": 10961.118208999997
           }
         },
         {
@@ -927,16 +956,17 @@
           "actual": {
             "verb": "status",
             "resolvedTargetId": null,
-            "payload": {}
+            "payload": {},
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9058.170957999999,
-            "act": 0.039416999999957625,
-            "verify": 0.11920800000007148,
-            "total": 9058.329582999999
+            "route": 8517.197083,
+            "act": 0.03191700000024866,
+            "verify": 0.17283300000417512,
+            "total": 8517.401833000004
           }
         },
         {
@@ -950,16 +980,17 @@
           "actual": {
             "verb": "status",
             "resolvedTargetId": "migration",
-            "payload": {}
+            "payload": {},
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9560.766666999996,
-            "act": 0.014959000000089873,
-            "verify": 0.17804199999955017,
-            "total": 9560.959667999996
+            "route": 8955.577583000006,
+            "act": 0.04341700000077253,
+            "verify": 0.25545899999997346,
+            "total": 8955.876459000006
           }
         },
         {
@@ -977,16 +1008,17 @@
             "resolvedTargetId": "migration",
             "payload": {
               "agentId": "migration"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9754.200375,
-            "act": 1.2460409999985131,
-            "verify": 0.06158300000242889,
-            "total": 9755.507999000001
+            "route": 9406.370458999998,
+            "act": 0.7654590000020107,
+            "verify": 0.10541699999885168,
+            "total": 9407.241334999999
           }
         },
         {
@@ -1004,16 +1036,17 @@
             "resolvedTargetId": "tests",
             "payload": {
               "agentId": "tests"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9874.960708999999,
-            "act": 0.3934579999986454,
-            "verify": 0.07600000000093132,
-            "total": 9875.430166999999
+            "route": 9414.518165999994,
+            "act": 0.23658299999078736,
+            "verify": 0.02787499999976717,
+            "total": 9414.782623999985
           }
         },
         {
@@ -1031,16 +1064,17 @@
             "resolvedTargetId": "migration",
             "payload": {
               "agentId": "migration"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 12133.346834000004,
-            "act": 0.18362499999784632,
-            "verify": 0.024167000003217254,
-            "total": 12133.554626000005
+            "route": 10088.552209000001,
+            "act": 0.5327080000133719,
+            "verify": 0.08695799999986775,
+            "total": 10089.171875000015
           }
         },
         {
@@ -1058,16 +1092,17 @@
             "resolvedTargetId": "tests",
             "payload": {
               "agentId": "tests"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 12986.59399999999,
-            "act": 0.6927080000023125,
-            "verify": 0.03970799999660812,
-            "total": 12987.326415999989
+            "route": 9822.668375000008,
+            "act": 0.5335419999901205,
+            "verify": 0.07633400001213886,
+            "total": 9823.27825100001
           }
         },
         {
@@ -1087,16 +1122,17 @@
             "payload": {
               "agentId": "tests",
               "text": "rerun the auth suite"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 11287.164583000005,
-            "act": 0.2151670000021113,
-            "verify": 0.5340000000142027,
-            "total": 11287.913750000022
+            "route": 11900.921208,
+            "act": 0.34704199999396224,
+            "verify": 0.27554200000304263,
+            "total": 11901.543791999997
           }
         },
         {
@@ -1116,16 +1152,17 @@
             "payload": {
               "agentId": "migration",
               "text": "use staging not production"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 10902.873000000007,
-            "act": 0.39795800000138115,
-            "verify": 0.07825000000593718,
-            "total": 10903.349208000014
+            "route": 11224.068916999997,
+            "act": 0.399582999991253,
+            "verify": 0.06008299998939037,
+            "total": 11224.528582999978
           }
         },
         {
@@ -1145,16 +1182,17 @@
             "payload": {
               "agentId": "deploy",
               "text": "only make a plan"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 12878.823166999995,
-            "act": 0.26483300000836607,
-            "verify": 0.06308400000852998,
-            "total": 12879.151084000012
+            "route": 13173.54299999999,
+            "act": 0.2696670000004815,
+            "verify": 0.03287500000442378,
+            "total": 13173.845541999995
           }
         },
         {
@@ -1174,16 +1212,17 @@
             "payload": {
               "agentId": "migration",
               "text": "use staging"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 10743.77691700001,
-            "act": 0.375041000006604,
-            "verify": 0.04137500000069849,
-            "total": 10744.193333000017
+            "route": 13520.82904099999,
+            "act": 1.405750000005355,
+            "verify": 0.4697499999892898,
+            "total": 13522.704540999985
           }
         },
         {
@@ -1203,16 +1242,17 @@
             "payload": {
               "agentId": "tests",
               "text": "continue"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9875.690457999997,
-            "act": 0.1883339999767486,
-            "verify": 0.060250000009546056,
-            "total": 9875.939041999984
+            "route": 12634.428332999989,
+            "act": 0.2177500000107102,
+            "verify": 0.14229200000409037,
+            "total": 12634.788375000004
           }
         },
         {
@@ -1232,16 +1272,17 @@
             "payload": {
               "harness": "codex",
               "cwd": "/repos/docs"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 10598.813541999989,
-            "act": 0.2752089999848977,
-            "verify": 0.04341700000804849,
-            "total": 10599.132167999982
+            "route": 13409.382249999995,
+            "act": 0.8106249999837019,
+            "verify": 1.7128749999974389,
+            "total": 13411.905749999976
           }
         },
         {
@@ -1261,16 +1302,17 @@
             "payload": {
               "harness": "claude",
               "cwd": "/repos/api"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 10187.794750000001,
-            "act": 0.4348749999771826,
-            "verify": 0.057541999995009974,
-            "total": 10188.287166999973
+            "route": 12896.06358300001,
+            "act": 0.375,
+            "verify": 0.04695800002082251,
+            "total": 12896.485541000031
           }
         },
         {
@@ -1311,16 +1353,17 @@
               "cwd": "/repos/web",
               "name": "New Claude Agent",
               "initialMessage": "inspect the build"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 26654.941124999983,
-            "act": 1.6265830000047572,
-            "verify": 0.08991599999717437,
-            "total": 26656.657623999985
+            "route": 28480.09600000002,
+            "act": 4.210625000006985,
+            "verify": 0.3005830000038259,
+            "total": 28484.60720800003
           }
         },
         {
@@ -1338,16 +1381,17 @@
             "resolvedTargetId": "deploy",
             "payload": {
               "agentId": "deploy"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 10960.55016699998,
-            "act": 0.07325000001583248,
-            "verify": 0.09462499999790452,
-            "total": 10960.718041999993
+            "route": 10496.361291000008,
+            "act": 1.7711249999993015,
+            "verify": 2.900792000000365,
+            "total": 10501.033208000008
           }
         },
         {
@@ -1365,16 +1409,17 @@
             "resolvedTargetId": "migration",
             "payload": {
               "agentId": "migration"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 10027.650250000006,
-            "act": 0.0887079999956768,
-            "verify": 0.09008299998822622,
-            "total": 10027.82904099999
+            "route": 9789.053291999997,
+            "act": 0.1296660000225529,
+            "verify": 0.12050000001909211,
+            "total": 9789.303458000039
           }
         },
         {
@@ -1392,16 +1437,17 @@
             "resolvedTargetId": null,
             "payload": {
               "action": "stop"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9369.347000000009,
-            "act": 0.14779099999577738,
-            "verify": 0.02945900001213886,
-            "total": 9369.524250000017
+            "route": 9676.046957999992,
+            "act": 1.203417000011541,
+            "verify": 0.7884170000324957,
+            "total": 9678.038792000036
           }
         },
         {
@@ -1419,16 +1465,17 @@
             "resolvedTargetId": null,
             "payload": {
               "action": "start"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9317.123625000007,
-            "act": 0.401624999998603,
-            "verify": 0.5595000000030268,
-            "total": 9318.084750000009
+            "route": 9607.14841699996,
+            "act": 0.9070420000352897,
+            "verify": 0.07112499995855615,
+            "total": 9608.126583999954
           }
         },
         {
@@ -1448,16 +1495,17 @@
             "payload": {
               "agentId": "tests",
               "text": "check the failing assertion"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 11824.41754200001,
-            "act": 0.742792000004556,
-            "verify": 0.24374999999417923,
-            "total": 11825.404084000009
+            "route": 12587.256082999986,
+            "act": 0.790207999991253,
+            "verify": 0.2737499999930151,
+            "total": 12588.32004099997
           }
         },
         {
@@ -1477,16 +1525,17 @@
             "payload": {
               "agentId": "tests",
               "text": "run npm test"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 11174.879541000002,
-            "act": 0.6222500000149012,
-            "verify": 0.09833299997262657,
-            "total": 11175.60012399999
+            "route": 11588.136959000025,
+            "act": 0.5944579999777488,
+            "verify": 0.17983400000957772,
+            "total": 11588.911251000012
           }
         },
         {
@@ -1502,16 +1551,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "unsupported request"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9467.059000000008,
-            "act": 0.006750000000465661,
-            "verify": 2.085625000006985,
-            "total": 9469.151375000016
+            "route": 9870.688749999972,
+            "act": 0.06004200002644211,
+            "verify": 0.46587499999441206,
+            "total": 9871.214666999993
           }
         },
         {
@@ -1527,16 +1577,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "unsupported request"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9736.674083000049,
-            "act": 0.007083000033162534,
-            "verify": 0.2755839999881573,
-            "total": 9736.95675000007
+            "route": 10126.446458999999,
+            "act": 0.020791999995708466,
+            "verify": 0.2009589999797754,
+            "total": 10126.668209999974
           }
         },
         {
@@ -1552,16 +1603,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "ambient speech"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9384.816082999983,
-            "act": 0.007250000024214387,
-            "verify": 0.19945899996673688,
-            "total": 9385.022791999974
+            "route": 10684.738292000024,
+            "act": 0.011500000022351742,
+            "verify": 0.2939170000026934,
+            "total": 10685.043709000049
           }
         },
         {
@@ -1577,16 +1629,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "unsupported request"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9857.89883400005,
-            "act": 0.008375000033993274,
-            "verify": 0.22412500000791624,
-            "total": 9858.131334000092
+            "route": 11484.985417000018,
+            "act": 0.01837499998509884,
+            "verify": 0.21516700001666322,
+            "total": 11485.21895900002
           }
         },
         {
@@ -1602,16 +1655,17 @@
             "resolvedTargetId": null,
             "payload": {
               "reason": "Unsupported request"
-            }
+            },
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9757.645084000018,
-            "act": 0.004292000026907772,
-            "verify": 0.1415419999975711,
-            "total": 9757.790918000042
+            "route": 9415.745082999987,
+            "act": 0.020499999984167516,
+            "verify": 0.10999999998603016,
+            "total": 9415.875582999957
           }
         },
         {
@@ -1625,19 +1679,895 @@
           "actual": {
             "verb": "noise",
             "resolvedTargetId": null,
-            "payload": {}
+            "payload": {},
+            "routedBy": "gemma"
           },
           "correct": true,
           "outcome": "SUCCEEDED",
           "latencyMs": {
             "stt": 0,
-            "route": 9261.90512499999,
-            "act": 0.006292000005487353,
-            "verify": 0.5190830000210553,
-            "total": 9262.430500000017
+            "route": 8847.71291599999,
+            "act": 0.018792000017128885,
+            "verify": 0.09499999997206032,
+            "total": 8847.826707999979
           }
         }
       ]
+    },
+    "cascade": {
+      "backend": "cascade:ollama-http:gemma4",
+      "modelEvidence": true,
+      "summary": {
+        "cases": 28,
+        "correct": 28,
+        "accuracy": 1
+      },
+      "categories": {
+        "clear": {
+          "cases": 15,
+          "correct": 15,
+          "accuracy": 1
+        },
+        "fuzzy": {
+          "cases": 5,
+          "correct": 5,
+          "accuracy": 1
+        },
+        "noise": {
+          "cases": 6,
+          "correct": 6,
+          "accuracy": 1
+        },
+        "destructive": {
+          "cases": 2,
+          "correct": 2,
+          "accuracy": 1
+        }
+      },
+      "falseFireRate": 0,
+      "endToEndSuccessRate": 1,
+      "latencyMs": {
+        "stt": {
+          "samples": 28,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0
+        },
+        "route": {
+          "samples": 28,
+          "mean": 2042.6070296785765,
+          "p50": 0.12295799999265,
+          "p95": 10259.373415999988
+        },
+        "act": {
+          "samples": 28,
+          "mean": 0.5252798571434271,
+          "p50": 0.015083000005688518,
+          "p95": 0.1483340000268072
+        },
+        "verify": {
+          "samples": 28,
+          "mean": 0.05390182142062778,
+          "p50": 0.014125000045169145,
+          "p95": 0.16441699996357784
+        },
+        "total": {
+          "samples": 28,
+          "mean": 2043.1862113571406,
+          "p50": 0.21549999999115244,
+          "p95": 10259.918791000033
+        }
+      },
+      "results": [
+        {
+          "id": "status-clear-1",
+          "category": "clear",
+          "expected": {
+            "verb": "status",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "status",
+            "resolvedTargetId": null,
+            "payload": {},
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 3.8297920000040904,
+            "act": 0.0032079999800771475,
+            "verify": 0.053041999984998256,
+            "total": 3.8860419999691658
+          }
+        },
+        {
+          "id": "status-clear-2",
+          "category": "clear",
+          "expected": {
+            "verb": "status",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "status",
+            "resolvedTargetId": null,
+            "payload": {},
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.6869580000056885,
+            "act": 0.0013339999713934958,
+            "verify": 0.012667000002693385,
+            "total": 0.7009589999797754
+          }
+        },
+        {
+          "id": "status-fuzzy-1",
+          "category": "fuzzy",
+          "expected": {
+            "verb": "status",
+            "resolvedTargetId": "migration",
+            "payload": {}
+          },
+          "actual": {
+            "verb": "status",
+            "resolvedTargetId": "migration",
+            "payload": {},
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.08345799997914582,
+            "act": 0.0005419999943114817,
+            "verify": 0.008749999979045242,
+            "total": 0.09274999995250255
+          }
+        },
+        {
+          "id": "focus-clear-1",
+          "category": "clear",
+          "expected": {
+            "verb": "focus",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            }
+          },
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 2.034166000026744,
+            "act": 0.05179100000532344,
+            "verify": 0.01554199995007366,
+            "total": 2.101498999982141
+          }
+        },
+        {
+          "id": "focus-clear-2",
+          "category": "clear",
+          "expected": {
+            "verb": "focus",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests"
+            }
+          },
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.18683399999281392,
+            "act": 0.019040999992284924,
+            "verify": 0.009625000006053597,
+            "total": 0.21549999999115244
+          }
+        },
+        {
+          "id": "focus-fuzzy-1",
+          "category": "fuzzy",
+          "expected": {
+            "verb": "focus",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            }
+          },
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.02154099999461323,
+            "act": 0.019250000012107193,
+            "verify": 0.008042000001296401,
+            "total": 0.048833000008016825
+          }
+        },
+        {
+          "id": "focus-fuzzy-2",
+          "category": "fuzzy",
+          "expected": {
+            "verb": "focus",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests"
+            }
+          },
+          "actual": {
+            "verb": "focus",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.5208340000244789,
+            "act": 0.025250000006053597,
+            "verify": 0.014125000045169145,
+            "total": 0.5602090000757016
+          }
+        },
+        {
+          "id": "send-clear-1",
+          "category": "clear",
+          "expected": {
+            "verb": "send",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "rerun the auth suite"
+            }
+          },
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "rerun the auth suite"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.22612499998649582,
+            "act": 0.01670799998100847,
+            "verify": 0.0617919999640435,
+            "total": 0.3046249999315478
+          }
+        },
+        {
+          "id": "send-clear-2",
+          "category": "clear",
+          "expected": {
+            "verb": "send",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration",
+              "text": "use staging not production"
+            }
+          },
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration",
+              "text": "use staging not production"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.27404200000455603,
+            "act": 0.018417000013869256,
+            "verify": 0.00841700000455603,
+            "total": 0.3008760000229813
+          }
+        },
+        {
+          "id": "send-clear-3",
+          "category": "clear",
+          "expected": {
+            "verb": "send",
+            "resolvedTargetId": "deploy",
+            "payload": {
+              "agentId": "deploy",
+              "text": "only make a plan"
+            }
+          },
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "deploy",
+            "payload": {
+              "agentId": "deploy",
+              "text": "only make a plan"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.06945899996208027,
+            "act": 0.01070899999467656,
+            "verify": 0.016333999985363334,
+            "total": 0.09650199994212016
+          }
+        },
+        {
+          "id": "send-fuzzy-1",
+          "category": "fuzzy",
+          "expected": {
+            "verb": "send",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration",
+              "text": "use staging"
+            }
+          },
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration",
+              "text": "use staging"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.013832999975420535,
+            "act": 0.00929099996574223,
+            "verify": 0.008749999979045242,
+            "total": 0.03187399992020801
+          }
+        },
+        {
+          "id": "send-fuzzy-2",
+          "category": "fuzzy",
+          "expected": {
+            "verb": "send",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "continue"
+            }
+          },
+          "actual": {
+            "verb": "send",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "continue"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.08929200004786253,
+            "act": 0.02333400002680719,
+            "verify": 0.006541999988257885,
+            "total": 0.1191680000629276
+          }
+        },
+        {
+          "id": "spawn-clear-1",
+          "category": "clear",
+          "expected": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "codex",
+              "cwd": "/repos/docs"
+            }
+          },
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "codex",
+              "cwd": "/repos/docs"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.12295799999265,
+            "act": 0.1483340000268072,
+            "verify": 0.02074999996693805,
+            "total": 0.29204199998639524
+          }
+        },
+        {
+          "id": "spawn-clear-2",
+          "category": "clear",
+          "expected": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "claude",
+              "cwd": "/repos/api"
+            }
+          },
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "claude",
+              "cwd": "/repos/api"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.09562500001629815,
+            "act": 0.015208999975584447,
+            "verify": 0.00712500000372529,
+            "total": 0.11795899999560788
+          }
+        },
+        {
+          "id": "spawn-clear-3",
+          "category": "clear",
+          "expected": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "codex",
+              "cwd": "/repos/docs",
+              "name": "Docs Agent"
+            }
+          },
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "codex",
+              "cwd": "/repos/docs",
+              "name": "Docs Agent"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.08712500002002344,
+            "act": 0.018500000005587935,
+            "verify": 0.013832999975420535,
+            "total": 0.1194580000010319
+          }
+        },
+        {
+          "id": "spawn-clear-4",
+          "category": "clear",
+          "expected": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "claude",
+              "cwd": "/repos/web",
+              "initialMessage": "inspect the build"
+            }
+          },
+          "actual": {
+            "verb": "spawn",
+            "resolvedTargetId": null,
+            "payload": {
+              "harness": "claude",
+              "cwd": "/repos/web",
+              "initialMessage": "inspect the build"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.03958300000522286,
+            "act": 0.015375000017229468,
+            "verify": 0.03791600000113249,
+            "total": 0.09287400002358481
+          }
+        },
+        {
+          "id": "interrupt-destructive-1",
+          "category": "destructive",
+          "expected": {
+            "verb": "interrupt",
+            "resolvedTargetId": "deploy",
+            "payload": {
+              "agentId": "deploy"
+            }
+          },
+          "actual": {
+            "verb": "interrupt",
+            "resolvedTargetId": "deploy",
+            "payload": {
+              "agentId": "deploy"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.06687500001862645,
+            "act": 0.010750000015832484,
+            "verify": 0.019582999986596406,
+            "total": 0.09720800002105534
+          }
+        },
+        {
+          "id": "interrupt-destructive-2",
+          "category": "destructive",
+          "expected": {
+            "verb": "interrupt",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            }
+          },
+          "actual": {
+            "verb": "interrupt",
+            "resolvedTargetId": "migration",
+            "payload": {
+              "agentId": "migration"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.017832999990787357,
+            "act": 0.01125000003958121,
+            "verify": 0.006374999997206032,
+            "total": 0.0354580000275746
+          }
+        },
+        {
+          "id": "listen-stop-1",
+          "category": "clear",
+          "expected": {
+            "verb": "listen_ctl",
+            "resolvedTargetId": null,
+            "payload": {
+              "action": "stop"
+            }
+          },
+          "actual": {
+            "verb": "listen_ctl",
+            "resolvedTargetId": null,
+            "payload": {
+              "action": "stop"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.030833000026177615,
+            "act": 0.00979199999710545,
+            "verify": 0.004083000007085502,
+            "total": 0.044708000030368567
+          }
+        },
+        {
+          "id": "listen-start-1",
+          "category": "clear",
+          "expected": {
+            "verb": "listen_ctl",
+            "resolvedTargetId": null,
+            "payload": {
+              "action": "start"
+            }
+          },
+          "actual": {
+            "verb": "listen_ctl",
+            "resolvedTargetId": null,
+            "payload": {
+              "action": "start"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.007374999986495823,
+            "act": 0.00458399998024106,
+            "verify": 0.006374999997206032,
+            "total": 0.018333999963942915
+          }
+        },
+        {
+          "id": "dictate-clear-1",
+          "category": "clear",
+          "expected": {
+            "verb": "dictate",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "check the failing assertion"
+            }
+          },
+          "actual": {
+            "verb": "dictate",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "check the failing assertion"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.15183299995260313,
+            "act": 0.007959000009577721,
+            "verify": 0.007415999949444085,
+            "total": 0.16720799991162494
+          }
+        },
+        {
+          "id": "dictate-clear-2",
+          "category": "clear",
+          "expected": {
+            "verb": "dictate",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "run npm test"
+            }
+          },
+          "actual": {
+            "verb": "dictate",
+            "resolvedTargetId": "tests",
+            "payload": {
+              "agentId": "tests",
+              "text": "run npm test"
+            },
+            "routedBy": "deterministic"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 0.04712500004097819,
+            "act": 14.177082999958657,
+            "verify": 0.05091699998592958,
+            "total": 14.275124999985565
+          }
+        },
+        {
+          "id": "noise-1",
+          "category": "noise",
+          "expected": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "unsupported request"
+            },
+            "routedBy": "gemma"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10595.537583000027,
+            "act": 0.012417000019922853,
+            "verify": 0.16441699996357784,
+            "total": 10595.71441700001
+          }
+        },
+        {
+          "id": "noise-2",
+          "category": "noise",
+          "expected": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "unsupported request"
+            },
+            "routedBy": "gemma"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 9364.083750000049,
+            "act": 0.015083000005688518,
+            "verify": 0.08791600004769862,
+            "total": 9364.186749000102
+          }
+        },
+        {
+          "id": "noise-3",
+          "category": "noise",
+          "expected": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "ambient speech"
+            },
+            "routedBy": "gemma"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 8530.486250000016,
+            "act": 0.015374999959021807,
+            "verify": 0.12591600004816428,
+            "total": 8530.627541000023
+          }
+        },
+        {
+          "id": "noise-4",
+          "category": "noise",
+          "expected": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "unsupported request"
+            },
+            "routedBy": "gemma"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10259.373415999988,
+            "act": 0.026250000053551048,
+            "verify": 0.5191249999916181,
+            "total": 10259.918791000033
+          }
+        },
+        {
+          "id": "noise-5",
+          "category": "noise",
+          "expected": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {
+              "reason": "Unsupported request"
+            },
+            "routedBy": "gemma"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 10256.374167000002,
+            "act": 0.01425000000745058,
+            "verify": 0.15120899997418746,
+            "total": 10256.539625999983
+          }
+        },
+        {
+          "id": "noise-6",
+          "category": "noise",
+          "expected": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {}
+          },
+          "actual": {
+            "verb": "noise",
+            "resolvedTargetId": null,
+            "payload": {},
+            "routedBy": "gemma"
+          },
+          "correct": true,
+          "outcome": "SUCCEEDED",
+          "latencyMs": {
+            "stt": 0,
+            "route": 8178.438166000007,
+            "act": 0.006750000000465661,
+            "verify": 0.06266699999105185,
+            "total": 8178.507582999999
+          }
+        }
+      ],
+      "cascadeMetrics": {
+        "escalationCount": 6,
+        "fallbackFailureCount": 0,
+        "routeLatencyMs": {
+          "deterministicAnswered": {
+            "samples": 22,
+            "mean": 0.39561359091153875,
+            "p50": 0.08712500002002344,
+            "p95": 2.034166000026744
+          },
+          "gemmaAnswered": {
+            "samples": 6,
+            "mean": 9530.715555333349,
+            "p50": 9364.083750000049,
+            "p95": 10595.537583000027
+          },
+          "fallbackFailed": {
+            "samples": 0,
+            "mean": 0,
+            "p50": 0,
+            "p95": 0
+          }
+        }
+      }
     }
   }
 }

@@ -50,11 +50,12 @@ describe("CascadeRouter", () => {
 
   it("falls back to deterministic noise when the Gemma tier fails", async () => {
     const deterministic = noiseCommand("no fleet command grammar matched");
+    const gemmaRoute = vi
+      .fn<Router["route"]>()
+      .mockRejectedValue(new Error("offline"));
     const router = new CascadeRouter({
       deterministic: stubRouter(deterministic),
-      gemma: {
-        route: vi.fn<Router["route"]>().mockRejectedValue(new Error("offline")),
-      },
+      gemma: { route: gemmaRoute },
     });
 
     const command = await router.route("the one that's waiting on auth", snapshot);
@@ -64,6 +65,7 @@ describe("CascadeRouter", () => {
       payload: { reason: "no fleet command grammar matched" },
       routedBy: "cascade-fallback-failed",
     });
+    expect(gemmaRoute).toHaveBeenCalledOnce();
   });
 
   it("overrides stub provenance with the tier that answered", async () => {
