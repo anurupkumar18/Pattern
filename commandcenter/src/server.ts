@@ -16,6 +16,7 @@ import { GemmaRouter } from "./router/gemma-router.js";
 import {
   ExecGemmaTransport,
   HttpGemmaTransport,
+  OllamaHttpGemmaTransport,
 } from "./router/gemma-transport.js";
 import type { Router } from "./router/router.js";
 
@@ -114,6 +115,17 @@ function createControl(): FleetControl {
 }
 
 function createRouter(): Router {
+  if (process.env.GEMMA_OLLAMA_MODEL) {
+    return new GemmaRouter(
+      new OllamaHttpGemmaTransport({
+        model: process.env.GEMMA_OLLAMA_MODEL,
+        endpoint: process.env.GEMMA_OLLAMA_ENDPOINT,
+        temperature: optionalNumber("GEMMA_OLLAMA_TEMPERATURE"),
+        numPredict: optionalNumber("GEMMA_OLLAMA_NUM_PREDICT"),
+        think: optionalBoolean("GEMMA_OLLAMA_THINK"),
+      }),
+    );
+  }
   if (process.env.GEMMA_HTTP_ENDPOINT) {
     return new GemmaRouter(
       new HttpGemmaTransport({
@@ -133,6 +145,24 @@ function createRouter(): Router {
     );
   }
   return new DeterministicRouter();
+}
+
+function optionalNumber(name: string): number | undefined {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${name} must be a finite number`);
+  }
+  return parsed;
+}
+
+function optionalBoolean(name: string): boolean | undefined {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} must be true or false`);
 }
 
 function broadcast(event: CommandLoopEvent): void {

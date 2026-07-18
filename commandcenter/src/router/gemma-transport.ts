@@ -103,3 +103,68 @@ export class HttpGemmaTransport implements GemmaTransport {
     return (await response.text()).trim();
   }
 }
+
+export interface OllamaHttpGemmaTransportOptions {
+  model: string;
+  endpoint?: string;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+  keepAlive?: string;
+  temperature?: number;
+  numPredict?: number;
+  think?: boolean;
+}
+
+export class OllamaHttpGemmaTransport implements GemmaTransport {
+  private readonly model: string;
+  private readonly endpoint: string;
+  private readonly timeoutMs: number;
+  private readonly fetchImpl: typeof fetch;
+  private readonly keepAlive: string;
+  private readonly temperature: number | undefined;
+  private readonly numPredict: number | undefined;
+  private readonly think: boolean | undefined;
+
+  constructor(options: OllamaHttpGemmaTransportOptions) {
+    this.model = options.model;
+    this.endpoint =
+      options.endpoint ?? "http://127.0.0.1:11434/api/generate";
+    this.timeoutMs = options.timeoutMs ?? 120_000;
+    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.keepAlive = options.keepAlive ?? "30m";
+    this.temperature = options.temperature;
+    this.numPredict = options.numPredict;
+    this.think = options.think;
+  }
+
+  async complete(prompt: string): Promise<string> {
+    const options: Record<string, number> = {};
+    if (this.temperature !== undefined) {
+      options.temperature = this.temperature;
+    }
+    if (this.numPredict !== undefined) {
+      options.num_predict = this.numPredict;
+    }
+    const response = await this.fetchImpl(this.endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: this.model,
+        prompt,
+        stream: false,
+        ...(this.think === undefined ? {} : { think: this.think }),
+        keep_alive: this.keepAlive,
+        options,
+      }),
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+    if (!response.ok) {
+      throw new Error(`Ollama HTTP transport returned ${response.status}`);
+    }
+    const body = (await response.json()) as { response?: unknown };
+    if (typeof body.response !== "string") {
+      throw new Error("Ollama HTTP response must contain response");
+    }
+    return body.response;
+  }
+}

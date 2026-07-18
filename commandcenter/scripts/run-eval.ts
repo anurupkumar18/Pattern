@@ -12,6 +12,7 @@ import { GemmaRouter } from "../src/router/gemma-router.js";
 import {
   ExecGemmaTransport,
   HttpGemmaTransport,
+  OllamaHttpGemmaTransport,
   type GemmaTransport,
 } from "../src/router/gemma-transport.js";
 import type { Router } from "../src/router/router.js";
@@ -37,6 +38,7 @@ const deterministic = await evaluateRouter(
 );
 
 const gemmaMode = createGemmaMode();
+await gemmaMode.warmUp?.();
 const gemma = await evaluateRouter(fixtures, gemmaMode.routerFor, {
   backend: gemmaMode.backend,
   modelEvidence: gemmaMode.modelEvidence,
@@ -73,12 +75,23 @@ function createGemmaMode(): {
   backend: string;
   modelEvidence: boolean;
   routerFor: (fixture: UtteranceFixture) => Router;
+  warmUp?: () => Promise<void>;
 } {
   let transport: GemmaTransport | null = null;
   let backend = "fixture-oracle-mock";
   let modelEvidence = false;
 
-  if (process.env.GEMMA_HTTP_ENDPOINT) {
+  if (process.env.GEMMA_OLLAMA_MODEL) {
+    transport = new OllamaHttpGemmaTransport({
+      model: process.env.GEMMA_OLLAMA_MODEL,
+      endpoint: process.env.GEMMA_OLLAMA_ENDPOINT,
+      temperature: optionalNumber("GEMMA_OLLAMA_TEMPERATURE"),
+      numPredict: optionalNumber("GEMMA_OLLAMA_NUM_PREDICT"),
+      think: optionalBoolean("GEMMA_OLLAMA_THINK"),
+    });
+    backend = `ollama-http:${process.env.GEMMA_OLLAMA_MODEL}`;
+    modelEvidence = true;
+  } else if (process.env.GEMMA_HTTP_ENDPOINT) {
     transport = new HttpGemmaTransport({
       endpoint: process.env.GEMMA_HTTP_ENDPOINT,
     });
@@ -98,6 +111,11 @@ function createGemmaMode(): {
   return {
     backend,
     modelEvidence,
+    warmUp: transport
+      ? async () => {
+          await transport.complete('Return exactly this JSON: {"warm":true}');
+        }
+      : undefined,
     routerFor: transport
       ? () => new GemmaRouter(transport)
       : (fixture) =>
@@ -111,6 +129,24 @@ function createGemmaMode(): {
             ),
           ),
   };
+}
+
+function optionalNumber(name: string): number | undefined {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${name} must be a finite number`);
+  }
+  return parsed;
+}
+
+function optionalBoolean(name: string): boolean | undefined {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} must be true or false`);
 }
 
 function renderMarkdown(
