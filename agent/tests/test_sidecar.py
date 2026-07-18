@@ -8,20 +8,32 @@ with INVALID_MESSAGE — never a crash, never silence.
 import json
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from voiceops_agent.main import handle_line
+from voiceops_agent.main import SidecarRuntime, handle_line
 from voiceops_agent.schemas import (
+    AppRef,
     EventType,
     FailureCode,
+    Observation,
     TaskCompleted,
     TaskFailure,
     TaskPlan,
+    UIElementCandidate,
+    WindowRef,
+    make_envelope,
     parse_envelope,
 )
 
 FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "ipc" / "voice_final.json"
+SCREEN_FIXTURE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "fixtures"
+    / "screen"
+    / "mail_deadline_observation.json"
+)
 
 
 def fixture_line() -> str:
@@ -71,6 +83,58 @@ class TestHandleLine:
         cancelled["payload"] = {"reason": "user pressed escape"}
         assert handle_line(json.dumps(cancelled)) == []
 
+    def test_observation_then_voice_yields_grounding_before_plan(self):
+        runtime = SidecarRuntime()
+        voice = parse_envelope(fixture_line())
+        observation = Observation(
+            capture_id=uuid4(),
+            timestamp=datetime.now(UTC),
+            active_app=AppRef(bundle_id="com.apple.mail", name="Mail"),
+            window=WindowRef(title="Hackathon email", bounds=(0, 0, 900, 700)),
+            focused_element_id="subject",
+            elements=[UIElementCandidate(
+                id="subject", role="AXStaticText", label="Hackathon deadline",
+                value=None, bounds=(10, 10, 200, 20), source="accessibility",
+                confidence=1, actions=[], app_bundle_id="com.apple.mail",
+            )],
+            screenshot_path="file:///tmp/capture.png",
+        )
+        observation_envelope = make_envelope(
+            EventType.OBSERVATION_READY, voice.task_id, observation
+        )
+
+        assert runtime.handle_line(observation_envelope.to_ndjson()) == []
+        events = runtime.handle_line(fixture_line())
+
+        assert [event.type for event in events] == [
+            EventType.GROUNDING_READY,
+            EventType.PLAN_READY,
+            EventType.TASK_COMPLETED,
+        ]
+        assert events[0].payload.references[0].phrase == "this email"
+
+    def test_grounding_adapter_failure_becomes_typed_task_failure(self):
+        class BrokenAdapter:
+            def resolve(self, grounding_input):
+                raise RuntimeError("provider unavailable")
+
+        runtime = SidecarRuntime(grounding_adapter=BrokenAdapter())
+        voice = parse_envelope(fixture_line())
+        observation = Observation(
+            capture_id=uuid4(), timestamp=datetime.now(UTC),
+            active_app=AppRef(bundle_id="com.apple.mail", name="Mail"),
+            window=WindowRef(title="Email", bounds=(0, 0, 100, 100)),
+            elements=[], screenshot_path="file:///tmp/capture.png",
+        )
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, voice.task_id, observation
+        ).to_ndjson())
+
+        events = runtime.handle_line(fixture_line())
+
+        assert [event.type for event in events] == [EventType.TASK_FAILED]
+        assert events[0].payload.error.code == FailureCode.MODEL_INVALID_OUTPUT
+
 
 class TestSidecarProcess:
     def run_sidecar(self, stdin: str) -> list[dict]:
@@ -88,6 +152,26 @@ class TestSidecarProcess:
         messages = self.run_sidecar(fixture_line() + "\n")
         envelopes = [parse_envelope(m) for m in messages]
         assert [e.type for e in envelopes] == [EventType.PLAN_READY, EventType.TASK_COMPLETED]
+
+    def test_screen_observation_exchange_over_stdio(self):
+        voice = parse_envelope(fixture_line())
+        observation = Observation.model_validate_json(SCREEN_FIXTURE_PATH.read_text())
+        observed = make_envelope(
+            EventType.OBSERVATION_READY, voice.task_id, observation
+        ).to_ndjson()
+
+        messages = self.run_sidecar(observed + fixture_line() + "\n")
+        envelopes = [parse_envelope(message) for message in messages]
+
+        assert [envelope.type for envelope in envelopes] == [
+            EventType.GROUNDING_READY,
+            EventType.PLAN_READY,
+            EventType.TASK_COMPLETED,
+        ]
+        assert [reference.phrase for reference in envelopes[0].payload.references] == [
+            "this email",
+            "the deadline",
+        ]
 
     def test_recovers_after_malformed_line(self):
         messages = self.run_sidecar("garbage\n" + fixture_line() + "\n")

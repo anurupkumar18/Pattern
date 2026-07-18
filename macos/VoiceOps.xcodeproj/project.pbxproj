@@ -13,11 +13,13 @@
 		735DC6FB5A89A97461561CED /* VoiceOpsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */; };
 		7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3B9B96230658F4F9616021 /* Narrator.swift */; };
 		98B5878BADA1ACDDB3A37650 /* VoiceOpsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7EFDE25BB447C20EFF02072B /* VoiceOpsCore */; };
+		B13BAE782EAC68EA8B01114D /* NativeScreenContextCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073A460C4C0C1CD6F0303380 /* NativeScreenContextCollector.swift */; };
 		F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8EA48DF1165324115400FCD /* HotKeyManager.swift */; };
 		FFA95AB014A1FC36A316FB1E /* CompanionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D6E0E89BE0D3CBA9396AE1 /* CompanionPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		073A460C4C0C1CD6F0303380 /* NativeScreenContextCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeScreenContextCollector.swift; sourceTree = "<group>"; };
 		14C2D66555C1DC080BA2A2DB /* macos */ = {isa = PBXFileReference; lastKnownFileType = folder; name = macos; path = .; sourceTree = SOURCE_ROOT; };
 		28E224505818686A6DED2E24 /* VoiceOps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceOps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39CAD534278016288C56718C /* CompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionView.swift; sourceTree = "<group>"; };
@@ -53,6 +55,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		334D10AE65A84C15407B73B3 /* Screen */ = {
+			isa = PBXGroup;
+			children = (
+				073A460C4C0C1CD6F0303380 /* NativeScreenContextCollector.swift */,
+			);
+			path = Screen;
+			sourceTree = "<group>";
+		};
 		5A1A9BD96E05A350C74242A3 = {
 			isa = PBXGroup;
 			children = (
@@ -75,6 +85,7 @@
 			children = (
 				95471A0FBE9BA112F119067F /* Info.plist */,
 				2D8A49214243D9F5269B8E2B /* App */,
+				334D10AE65A84C15407B73B3 /* Screen */,
 				DEB7C9AD022142A32D8FFE98 /* UI */,
 				998B9219220454E6BE15B29A /* Voice */,
 			);
@@ -174,6 +185,7 @@
 				468B7C4A56E05E2AF136DC72 /* CompanionView.swift in Sources */,
 				F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */,
 				7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */,
+				B13BAE782EAC68EA8B01114D /* NativeScreenContextCollector.swift in Sources */,
 				32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */,
 				735DC6FB5A89A97461561CED /* VoiceOpsApp.swift in Sources */,
 			);

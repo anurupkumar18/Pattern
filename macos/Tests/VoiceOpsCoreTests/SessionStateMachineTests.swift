@@ -20,33 +20,49 @@ final class SessionStateMachineTests: XCTestCase {
             .listening(transcript: "remind me"))
     }
 
-    func testHotkeyEndsCaptureIntoPlanning() {
+    func testHotkeyEndsCaptureIntoGrounding() {
         XCTAssertEqual(
             SessionStateMachine.reduce(.listening(transcript: "remind me"), .hotkeyTapped),
-            .planning(transcript: "remind me"))
+            .grounding(transcript: "remind me"))
     }
 
-    func testFinalTranscriptAlsoEndsCaptureIntoPlanning() {
+    func testFinalTranscriptAlsoEndsCaptureIntoGrounding() {
         XCTAssertEqual(
             SessionStateMachine.reduce(.listening(transcript: "remind"), .finalTranscript("remind me tomorrow")),
-            .planning(transcript: "remind me tomorrow"))
+            .grounding(transcript: "remind me tomorrow"))
     }
 
-    func testFinalTranscriptRefinesPlanningTranscript() {
+    func testFinalTranscriptRefinesGroundingTranscript() {
         XCTAssertEqual(
-            SessionStateMachine.reduce(.planning(transcript: "remind"), .finalTranscript("remind me tomorrow")),
-            .planning(transcript: "remind me tomorrow"))
+            SessionStateMachine.reduce(.grounding(transcript: "remind"), .finalTranscript("remind me tomorrow")),
+            .grounding(transcript: "remind me tomorrow"))
+    }
+
+    func testGroundingReadyMovesToPlanningWithReferenceChips() {
+        let chips = [GroundingChip(
+            phrase: "that deadline", resolvedText: "July 31, 2026",
+            source: .accessibility, confidence: 0.98)]
+        XCTAssertEqual(
+            SessionStateMachine.reduce(
+                .grounding(transcript: "use that deadline"),
+                .groundingReady(chips)),
+            .planning(transcript: "use that deadline", groundingChips: chips))
     }
 
     func testPlanReadyMovesToActing() {
+        let chips = [GroundingChip(
+            phrase: "this email", resolvedText: "Hackathon details",
+            source: .accessibility, confidence: 1)]
         XCTAssertEqual(
-            SessionStateMachine.reduce(.planning(transcript: "t"), .planReady(summary: "one verified write")),
-            .acting(description: "one verified write"))
+            SessionStateMachine.reduce(
+                .planning(transcript: "t", groundingChips: chips),
+                .planReady(summary: "one verified write")),
+            .acting(description: "one verified write", groundingChips: chips))
     }
 
     func testVerificationStartedMovesToVerifying() {
         XCTAssertEqual(
-            SessionStateMachine.reduce(.acting(description: "d"), .verificationStarted),
+            SessionStateMachine.reduce(.acting(description: "d", groundingChips: []), .verificationStarted),
             .verifying)
     }
 
@@ -59,7 +75,9 @@ final class SessionStateMachineTests: XCTestCase {
     func testTaskCompletedAlsoAcceptedFromActing() {
         // The Phase 1 mock sidecar completes without a separate verification event.
         XCTAssertEqual(
-            SessionStateMachine.reduce(.acting(description: "d"), .taskCompleted(state: .succeeded, summary: "ok")),
+            SessionStateMachine.reduce(
+                .acting(description: "d", groundingChips: []),
+                .taskCompleted(state: .succeeded, summary: "ok")),
             .result(.completed(state: .succeeded, summary: "ok")))
     }
 
@@ -77,8 +95,13 @@ final class SessionStateMachineTests: XCTestCase {
             .idle)
     }
 
-    func testStopDuringPlanningActingVerifyingShowsCancelledResult() {
-        for state: SessionState in [.planning(transcript: "t"), .acting(description: "d"), .verifying] {
+    func testStopDuringGroundingPlanningActingVerifyingShowsCancelledResult() {
+        for state: SessionState in [
+            .grounding(transcript: "t"),
+            .planning(transcript: "t", groundingChips: []),
+            .acting(description: "d", groundingChips: []),
+            .verifying,
+        ] {
             XCTAssertEqual(
                 SessionStateMachine.reduce(state, .stopRequested),
                 .result(.cancelled),
@@ -92,8 +115,9 @@ final class SessionStateMachineTests: XCTestCase {
         // Includes .listening: capture failures (mic/speech permission denied,
         // recognizer unavailable) must surface an actionable result, not vanish.
         for state: SessionState in [
-            .listening(transcript: ""), .planning(transcript: "t"),
-            .acting(description: "d"), .verifying,
+            .listening(transcript: ""), .grounding(transcript: "t"),
+            .planning(transcript: "t", groundingChips: []),
+            .acting(description: "d", groundingChips: []), .verifying,
         ] {
             XCTAssertEqual(
                 SessionStateMachine.reduce(state, .taskFailed(reason: "INVALID_MESSAGE")),
@@ -114,7 +138,7 @@ final class SessionStateMachineTests: XCTestCase {
             (.verifying, .partialTranscript("p")),
             (.result(.cancelled), .stopRequested),
             (.result(.cancelled), .hotkeyTapped),
-            (.planning(transcript: "t"), .hotkeyTapped),
+            (.planning(transcript: "t", groundingChips: []), .hotkeyTapped),
         ]
         for (state, event) in ignored {
             XCTAssertNil(

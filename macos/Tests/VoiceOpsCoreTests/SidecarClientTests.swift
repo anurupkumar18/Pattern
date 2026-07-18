@@ -78,6 +78,37 @@ final class SidecarClientTests: XCTestCase {
         await client.cancel()
     }
 
+    func testObservationThenVoiceYieldsGroundingBeforePlan() async throws {
+        try requireUV()
+        let voice = try fixtureEnvelope()
+        let observationURL = Self.repoRoot
+            .appendingPathComponent("fixtures/screen/mail_deadline_observation.json")
+        let observation = try JSONDecoder().decode(
+            Observation.self, from: Data(contentsOf: observationURL))
+        let client = makeClient()
+        let events = try await client.start()
+        try await client.send(Envelope(
+            type: .observationReady,
+            taskID: voice.taskID,
+            payload: .observationReady(observation)))
+        try await client.send(voice)
+
+        var received: [Envelope] = []
+        for try await envelope in events {
+            received.append(envelope)
+            if received.count == 3 { break }
+        }
+
+        XCTAssertEqual(received.map(\.type), [
+            .groundingReady, .planReady, .taskCompleted,
+        ])
+        guard case .groundingReady(let grounding) = received.first?.payload else {
+            return XCTFail("expected grounding.ready first")
+        }
+        XCTAssertEqual(grounding.references.map(\.phrase), ["this email", "the deadline"])
+        await client.cancel()
+    }
+
     func testCancelInterruptsTaskAndFinishesStream() async throws {
         try requireUV()
         let client = makeClient()

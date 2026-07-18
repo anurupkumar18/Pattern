@@ -100,4 +100,33 @@ final class EnvelopeTests: XCTestCase {
         XCTAssertEqual(payload.state, .succeeded)
         XCTAssertTrue(payload.verification.allSatisfy(\.passed))
     }
+
+    func testRoundTripsObservationAndGroundingPayloads() throws {
+        let taskID = UUID(uuidString: "B3E9A1C2-6D4F-4A8B-9C0D-1E2F3A4B5C6D")!
+        let candidate = UIElementCandidate(
+            id: "deadline", role: "AXStaticText", label: "Deadline",
+            value: "July 31, 2026", bounds: .init(x: 10, y: 20, width: 100, height: 20),
+            source: .accessibility, confidence: 1, actions: [],
+            appBundleID: "com.apple.mail", stableAttributes: ["AXIdentifier": "deadline"])
+        let observation = Observation(
+            captureID: UUID(), timestamp: Date(timeIntervalSince1970: 1_784_329_200),
+            activeApp: AppReference(bundleID: "com.apple.mail", name: "Mail"),
+            window: WindowReference(
+                title: "Hackathon details", bounds: .init(x: 0, y: 0, width: 900, height: 700)),
+            focusedElementID: "deadline", pointer: .init(x: 20, y: 30),
+            elements: [candidate], screenshotPath: "file:///tmp/capture.png")
+        let observationEnvelope = Envelope(
+            type: .observationReady, taskID: taskID, payload: .observationReady(observation))
+        XCTAssertEqual(
+            try Envelope.decode(from: observationEnvelope.encodeWire()), observationEnvelope)
+
+        let result = GroundingResult(references: [ResolvedReference(
+            phrase: "that deadline", candidateID: "deadline",
+            resolvedText: "July 31, 2026", confidence: 0.99,
+            provenance: ["capture_id": .string(observation.captureID.uuidString.lowercased())])])
+        let groundingEnvelope = Envelope(
+            type: .groundingReady, taskID: taskID, payload: .groundingReady(result))
+        XCTAssertEqual(
+            try Envelope.decode(from: groundingEnvelope.encodeWire()), groundingEnvelope)
+    }
 }

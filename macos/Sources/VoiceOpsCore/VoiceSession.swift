@@ -71,6 +71,7 @@ public final class VoiceSessionController {
         isActive = true
         isCancelled = false
         storedFinal = nil
+        lastPartial = ""
 
         let stream = try await transcriber.start()
         consumeTask = Task { [weak self] in
@@ -164,8 +165,17 @@ public final class VoiceSessionController {
             pendingEnd.resume(returning: final)
         } else if isCancelled {
             pendingEnd.resume(throwing: VoiceSessionError.cancelled)
+        } else if !lastPartial.isEmpty {
+            // Some providers close with a finalization error after already
+            // streaming usable words. Preserve the user-visible transcript
+            // exactly as the timeout path does instead of discarding it.
+            pendingEnd.resume(returning: TranscriptUpdate(
+                text: lastPartial, isFinal: true, confidence: nil, segments: []))
         } else {
-            pendingEnd.resume(throwing: error ?? VoiceSessionError.noSpeech)
+            // With no final or partial, the task has no usable voice request.
+            // Normalize provider-specific "no speech" failures so the app can
+            // give one actionable message rather than leaking opaque NSError text.
+            pendingEnd.resume(throwing: VoiceSessionError.noSpeech)
         }
     }
 

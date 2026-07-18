@@ -123,7 +123,9 @@ class Observation(VoiceOpsModel):
 class ResolvedReference(VoiceOpsModel):
     phrase: str
     candidate_id: str
+    resolved_text: str
     confidence: float = Field(ge=0.0, le=1.0)
+    provenance: dict[str, Any]
 
 
 class GroundingResult(VoiceOpsModel):

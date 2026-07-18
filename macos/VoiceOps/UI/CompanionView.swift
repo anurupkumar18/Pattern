@@ -41,6 +41,7 @@ struct CompanionView: View {
         switch coordinator.state {
         case .idle: "waveform.circle"
         case .listening: "mic.fill"
+        case .grounding: "viewfinder.circle"
         case .planning: "brain"
         case .acting: "gearshape.2.fill"
         case .verifying: "checklist"
@@ -54,6 +55,7 @@ struct CompanionView: View {
         switch coordinator.state {
         case .idle: "Idle"
         case .listening: "Listening…"
+        case .grounding: "Grounding"
         case .planning: "Planning"
         case .acting: "Acting"
         case .verifying: "Verifying"
@@ -75,9 +77,21 @@ struct CompanionView: View {
         case .listening(let transcript):
             transcriptView(transcript.isEmpty ? "…" : transcript)
 
-        case .planning(let transcript):
+        case .grounding(let transcript):
             VStack(alignment: .leading, spacing: 6) {
                 transcriptView(transcript)
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Reading the active window")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+        case .planning(let transcript, let chips):
+            VStack(alignment: .leading, spacing: 8) {
+                transcriptView(transcript)
+                groundingChips(chips)
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text("Interpreting your request")
@@ -86,9 +100,11 @@ struct CompanionView: View {
                 }
             }
 
-        case .acting(let description):
-            Text(description)
-                .font(.callout)
+        case .acting(let description, let chips):
+            VStack(alignment: .leading, spacing: 8) {
+                groundingChips(chips)
+                Text(description).font(.callout)
+            }
 
         case .verifying:
             Text("Checking that the result really exists…")
@@ -113,13 +129,49 @@ struct CompanionView: View {
     private func resultView(_ result: SessionResult) -> some View {
         switch result {
         case .completed(_, let summary):
-            Text(summary).font(.callout)
+            VStack(alignment: .leading, spacing: 8) {
+                groundingChips(coordinator.groundingChips)
+                Text(summary).font(.callout)
+            }
         case .failed(let reason):
-            Text(reason).font(.callout)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(reason).font(.callout)
+                if coordinator.permissionSettingsURL != nil {
+                    Button("Open Privacy Settings") {
+                        coordinator.openPermissionSettings()
+                    }
+                }
+            }
         case .cancelled:
             Text("Cancelled. Nothing else will run.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func groundingChips(_ chips: [GroundingChip]) -> some View {
+        if chips.isEmpty {
+            Text("No explicit screen reference found")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+                HStack(spacing: 5) {
+                    Image(systemName: "scope")
+                    Text("\(chip.phrase) → \(chip.resolvedText)")
+                        .lineLimit(2)
+                    Text(chip.source.rawValue)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(.quaternary.opacity(0.5), in: Capsule())
+                .accessibilityLabel(
+                    "Grounded \(chip.phrase) to \(chip.resolvedText) from \(chip.source.rawValue)")
+            }
         }
     }
 
@@ -128,7 +180,7 @@ struct CompanionView: View {
     @ViewBuilder
     private var footer: some View {
         switch coordinator.state {
-        case .listening, .planning, .acting, .verifying:
+        case .listening, .grounding, .planning, .acting, .verifying:
             HStack {
                 Spacer()
                 Button(role: .destructive) {

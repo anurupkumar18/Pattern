@@ -11,17 +11,28 @@
           "title": "Candidate Id",
           "type": "string"
         },
+        "resolved_text": {
+          "title": "Resolved Text",
+          "type": "string"
+        },
         "confidence": {
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Confidence",
           "type": "number"
+        },
+        "provenance": {
+          "additionalProperties": true,
+          "title": "Provenance",
+          "type": "object"
         }
       },
       "required": [
         "phrase",
         "candidate_id",
-        "confidence"
+        "resolved_text",
+        "confidence",
+        "provenance"
       ],
       "title": "ResolvedReference",
       "type": "object"

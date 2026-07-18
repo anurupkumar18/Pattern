@@ -54,3 +54,36 @@ hardening because it needs an event tap and Accessibility permission.
 setup stays at exactly two prompts (microphone, speech recognition). Toggle
 beats hold-to-talk for demo reliability: no lost finals when the key is
 released mid-word.
+
+## ADR-011: Native observation, sidecar grounding
+
+**Date:** 2026-07-18 · **Phase:** 2
+
+**Decision:** The macOS shell owns ScreenCaptureKit and Accessibility access,
+normalizes the active window into the shared `Observation` contract, and stores
+the screenshot in a task-scoped temporary directory. It sends
+`observation.ready` immediately before `voice.final`. The Python sidecar owns
+the `MultimodalGroundingAdapter` boundary and returns `grounding.ready` before
+planning. Terminal app states delete the capture directory.
+
+**Reason:** Permissioned native frameworks remain in Swift while provider/model
+logic stays in the Python runtime designated by ARD §2. Sending the normalized
+observation over the existing NDJSON protocol preserves provenance and avoids a
+third runtime or a second transport.
+
+## ADR-012: Deterministic grounding fallback before provider selection
+
+**Date:** 2026-07-18 · **Phase:** 2
+
+**Decision:** Phase 2's default adapter is an offline-safe, deliberately narrow
+semantic grounder for high-confidence MVP references. It receives the same
+screenshot path and accessibility candidates as a future VLM adapter, resolves
+the golden Mail/deadline cases with candidate-level provenance, and returns no
+reference when evidence is insufficient. A live multimodal provider and
+Keychain credential UI remain pending and are not simulated with a network
+stub or source-controlled key.
+
+**Reason:** The architecture explicitly requires provider adapters and Keychain
+credentials but does not select a vendor. Deterministic fixtures keep CI stable
+and false grounding visible while the provider choice is still open. This is a
+recorded Phase 2 residual, not a claim that model-backed grounding exists.

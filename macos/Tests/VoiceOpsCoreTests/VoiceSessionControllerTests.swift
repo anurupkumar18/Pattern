@@ -116,6 +116,47 @@ final class VoiceSessionControllerTests: XCTestCase {
         XCTAssertEqual(request.confidence, 0)
     }
 
+    func testEndUsesLastPartialWhenProviderErrorsDuringFinalization() async throws {
+        // SFSpeechRecognizer commonly terminates with "No speech detected"
+        // after endAudio even though it already streamed a usable partial.
+        struct FinalizationFailure: Error {}
+        let fake = FakeTranscriber()
+        let controller = VoiceSessionController(
+            transcriber: fake, locale: "en-US", finalizationTimeout: .seconds(1))
+        try await controller.begin()
+        await fake.emit(TranscriptUpdate(
+            text: "using this email", isFinal: false, confidence: nil, segments: []))
+        try await Task.sleep(for: .milliseconds(20))
+
+        async let pendingRequest = controller.end()
+        try await Task.sleep(for: .milliseconds(20))
+        await fake.failStream(FinalizationFailure())
+        let request = try await pendingRequest
+
+        XCTAssertEqual(request.transcript, "using this email")
+        XCTAssertEqual(request.confidence, 0)
+    }
+
+    func testProviderErrorDuringFinalizationWithoutPartialsBecomesNoSpeech() async throws {
+        struct FinalizationFailure: Error {}
+        let fake = FakeTranscriber()
+        let controller = VoiceSessionController(
+            transcriber: fake, locale: "en-US", finalizationTimeout: .seconds(1))
+        try await controller.begin()
+
+        async let pendingRequest = controller.end()
+        try await Task.sleep(for: .milliseconds(20))
+        await fake.failStream(FinalizationFailure())
+
+        do {
+            _ = try await pendingRequest
+            XCTFail("expected noSpeech")
+        } catch VoiceSessionError.noSpeech {
+        } catch {
+            XCTFail("expected .noSpeech, got \(error)")
+        }
+    }
+
     func testEndThrowsNoSpeechWhenNothingWasHeard() async throws {
         let fake = FakeTranscriber()
         let controller = VoiceSessionController(

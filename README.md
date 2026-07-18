@@ -8,7 +8,9 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
-Phase 1 — voice shell: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, stop/Escape cancellation, and spoken progress. The transcript flows to the mock Python sidecar and back (plan + verified completion). See `docs/` for the full spec:
+Phase 2 — screen context and grounding is in progress. The app now captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, sends a typed task-scoped observation to the sidecar, resolves high-confidence screen references with provenance, and shows grounding chips before the mock plan. Golden Mail/deadline grounding is deterministic and offline-safe; a live VLM provider and its Keychain credential UI remain pending.
+
+Phase 1’s voice shell remains intact: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, stop/Escape cancellation, and spoken progress. See `docs/` for the full spec:
 
 | Doc | Contents |
 |---|---|
@@ -40,10 +42,10 @@ cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 scripts/run_app.sh            # builds with the CLI toolchain and launches — no Xcode IDE needed
 ```
 
-(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone and Speech Recognition prompts. Then:
+(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone, Speech Recognition, Screen Recording, and Accessibility prompts. Then:
 
 1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
-2. Press **⌃⌥V** again (or pause) to finish. The request goes to the Python sidecar; the companion walks through planning → acting → result with spoken progress.
+2. Press **⌃⌥V** again (or pause) to finish. VoiceOps captures the active window, shows any grounded reference chips, and then walks through planning → acting → result with spoken progress.
 3. **Stop** (or Escape while the companion has focus) cancels capture and any running task.
 
 ## Layout

@@ -8,6 +8,8 @@ import VoiceOpsCore
 @MainActor
 final class AppCoordinator: ObservableObject {
     @Published private(set) var state: SessionState = .idle
+    @Published private(set) var permissionSettingsURL: URL?
+    @Published private(set) var groundingChips: [GroundingChip] = []
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
@@ -15,6 +17,9 @@ final class AppCoordinator: ObservableObject {
     private var voiceSession: VoiceSessionController?
     private var sidecarClient: SidecarClient?
     private var sidecarTask: Task<Void, Never>?
+    private var contextTask: Task<Void, Never>?
+    private let screenContextCollector: any ScreenContextCollecting = NativeScreenContextCollector()
+    private var activeScreenContext: CollectedScreenContext?
     private var permissionsGranted = false
 
     /// Dev builds run the sidecar straight from the repo checkout; packaged
@@ -39,6 +44,10 @@ final class AppCoordinator: ObservableObject {
     func toggle() { dispatch(.hotkeyTapped) }
     func stop() { dispatch(.stopRequested) }
     func dismiss() { dispatch(.dismissResult) }
+    func openPermissionSettings() {
+        guard let permissionSettingsURL else { return }
+        NSWorkspace.shared.open(permissionSettingsURL)
+    }
 
     func dispatch(_ event: SessionEvent) {
         guard let next = SessionStateMachine.reduce(state, event) else { return }
@@ -51,18 +60,25 @@ final class AppCoordinator: ObservableObject {
         switch state {
         case .idle:
             if case .listening = previous { cancelCapture() }
+            cleanupScreenContext()
             panel?.hide()
 
         case .listening:
+            permissionSettingsURL = nil
+            groundingChips = []
+            cleanupScreenContext()
             panel?.show()
             narrator.say("Listening")
             startCapture()
 
-        case .planning:
+        case .grounding:
             if case .listening = previous {
                 narrator.say("Got it")
-                finishCaptureAndStartTask()
+                finishCaptureAndCollectContext()
             }
+
+        case .planning:
+            narrator.say("I found the visible context")
 
         case .acting:
             narrator.say("Working on it")
@@ -77,7 +93,10 @@ final class AppCoordinator: ObservableObject {
             case .cancelled: narrator.say("Stopped")
             }
             cancelCapture()
+            contextTask?.cancel()
+            contextTask = nil
             cancelSidecar()
+            cleanupScreenContext()
         }
     }
 
@@ -115,19 +134,37 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
-    private func finishCaptureAndStartTask() {
-        Task { [weak self] in
+    private func finishCaptureAndCollectContext() {
+        contextTask = Task { [weak self] in
             guard let self, let voiceSession else { return }
             do {
                 let request = try await voiceSession.end()
                 dispatch(.finalTranscript(request.transcript))
-                startSidecarExchange(request)
+                let context = try await screenContextCollector.collect()
+                guard !Task.isCancelled, case .grounding = state else {
+                    await screenContextCollector.cleanup(
+                        captureID: context.observation.captureID)
+                    return
+                }
+                activeScreenContext = context
+                startSidecarExchange(request, context: context)
             } catch VoiceSessionError.cancelled {
                 // stop already handled by the state machine
+            } catch VoiceSessionError.noSpeech {
+                dispatch(.taskFailed(reason:
+                    "No speech captured. Try again closer to the microphone."))
+            } catch let error as ScreenContextError {
+                permissionSettingsURL = error.settingsURL
+                dispatch(.taskFailed(reason: error.localizedDescription))
             } catch {
-                dispatch(.taskFailed(reason: "No speech captured. Try again closer to the microphone."))
+                if !Task.isCancelled {
+                    dispatch(.taskFailed(reason:
+                        "Could not collect the spoken request and visible screen: "
+                        + error.localizedDescription))
+                }
             }
             self.voiceSession = nil
+            self.contextTask = nil
         }
     }
 
@@ -139,7 +176,9 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: Sidecar exchange
 
-    private func startSidecarExchange(_ request: VoiceRequest) {
+    private func startSidecarExchange(
+        _ request: VoiceRequest, context: CollectedScreenContext
+    ) {
         let client = SidecarClient(agentProjectURL: Self.agentProjectURL)
         sidecarClient = client
         let taskID = UUID()
@@ -148,10 +187,23 @@ final class AppCoordinator: ObservableObject {
             do {
                 let events = try await client.start()
                 try await client.send(
+                    Envelope(
+                        type: .observationReady,
+                        taskID: taskID,
+                        payload: .observationReady(context.observation)))
+                try await client.send(
                     Envelope(type: .voiceFinal, taskID: taskID, payload: .voiceFinal(request)))
                 for try await envelope in events {
                     guard envelope.taskID == taskID else { continue }
                     switch envelope.payload {
+                    case .groundingReady(let grounding):
+                        let chips = grounding.references.compactMap {
+                            GroundingChip(
+                                reference: $0,
+                                candidates: context.observation.elements)
+                        }
+                        self?.groundingChips = chips
+                        self?.dispatch(.groundingReady(chips))
                     case .planReady(let plan):
                         self?.dispatch(.planReady(summary: plan.summary))
                     case .taskCompleted(let completed):
@@ -182,5 +234,14 @@ final class AppCoordinator: ObservableObject {
         let client = sidecarClient
         sidecarClient = nil
         Task { await client?.cancel() }
+    }
+
+    private func cleanupScreenContext() {
+        guard let context = activeScreenContext else { return }
+        activeScreenContext = nil
+        Task {
+            await screenContextCollector.cleanup(
+                captureID: context.observation.captureID)
+        }
     }
 }

@@ -15,7 +15,7 @@ final class CompanionPanelController {
 
     init(coordinator: AppCoordinator) {
         panel = KeyablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 180),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 260),
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
             backing: .buffered,
             defer: true)

@@ -4,8 +4,9 @@ import Foundation
 public enum SessionState: Equatable, Sendable {
     case idle
     case listening(transcript: String)
-    case planning(transcript: String)
-    case acting(description: String)
+    case grounding(transcript: String)
+    case planning(transcript: String, groundingChips: [GroundingChip])
+    case acting(description: String, groundingChips: [GroundingChip])
     case verifying
     case result(SessionResult)
 }
@@ -20,6 +21,7 @@ public enum SessionEvent: Equatable, Sendable {
     case hotkeyTapped
     case partialTranscript(String)
     case finalTranscript(String)
+    case groundingReady([GroundingChip])
     case planReady(summary: String)
     case verificationStarted
     case taskCompleted(state: TaskState, summary: String)
@@ -40,16 +42,18 @@ public enum SessionStateMachine {
         case (.listening, .partialTranscript(let text)):
             return .listening(transcript: text)
         case (.listening(let transcript), .hotkeyTapped):
-            return .planning(transcript: transcript)
+            return .grounding(transcript: transcript)
         case (.listening, .finalTranscript(let text)):
-            return .planning(transcript: text)
+            return .grounding(transcript: text)
         case (.listening, .stopRequested):
             return .idle
 
-        case (.planning, .finalTranscript(let text)):
-            return .planning(transcript: text)
-        case (.planning, .planReady(let summary)):
-            return .acting(description: summary)
+        case (.grounding, .finalTranscript(let text)):
+            return .grounding(transcript: text)
+        case (.grounding(let transcript), .groundingReady(let chips)):
+            return .planning(transcript: transcript, groundingChips: chips)
+        case (.planning(_, let chips), .planReady(let summary)):
+            return .acting(description: summary, groundingChips: chips)
 
         case (.acting, .verificationStarted):
             return .verifying
@@ -60,11 +64,13 @@ public enum SessionStateMachine {
 
         case (.listening, .taskFailed(let reason)),
              (.planning, .taskFailed(let reason)),
+             (.grounding, .taskFailed(let reason)),
              (.acting, .taskFailed(let reason)),
              (.verifying, .taskFailed(let reason)):
             return .result(.failed(reason: reason))
 
-        case (.planning, .stopRequested),
+        case (.grounding, .stopRequested),
+             (.planning, .stopRequested),
              (.acting, .stopRequested),
              (.verifying, .stopRequested):
             return .result(.cancelled)

@@ -192,6 +192,8 @@ public struct TaskCancelled: Codable, Equatable, Sendable {
 
 public enum EventPayload: Equatable, Sendable {
     case voiceFinal(VoiceRequest)
+    case observationReady(Observation)
+    case groundingReady(GroundingResult)
     case planReady(TaskPlan)
     case taskCompleted(TaskCompleted)
     case taskFailed(TaskFailure)
@@ -215,7 +217,9 @@ public struct Envelope: Equatable, Sendable {
         self.id = id
         self.type = type
         self.taskID = taskID
-        self.timestamp = timestamp
+        // Match schemas.make_envelope: strict whole-second UTC on the wire and
+        // in memory so encode/decode round-trips remain value-equal.
+        self.timestamp = Date(timeIntervalSince1970: floor(timestamp.timeIntervalSince1970))
         self.payload = payload
     }
 }
@@ -252,6 +256,10 @@ extension Envelope: Codable {
         switch type {
         case .voiceFinal:
             self.payload = .voiceFinal(try container.decode(VoiceRequest.self, forKey: .payload))
+        case .observationReady:
+            self.payload = .observationReady(try container.decode(Observation.self, forKey: .payload))
+        case .groundingReady:
+            self.payload = .groundingReady(try container.decode(GroundingResult.self, forKey: .payload))
         case .planReady:
             self.payload = .planReady(try container.decode(TaskPlan.self, forKey: .payload))
         case .taskCompleted:
@@ -276,6 +284,8 @@ extension Envelope: Codable {
         try container.encode(WireDate.format(timestamp), forKey: .timestamp)
         switch payload {
         case .voiceFinal(let value): try container.encode(value, forKey: .payload)
+        case .observationReady(let value): try container.encode(value, forKey: .payload)
+        case .groundingReady(let value): try container.encode(value, forKey: .payload)
         case .planReady(let value): try container.encode(value, forKey: .payload)
         case .taskCompleted(let value): try container.encode(value, forKey: .payload)
         case .taskFailed(let value): try container.encode(value, forKey: .payload)
