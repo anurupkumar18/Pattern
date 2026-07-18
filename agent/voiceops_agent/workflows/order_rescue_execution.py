@@ -15,6 +15,7 @@ from ..schemas import (
     VoiceOpsModel,
 )
 from .order_rescue import OrderRescueFixture, OrderRescueState
+from .order_rescue_adapters import FixtureOrderRescueAdapters, OrderRescueChannelAdapters
 
 
 class OrderRescueExecutionError(ValueError):
@@ -66,7 +67,9 @@ class FixtureOrderRescueExecutor:
         *,
         approved_action_ids: set[str],
         stop_before_action: str | None = None,
+        adapters: OrderRescueChannelAdapters | None = None,
     ) -> OrderRescueExecutionResult:
+        adapters = adapters if adapters is not None else FixtureOrderRescueAdapters(fixture)
         _require_corrected_task(task)
         required = {
             action_id
@@ -79,9 +82,7 @@ class FixtureOrderRescueExecutor:
                 "approval required before any write: " + ", ".join(missing)
             )
 
-        state = OrderRescueState.model_validate(
-            fixture.initial_state.model_dump(mode="python")
-        )
+        applied = list(fixture.initial_state.applied_action_ids)
         actions: dict[str, OrderRescueActionRecord] = {}
         ledger: list[ExecutionLedgerEvent] = []
         clock = _LedgerClock()
@@ -116,13 +117,13 @@ class FixtureOrderRescueExecutor:
                 ))
                 return OrderRescueExecutionResult(
                     status="stopped",
-                    state=state,
+                    state=_snapshot(adapters, applied),
                     actions=actions,
                     ledger=ledger,
                     stopped_before_action=action_id,
                 )
 
-            if action_id in state.applied_action_ids:
+            if action_id in applied:
                 actions[action_id] = OrderRescueActionRecord(
                     action_id=action_id,
                     status="no_op",
@@ -140,19 +141,22 @@ class FixtureOrderRescueExecutor:
                 ))
                 continue
 
-            record = self._apply(action_id, action, state, fixture, clock, ledger)
-            state.applied_action_ids.append(action_id)
+            record = self._apply(action_id, action, adapters, fixture, clock, ledger)
+            applied.append(action_id)
             actions[action_id] = record
 
         return OrderRescueExecutionResult(
-            status="completed", state=state, actions=actions, ledger=ledger
+            status="completed",
+            state=_snapshot(adapters, applied),
+            actions=actions,
+            ledger=ledger,
         )
 
     def _apply(
         self,
         action_id: str,
         action: TaskActionDefinition,
-        state: OrderRescueState,
+        adapters: OrderRescueChannelAdapters,
         fixture: OrderRescueFixture,
         clock: "_LedgerClock",
         ledger: list[ExecutionLedgerEvent],
@@ -207,21 +211,18 @@ class FixtureOrderRescueExecutor:
             return _record(action_id, observed, "shopify:inventory")
 
         if action_id == "add_shopify_note":
-            if "Carrier Delay" not in state.shopify_tags:
-                state.shopify_tags.append("Carrier Delay")
             note = (
                 f"Carrier delay: no movement for {fixture.tracking.stationary_hours}h. "
                 "Awaiting customer choice; do not replace or refund yet."
             )
-            if note not in state.shopify_notes:
-                state.shopify_notes.append(note)
+            adapters.add_note_and_tag(note, "Carrier Delay")
             return self._acted(clock, ledger, action_id, action, "Shopify → Order #1842", "shopify:order-note")
 
         if action_id == "draft_customer_apology":
             return self._acted(clock, ledger, action_id, action, "VoiceOps draft workspace", "draft:customer-apology")
 
         if action_id == "issue_store_credit":
-            state.store_credit_usd = 20
+            adapters.issue_store_credit(20)
             return self._acted(clock, ledger, action_id, action, "Shopify → Customer credit", "shopify:credit-20")
 
         if action_id == "ask_customer_preference":
@@ -230,8 +231,7 @@ class FixtureOrderRescueExecutor:
                 "expedited replacement or a full refund? We added a $20 store credit "
                 "either way and will wait for your choice."
             )
-            if message not in state.customer_messages:
-                state.customer_messages.append(message)
+            adapters.send_customer_choice_message(message, fixture.customer.email)
             return self._acted(clock, ledger, action_id, action, "Customer inbox → Sent", "mail:maya-choice")
 
         if action_id == "notify_operations":
@@ -239,14 +239,13 @@ class FixtureOrderRescueExecutor:
                 "@Sarah Order #1842 is the third delayed package from this carrier; "
                 "customer choice is pending."
             )
-            if message not in state.operations_messages:
-                state.operations_messages.append(message)
+            adapters.post_operations_message(message)
             return self._acted(clock, ledger, action_id, action, "Slack → #shipping-escalations", "slack:carrier-escalation")
 
         if action_id == "create_followup":
-            reminder = "Verify Order #1842 tracking — 2026-07-19 09:00"
-            if reminder not in state.reminders:
-                state.reminders.append(reminder)
+            adapters.create_followup_reminder(
+                "Verify Order #1842 tracking — 2026-07-19 09:00"
+            )
             return self._acted(clock, ledger, action_id, action, "Reminders → VoiceOps", "reminder:order-1842")
 
         raise OrderRescueExecutionError(f"unsupported fixture action {action_id}")
@@ -274,9 +273,16 @@ def verify_order_rescue(
     task: VersionedTaskSpec,
     fixture: OrderRescueFixture,
     execution: OrderRescueExecutionResult,
+    adapters: OrderRescueChannelAdapters | None = None,
 ) -> OrderRescueVerificationReport:
-    """Evaluate fresh fixture state; executor status never implies success."""
-    state = execution.state
+    """Evaluate freshly fetched channel state; executor status never implies success."""
+    if adapters is None:
+        adapters = FixtureOrderRescueAdapters.wrapping(execution.state)
+    channel = adapters.channel
+    shopify = adapters.fetch_shopify_state()
+    customer_messages = adapters.fetch_customer_messages()
+    operations_messages = adapters.fetch_operations_messages()
+    reminders = adapters.fetch_reminders()
     tracking = execution.actions.get("review_tracking")
     core = [
         _check(
@@ -284,56 +290,62 @@ def verify_order_rescue(
             tracking is not None
             and tracking.observed.get("stationary_hours") == fixture.tracking.stationary_hours
             and tracking.observed.get("last_scan_at") == fixture.tracking.last_scan_at.isoformat(),
-            "carrier_snapshot_refetch",
+            f"carrier_snapshot_refetch@{channel}",
             {"stationary_hours": fixture.tracking.stationary_hours},
             tracking.observed if tracking else {},
             tracking.evidence_ids if tracking else [],
         ),
         _check(
             "shopify-updated",
-            "Carrier Delay" in state.shopify_tags
-            and any("Awaiting customer choice" in note for note in state.shopify_notes)
-            and state.store_credit_usd == 20,
-            "shopify_state_refetch",
+            "Carrier Delay" in shopify["tags"]
+            and any("Awaiting customer choice" in note for note in shopify["notes"])
+            and shopify["store_credit_usd"] == 20,
+            f"shopify_state_refetch@{channel}",
             {"tag": "Carrier Delay", "credit_usd": 20},
-            {"tags": state.shopify_tags, "credit_usd": state.store_credit_usd},
+            {"tags": shopify["tags"], "credit_usd": shopify["store_credit_usd"]},
             ["shopify:order-note", "shopify:credit-20"],
         ),
         _check(
             "customer-contacted",
-            any("expedited replacement or a full refund" in item for item in state.customer_messages),
-            "sent_message_refetch",
+            any(
+                "expedited replacement or a full refund" in item
+                for item in customer_messages
+            ),
+            f"sent_message_refetch@{channel}",
             {"recipient": fixture.customer.email, "choice_requested": True},
-            {"sent_count": len(state.customer_messages)},
+            {"sent_count": len(customer_messages)},
             ["mail:maya-choice"],
         ),
         _check(
             "operations-notified",
-            any("@Sarah" in item and "third delayed package" in item for item in state.operations_messages),
-            "slack_channel_refetch",
+            any(
+                "@Sarah" in item and "third delayed package" in item
+                for item in operations_messages
+            ),
+            f"slack_channel_refetch@{channel}",
             {"channel": "#shipping-escalations", "mentions": "Sarah"},
-            {"message_count": len(state.operations_messages)},
+            {"message_count": len(operations_messages)},
             ["slack:carrier-escalation"],
         ),
         _check(
             "followup-scheduled",
-            "Verify Order #1842 tracking — 2026-07-19 09:00" in state.reminders,
-            "reminders_refetch",
+            "Verify Order #1842 tracking — 2026-07-19 09:00" in reminders,
+            f"reminders_refetch@{channel}",
             {"title": "Verify Order #1842 tracking", "date": "2026-07-19 09:00"},
-            {"reminders": state.reminders},
+            {"reminders": reminders},
             ["reminder:order-1842"],
         ),
     ]
     negative = [
         _check(
-            "no-refund-issued", not state.refund_issued,
-            "shopify_transaction_refetch", {"refund_issued": False},
-            {"refund_issued": state.refund_issued}, ["shopify:transactions"],
+            "no-refund-issued", not shopify["refund_issued"],
+            f"shopify_transaction_refetch@{channel}", {"refund_issued": False},
+            {"refund_issued": shopify["refund_issued"]}, ["shopify:transactions"],
         ),
         _check(
-            "no-replacement-created", state.replacement_order_id is None,
-            "shopify_order_refetch", {"replacement_order_id": None},
-            {"replacement_order_id": state.replacement_order_id}, ["shopify:orders"],
+            "no-replacement-created", shopify["replacement_order_id"] is None,
+            f"shopify_order_refetch@{channel}", {"replacement_order_id": None},
+            {"replacement_order_id": shopify["replacement_order_id"]}, ["shopify:orders"],
         ),
     ]
     passed = sum(item.passed for item in core)
@@ -376,6 +388,23 @@ def _require_corrected_task(task: VersionedTaskSpec) -> None:
         raise OrderRescueExecutionError("the corrected version-two task is required")
     if "create_replacement" in task.actions:
         raise OrderRescueExecutionError("replacement creation must be removed before execution")
+
+
+def _snapshot(
+    adapters: OrderRescueChannelAdapters, applied: list[str]
+) -> OrderRescueState:
+    shopify = adapters.fetch_shopify_state()
+    return OrderRescueState(
+        shopify_tags=shopify["tags"],
+        shopify_notes=shopify["notes"],
+        store_credit_usd=shopify["store_credit_usd"],
+        customer_messages=adapters.fetch_customer_messages(),
+        operations_messages=adapters.fetch_operations_messages(),
+        reminders=adapters.fetch_reminders(),
+        refund_issued=shopify["refund_issued"],
+        replacement_order_id=shopify["replacement_order_id"],
+        applied_action_ids=list(applied),
+    )
 
 
 def _record(action_id: str, observed: dict[str, Any], *evidence: str) -> OrderRescueActionRecord:
