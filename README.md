@@ -8,7 +8,7 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
-Phase 0 — app↔agent contracts and project skeleton. See `docs/` for the full spec:
+Phase 1 — voice shell: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, stop/Escape cancellation, and spoken progress. The transcript flows to the mock Python sidecar and back (plan + verified completion). See `docs/` for the full spec:
 
 | Doc | Contents |
 |---|---|
@@ -33,6 +33,14 @@ cd agent && uv run pytest     # Python tests
 cd macos && swift test        # Swift tests
 cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 ```
+
+### Run the app
+
+Open `macos/VoiceOps.xcodeproj` in Xcode and Run (or `xcodebuild -project macos/VoiceOps.xcodeproj -scheme VoiceOps build` and launch the built `VoiceOps.app`). On first use, grant the Microphone and Speech Recognition prompts. Then:
+
+1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
+2. Press **⌃⌥V** again (or pause) to finish. The request goes to the Python sidecar; the companion walks through planning → acting → result with spoken progress.
+3. **Stop** (or Escape while the companion has focus) cancels capture and any running task.
 
 ## Layout
 

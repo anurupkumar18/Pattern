@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: swift build --package-path macos
       - run: swift test --package-path macos
+      - run: xcodebuild -project macos/VoiceOps.xcodeproj -scheme VoiceOps build CODE_SIGNING_ALLOWED=NO
 
   e2e:
     name: Swift-Python mock exchange

@@ -25,3 +25,32 @@ Deviations from the phase plan and notable engineering decisions. ADR-001..005 l
 **Decision:** The sidecar speaks newline-delimited JSON envelopes on stdin/stdout, per ARD §7. The localhost WebSocket option is deferred until streaming voice partials (Phase 1) proves it necessary.
 
 **Reason:** Lowest-overhead transport that the ARD explicitly endorses; trivially testable from both runtimes and from the shell.
+
+## ADR-009: System speech recognition behind the Transcriber protocol
+
+**Date:** 2026-07-17 · **Phase:** 1
+
+**Decision:** Phase 1 STT is SFSpeechRecognizer + AVAudioEngine, wrapped in the
+`Transcriber` protocol (`VoiceOpsCore`). Session logic lives in
+`VoiceSessionController` and is tested against a scripted fake; the system
+adapter stays thin and untested-by-unit-tests.
+
+**Reason:** Zero API keys, zero setup, streaming partials out of the box —
+and the ARD requires provider adapters, so a Whisper-class endpoint can be
+swapped in later without touching session logic. Matches the demo runbook's
+"speech service failure → local/system STT" contingency from day one.
+
+## ADR-010: Toggle hotkey ⌃⌥V via Carbon, panel-scoped Escape
+
+**Date:** 2026-07-17 · **Phase:** 1
+
+**Decision:** The global hotkey is ⌃⌥V (press to start listening, press again
+to finish), registered with Carbon `RegisterEventHotKey`. Escape cancels when
+the companion panel has keyboard focus; the always-on global Escape ("panic
+stop at a lower level than the model loop", ARD §8) arrives with Phase 6
+hardening because it needs an event tap and Accessibility permission.
+
+**Reason:** Carbon hotkeys need no Accessibility permission, so first-run
+setup stays at exactly two prompts (microphone, speech recognition). Toggle
+beats hold-to-talk for demo reliability: no lost finals when the key is
+released mid-word.

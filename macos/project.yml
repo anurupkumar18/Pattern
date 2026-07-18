@@ -1,0 +1,39 @@
+# Source of truth for VoiceOps.xcodeproj — regenerate with `xcodegen generate`
+# from macos/. The generated project is committed so CI and fresh clones build
+# without xcodegen installed.
+name: VoiceOps
+options:
+  bundleIdPrefix: com.voiceops
+  deploymentTarget:
+    macOS: "14.2"
+
+packages:
+  VoiceOpsCore:
+    path: .
+
+targets:
+  VoiceOps:
+    type: application
+    platform: macOS
+    sources:
+      - path: VoiceOps
+    dependencies:
+      - package: VoiceOpsCore
+        product: VoiceOpsCore
+    info:
+      path: VoiceOps/Info.plist
+      properties:
+        CFBundleDisplayName: VoiceOps
+        LSUIElement: true  # menu-bar companion, no Dock icon
+        NSMicrophoneUsageDescription: >-
+          VoiceOps captures audio only during an active hotkey session to hear
+          your spoken request.
+        NSSpeechRecognitionUsageDescription: >-
+          VoiceOps transcribes your spoken request so it can plan, perform, and
+          verify the work you asked for.
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"

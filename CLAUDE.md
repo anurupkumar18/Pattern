@@ -32,3 +32,6 @@ Deviations from the phase plan must be recorded in `docs/DECISIONS.md`.
 - Python tests: `cd agent && uv run pytest`
 - Swift build/tests: `cd macos && swift build && swift test`
 - End-to-end mock exchange: `cd macos && swift run voiceops-mock-client`
+- Regenerate the Xcode project after editing `macos/project.yml`: `cd macos && xcodegen generate` (the generated `VoiceOps.xcodeproj` is committed)
+- Build the app: `xcodebuild -project macos/VoiceOps.xcodeproj -scheme VoiceOps build`
+- App target sources live in `macos/VoiceOps/` (App, UI, Voice); shared logic belongs in the `VoiceOpsCore` package so it stays testable

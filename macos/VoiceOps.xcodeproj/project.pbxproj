@@ -1,0 +1,380 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08B05F4CD2CE49C398827282 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */; };
+		32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */; };
+		468B7C4A56E05E2AF136DC72 /* CompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CAD534278016288C56718C /* CompanionView.swift */; };
+		735DC6FB5A89A97461561CED /* VoiceOpsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */; };
+		7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3B9B96230658F4F9616021 /* Narrator.swift */; };
+		98B5878BADA1ACDDB3A37650 /* VoiceOpsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7EFDE25BB447C20EFF02072B /* VoiceOpsCore */; };
+		F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8EA48DF1165324115400FCD /* HotKeyManager.swift */; };
+		FFA95AB014A1FC36A316FB1E /* CompanionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D6E0E89BE0D3CBA9396AE1 /* CompanionPanel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		14C2D66555C1DC080BA2A2DB /* macos */ = {isa = PBXFileReference; lastKnownFileType = folder; name = macos; path = .; sourceTree = SOURCE_ROOT; };
+		28E224505818686A6DED2E24 /* VoiceOps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceOps.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		39CAD534278016288C56718C /* CompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionView.swift; sourceTree = "<group>"; };
+		45D6E0E89BE0D3CBA9396AE1 /* CompanionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPanel.swift; sourceTree = "<group>"; };
+		6B3B9B96230658F4F9616021 /* Narrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Narrator.swift; sourceTree = "<group>"; };
+		95471A0FBE9BA112F119067F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOpsApp.swift; sourceTree = "<group>"; };
+		B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriber.swift; sourceTree = "<group>"; };
+		B8EA48DF1165324115400FCD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
+		EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EF706CEA85DBBA4294190D31 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98B5878BADA1ACDDB3A37650 /* VoiceOpsCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2D8A49214243D9F5269B8E2B /* App */ = {
+			isa = PBXGroup;
+			children = (
+				EDB14CC96B8DCD56E7154A66 /* AppCoordinator.swift */,
+				B8EA48DF1165324115400FCD /* HotKeyManager.swift */,
+				6B3B9B96230658F4F9616021 /* Narrator.swift */,
+				B1B2E43BFCA53A2B2DD20380 /* VoiceOpsApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5A1A9BD96E05A350C74242A3 = {
+			isa = PBXGroup;
+			children = (
+				639E88278752BB0B9B0AFDE5 /* Packages */,
+				697837329334FEE89260229F /* VoiceOps */,
+				F7A3F9039055922248A1D262 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		639E88278752BB0B9B0AFDE5 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				14C2D66555C1DC080BA2A2DB /* macos */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		697837329334FEE89260229F /* VoiceOps */ = {
+			isa = PBXGroup;
+			children = (
+				95471A0FBE9BA112F119067F /* Info.plist */,
+				2D8A49214243D9F5269B8E2B /* App */,
+				DEB7C9AD022142A32D8FFE98 /* UI */,
+				998B9219220454E6BE15B29A /* Voice */,
+			);
+			path = VoiceOps;
+			sourceTree = "<group>";
+		};
+		998B9219220454E6BE15B29A /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				B507ACFBCB147C7FC9BC727D /* SpeechTranscriber.swift */,
+			);
+			path = Voice;
+			sourceTree = "<group>";
+		};
+		DEB7C9AD022142A32D8FFE98 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				45D6E0E89BE0D3CBA9396AE1 /* CompanionPanel.swift */,
+				39CAD534278016288C56718C /* CompanionView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		F7A3F9039055922248A1D262 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				28E224505818686A6DED2E24 /* VoiceOps.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7A9E48824B569580007A051A /* VoiceOps */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3DDE7AE033A52C795B335619 /* Build configuration list for PBXNativeTarget "VoiceOps" */;
+			buildPhases = (
+				065B363751178E9DC7F9B4AA /* Sources */,
+				EF706CEA85DBBA4294190D31 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VoiceOps;
+			packageProductDependencies = (
+				7EFDE25BB447C20EFF02072B /* VoiceOpsCore */,
+			);
+			productName = VoiceOps;
+			productReference = 28E224505818686A6DED2E24 /* VoiceOps.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		34997EA4ACF95076EF0FD439 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					7A9E48824B569580007A051A = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = DA899388EE0C235A4E8B8369 /* Build configuration list for PBXProject "VoiceOps" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 5A1A9BD96E05A350C74242A3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DF81B7D1CE3875C982399E74 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F7A3F9039055922248A1D262 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7A9E48824B569580007A051A /* VoiceOps */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		065B363751178E9DC7F9B4AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				08B05F4CD2CE49C398827282 /* AppCoordinator.swift in Sources */,
+				FFA95AB014A1FC36A316FB1E /* CompanionPanel.swift in Sources */,
+				468B7C4A56E05E2AF136DC72 /* CompanionView.swift in Sources */,
+				F8C0AD82AA99128522F6A1F2 /* HotKeyManager.swift in Sources */,
+				7B3EEA10A03D390DAD7721AD /* Narrator.swift in Sources */,
+				32656718F653CF7D831970F7 /* SpeechTranscriber.swift in Sources */,
+				735DC6FB5A89A97461561CED /* VoiceOpsApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1D03C6EEA2E7BAD502609301 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		726ABA2F5F2D9FD74C21EFF7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = VoiceOps/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.voiceops.VoiceOps;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		89F9EE63EFB35C83ED6B74A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FD6C41A939C5616A94255CDC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = VoiceOps/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.voiceops.VoiceOps;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3DDE7AE033A52C795B335619 /* Build configuration list for PBXNativeTarget "VoiceOps" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				726ABA2F5F2D9FD74C21EFF7 /* Debug */,
+				FD6C41A939C5616A94255CDC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DA899388EE0C235A4E8B8369 /* Build configuration list for PBXProject "VoiceOps" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D03C6EEA2E7BAD502609301 /* Debug */,
+				89F9EE63EFB35C83ED6B74A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		DF81B7D1CE3875C982399E74 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7EFDE25BB447C20EFF02072B /* VoiceOpsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VoiceOpsCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 34997EA4ACF95076EF0FD439 /* Project object */;
+}
