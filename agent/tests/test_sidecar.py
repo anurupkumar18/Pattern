@@ -566,7 +566,7 @@ class TestSidecarProcess:
 
 
 class TestConversationDispatch:
-    def test_conversation_tool_call_routes_to_router(self):
+    def test_conversation_compile_without_observation_fails_closed(self):
         from voiceops_agent.schemas import ConversationToolCall
 
         runtime = SidecarRuntime()
@@ -580,8 +580,73 @@ class TestConversationDispatch:
             ),
         )
         events = runtime.handle_line(envelope.to_ndjson())
-        assert events[0].type == EventType.TASK_SPEC_READY
-        assert events[-1].type == EventType.CONVERSATION_TOOL_RESULT
+        assert [event.type for event in events] == [EventType.TASK_FAILED]
+        assert events[0].payload.error.code is FailureCode.TARGET_NOT_FOUND
+        assert "live screen observation" in events[0].payload.error.message
+
+    def test_conversation_compile_rejects_mismatched_visible_workflow(self):
+        from voiceops_agent.schemas import ConversationToolCall
+
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+        observation = Observation.model_validate_json(SCREEN_FIXTURE_PATH.read_text())
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, task_id, observation
+        ).to_ndjson())
+        envelope = make_envelope(
+            EventType.CONVERSATION_TOOL_CALL,
+            task_id,
+            ConversationToolCall(
+                call_id="c1",
+                tool="compile_task",
+                arguments={"transcript": ORDER_RESCUE_REQUEST},
+            ),
+        )
+
+        events = runtime.handle_line(envelope.to_ndjson())
+
+        assert [event.type for event in events] == [
+            EventType.GROUNDING_READY,
+            EventType.TASK_FAILED,
+        ]
+        assert events[-1].payload.error.code is FailureCode.TARGET_NOT_FOUND
+        assert "No fixture-backed task was compiled" in events[-1].payload.error.message
+        assert task_id not in runtime._conversation_grounded_tasks
+
+    def test_conversation_compile_emits_grounding_before_task_spec(self):
+        from voiceops_agent.schemas import ConversationToolCall
+
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+        observation = Observation.model_validate_json(
+            ORDER_RESCUE_OBSERVATION_PATH.read_text()
+        )
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, task_id, observation
+        ).to_ndjson())
+        envelope = make_envelope(
+            EventType.CONVERSATION_TOOL_CALL,
+            task_id,
+            ConversationToolCall(
+                call_id="c1",
+                tool="compile_task",
+                arguments={"transcript": ORDER_RESCUE_REQUEST},
+            ),
+        )
+
+        events = runtime.handle_line(envelope.to_ndjson())
+
+        assert [event.type for event in events] == [
+            EventType.GROUNDING_READY,
+            EventType.TASK_SPEC_READY,
+            EventType.CONVERSATION_TOOL_RESULT,
+        ]
+        grounding = events[0].payload
+        assert grounding.references
+        assert grounding.references[0].phrase == "this delayed order"
+        assert "#1842" in grounding.references[0].resolved_text
+        assert task_id not in runtime._observations
+        assert task_id in runtime._conversation_grounded_tasks
         assert events[-1].payload.status == "ok"
 
     def test_conversation_tool_call_with_bad_arguments_is_rejected(self):

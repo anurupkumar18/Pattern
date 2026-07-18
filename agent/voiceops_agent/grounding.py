@@ -103,6 +103,23 @@ class DeterministicMultimodalGroundingAdapter:
                     self._reference("this email", email, observation, confidence=0.99)
                 )
 
+        order_phrase = next(
+            (
+                phrase
+                for phrase in ("this delayed order", "this order")
+                if phrase in transcript
+            ),
+            None,
+        )
+        if order_phrase:
+            order = self._resolve_order(observation)
+            if order is not None:
+                references.append(
+                    self._reference(
+                        order_phrase, order, observation, confidence=0.99
+                    )
+                )
+
         deadline_phrase = next(
             (phrase for phrase in ("that deadline", "the deadline") if phrase in transcript),
             None,
@@ -155,6 +172,27 @@ class DeterministicMultimodalGroundingAdapter:
             if focused is not None:
                 return focused
         return observation.elements[0] if observation.elements else None
+
+    @staticmethod
+    def _resolve_order(observation: Observation) -> UIElementCandidate | None:
+        for candidate in observation.elements:
+            visible = " ".join(
+                filter(
+                    None,
+                    (
+                        candidate.label,
+                        candidate.value,
+                        *candidate.stable_attributes.values(),
+                    ),
+                )
+            ).casefold()
+            if (
+                ("#1842" in visible or "order 1842" in visible)
+                and "maya" in visible
+                and ("delayed" in visible or "delay" in visible)
+            ):
+                return candidate
+        return None
 
     @staticmethod
     def _resolve_deadline(observation: Observation) -> UIElementCandidate | None:

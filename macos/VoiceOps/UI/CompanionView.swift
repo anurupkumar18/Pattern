@@ -18,14 +18,21 @@ struct CompanionView: View {
                 ScrollView {
                     detailContent
                 }
-                .frame(height: 560)
+                .frame(minHeight: 360, maxHeight: .infinity)
             } else {
                 detailContent
             }
             footer
         }
         .padding(16)
-        .frame(width: 520, alignment: .leading)
+        .frame(
+            minWidth: 680,
+            idealWidth: 900,
+            maxWidth: .infinity,
+            minHeight: 520,
+            idealHeight: 720,
+            maxHeight: .infinity,
+            alignment: .topLeading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .animation(.easeInOut(duration: 0.15), value: coordinator.state)
     }
