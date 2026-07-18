@@ -129,19 +129,15 @@ describe("HerdrAdapter", () => {
     transport.respond("agent.send", { type: "agent_info", agent: {} });
     transport.respond("pane.send_keys", { type: "pane_info", pane: {} });
     transport.respond("workspace.create", {
-      type: "workspace_info",
+      type: "workspace_created",
       workspace: { workspace_id: "w2" },
-    });
-    transport.respond("session.snapshot", {
-      type: "session_snapshot",
-      snapshot: {
-        panes: [{ pane_id: "w2:p1", workspace_id: "w2" }],
-        agents: [],
-      },
+      tab: { tab_id: "w2:t1" },
+      root_pane: { pane_id: "w2:p1" },
     });
     transport.respond("agent.start", {
-      type: "agent_info",
+      type: "agent_started",
       agent: { pane_id: "w2:p1" },
+      argv: ["codex"],
     });
     transport.respond("agent.send", { type: "agent_info", agent: {} });
     const adapter = new HerdrAdapter({ transport, now: () => NOW });
@@ -165,15 +161,14 @@ describe("HerdrAdapter", () => {
         "workspace.create",
         { cwd: "/repos/docs", label: "Docs Agent", focus: true },
       ],
-      ["session.snapshot", {}],
       [
         "agent.start",
         {
           name: "Docs Agent",
-          kind: "codex",
-          pane_id: "w2:p1",
-          args: [],
-          timeout_ms: 30_000,
+          argv: ["codex"],
+          workspace_id: "w2",
+          cwd: "/repos/docs",
+          focus: true,
         },
       ],
       ["agent.send", { target: "w2:p1", text: "draft the readme" }],

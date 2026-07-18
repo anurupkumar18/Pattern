@@ -93,29 +93,22 @@ export class HerdrAdapter implements FleetControl {
       "workspace.create result.workspace.workspace_id",
     );
 
-    const rawSnapshot = await this.readRawSnapshot();
-    const pane = (rawSnapshot.panes ?? []).find(
-      (candidate) => candidate.workspace_id === workspaceId,
-    );
-    const paneId = requiredString(
-      pane?.pane_id,
-      `pane in workspace ${workspaceId}`,
-    );
-
+    // Live schema: agent.start requires { name, argv } and accepts
+    // workspace_id/cwd/focus. There are no kind/pane_id/args fields.
     const startResult = asRecord(
       await this.transport.request("agent.start", {
         name: spec.name ?? `${spec.harness} agent`,
-        kind: spec.harness,
-        pane_id: paneId,
-        args: [],
-        timeout_ms: 30_000,
+        argv: harnessArgv(spec.harness),
+        workspace_id: workspaceId,
+        cwd: spec.cwd,
+        focus: true,
       }),
     );
     const startedAgent = asRecord(startResult.agent);
-    const agentId =
-      typeof startedAgent.pane_id === "string"
-        ? startedAgent.pane_id
-        : paneId;
+    const agentId = requiredString(
+      startedAgent.pane_id,
+      "agent.start result.agent.pane_id",
+    );
 
     if (spec.initialMessage) {
       await this.transport.request("agent.send", {
@@ -202,6 +195,21 @@ export class HerdrAdapter implements FleetControl {
       cwd: agent.foreground_cwd ?? agent.cwd ?? ".",
       lastActivity: { summary, at: capturedAt },
     };
+  }
+}
+
+function harnessArgv(harness: Harness): string[] {
+  switch (harness) {
+    case "claude":
+      return ["claude"];
+    case "codex":
+      return ["codex"];
+    case "gemini":
+      return ["gemini"];
+    case "shell":
+      return [process.env.SHELL ?? "zsh"];
+    default:
+      return [process.env.SHELL ?? "zsh"];
   }
 }
 

@@ -125,3 +125,23 @@ blockers for `cursor/voice-command-center`.
 - Open blockers: no local Herdr socket or Cactus/Gemma runtime was configured.
   Both seams and opt-in test commands are documented; no implementation phase
   is blocked.
+## 2026-07-18 (overnight follow-up) - Real Herdr validated, adapter fixed
+
+- Installed Herdr 0.7.4 (brew) and started `herdr server`; socket at
+  `~/.config/herdr/herdr.sock`.
+- Ran the previously skipped integration test for real:
+  `RUN_HERDR_INTEGRATION=1 HERDR_SOCKET_PATH=~/.config/herdr/herdr.sock npx vitest run test/herdr.integration.test.ts` passes.
+- Found and fixed a real-API mismatch in `HerdrAdapter.spawn`: the live
+  `agent.start` schema requires `{ name, argv }` and accepts
+  `workspace_id`/`cwd`/`focus`; the previous `kind`/`pane_id`/`args`/`timeout_ms`
+  shape was invented and would have failed on real Herdr. Verified against
+  `herdr api schema --json` (protocol 16) and the live server.
+- Added `commandcenter/scripts/smoke-herdr.ts`: end-to-end
+  snapshot -> spawn -> verify -> send -> focus -> verify against the real
+  server. All six checks pass (SMOKE OK).
+- `pane.send_keys` with `ctrl+c` for interrupt matches the documented key-combo
+  grammar; no change needed.
+- Remaining environment gap: local Gemma runtime. Ollama 0.15 installed and
+  serving, but no model pulled yet (download needs approval). Once a Gemma
+  model is present: `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","<model>"]'
+  npm run eval` exercises the real-model path via the exec transport.
