@@ -62,3 +62,20 @@ blockers for `cursor/voice-command-center`.
   skipped; `npm run build` passes.
 - Open questions: choose E2B versus E4B Gemma 4 weights based on demo-machine
   latency, then tune temperature/max tokens for JSON reliability.
+
+## 2026-07-18 - Phase 4: Command loop and verifier
+
+- Added the route, confirmation, act, independent-read, verify, and evidence
+  loop with typed routed/outcome/snapshot events.
+- Interrupts and commands below the confidence threshold stop in
+  `AWAITING_CONFIRMATION` until explicitly confirmed.
+- Added per-verb predicates for focus, delivered text, spawn specification,
+  interrupt status transition, listening state, status reads, and noise
+  no-op behavior.
+- Ran all 28 utterance fixtures end to end against `MockHerdr`.
+- Proved the executor/verifier invariant with a lying focus executor: executor
+  returned `ok: true`, independent state did not change, and the loop returned
+  `UNVERIFIED`, never `SUCCEEDED`.
+- Proof: `npm test` passes 18 tests in 5 files with 1 real-Herdr smoke test
+  skipped; `npm run build` passes.
+- Open questions: none.

@@ -55,4 +55,11 @@ Two local Gemma transport seams are available:
 - `HttpGemmaTransport`: POSTs `{ "prompt": "..." }` to a local endpoint and
   accepts `{ "output": "..." }`, `{ "text": "..." }`, or plain text.
 
+## Verified command loop
+
+`CommandLoop` routes an utterance, gates interrupt and low-confidence commands,
+executes through `FleetControl`, and emits typed stage events. `Verifier`
+performs a separate snapshot read and owns the only transition to `SUCCEEDED`.
+An executor acknowledgement without a passing predicate becomes `UNVERIFIED`.
+
 The full runtime and demo commands are added as each build phase lands.

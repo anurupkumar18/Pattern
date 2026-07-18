@@ -12,5 +12,6 @@ export interface FleetControl {
   send(agentId: string, text: string): Promise<ControlReceipt>;
   spawn(spec: SpawnSpec): Promise<ControlReceipt>;
   interrupt(agentId: string): Promise<ControlReceipt>;
+  setListening(listening: boolean): void | Promise<void>;
   subscribe(handler: FleetSnapshotHandler): () => void;
 }
