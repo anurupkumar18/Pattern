@@ -67,6 +67,9 @@ jobs:
       - name: Run the 20-case Order Rescue safety rehearsal
         working-directory: agent
         run: uv run python -m voiceops_agent.evals.order_rescue --runs 20 --output-dir ../artifacts/evaluations/order-rescue
+      - name: Render the offline evaluation dashboard
+        working-directory: agent
+        run: uv run python -m voiceops_agent.evaluation_dashboard --cross-report ../artifacts/evaluations/cross-runtime/latest.json --order-report ../artifacts/evaluations/order-rescue/report.json --output ../artifacts/evaluations/dashboard.html
       - name: Upload deterministic evaluation evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

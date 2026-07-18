@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23090b10'/%3E%3Cpath d='m17 33 9 9 21-23' fill='none' stroke='%2369e6a6' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <title>VoiceOps Evaluation Evidence</title>
+  <style>
+    :root { color-scheme: dark; --bg:#090b10; --panel:#121722; --line:#263043;
+      --text:#f5f7fb; --muted:#9ca8ba; --cyan:#53d8ff; --green:#69e6a6;
+      --red:#ff7b89; --amber:#ffc668; font-family:Inter,ui-sans-serif,-apple-system,
+      BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:
+      radial-gradient(circle at 78% -10%,#15314a 0,transparent 38%),var(--bg);
+      color:var(--text); }
+    main { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:48px 0 72px; }
+    header { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:end;
+      padding-bottom:28px; border-bottom:1px solid var(--line); }
+    .eyebrow { margin:0 0 12px; color:var(--cyan); font:700 12px/1.2 ui-monospace,
+      SFMono-Regular,Menlo,monospace; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(36px,6vw,72px); line-height:.95; letter-spacing:-.055em; }
+    .lede { max-width:720px; margin:20px 0 0; color:var(--muted); font-size:17px; line-height:1.55; }
+    .ready { min-width:170px; border:1px solid #34785c; border-radius:18px; padding:15px 18px;
+      background:#10271e; color:var(--green); text-align:right; }
+    .ready b { display:block; font-size:22px; letter-spacing:-.02em; }
+    .ready span { color:#a7cbb9; font-size:12px; }
+    .metrics { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin:24px 0 40px; }
+    .metric { min-height:142px; padding:18px; border:1px solid var(--line); border-radius:18px;
+      background:linear-gradient(145deg,#151b27,#10141d); }
+    .metric p { min-height:30px; margin:0; color:var(--muted); font-size:12px; line-height:1.25;
+      text-transform:uppercase; letter-spacing:.06em; }
+    .metric strong { display:block; margin:14px 0 5px; color:var(--green); font-size:31px;
+      line-height:1; letter-spacing:-.045em; }
+    .metric span { color:var(--muted); font-size:12px; }
+    .metric.danger strong { color:var(--red); }
+    .grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr); gap:18px; }
+    section { margin-bottom:18px; border:1px solid var(--line); border-radius:20px;
+      overflow:hidden; background:rgba(18,23,34,.88); }
+    section > h2, section > .section-head { margin:0; padding:18px 20px; border-bottom:1px solid var(--line); }
+    h2 { font-size:16px; letter-spacing:-.01em; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .section-head h2 { margin:0; }
+    .badge { border:1px solid #365066; border-radius:999px; padding:5px 9px; color:var(--cyan);
+      background:#112230; font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { padding:13px 16px; border-bottom:1px solid #20293a; text-align:left; vertical-align:top; }
+    thead th { color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+    tbody tr:last-child > * { border-bottom:0; }
+    tbody th { font-weight:600; }
+    .pass,.fail { display:inline-grid; width:19px; height:19px; place-items:center; border-radius:50%;
+      background:#183c2c; color:var(--green); font-weight:900; }
+    .fail { background:#461f27; color:var(--red); }
+    .gates { margin:0; padding:8px 20px 12px; list-style:none; }
+    .gates li { display:grid; grid-template-columns:22px 1fr auto; gap:10px; align-items:center;
+      padding:11px 0; border-bottom:1px solid #20293a; font-size:13px; }
+    .gates li:last-child { border-bottom:0; }
+    .gates b { color:var(--green); font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .limitations { margin:0; padding:18px 38px 20px; color:var(--muted); font-size:13px; line-height:1.55; }
+    .limitations li + li { margin-top:8px; }
+    .integrity { display:flex; gap:12px; align-items:flex-start; padding:16px 20px; color:var(--muted);
+      font-size:12px; line-height:1.5; }
+    .integrity b { color:var(--text); }
+    footer { display:flex; justify-content:space-between; gap:16px; padding-top:24px; color:#69778b;
+      font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    @media (max-width:980px) { .metrics { grid-template-columns:repeat(3,1fr); } .grid { grid-template-columns:1fr; } }
+    @media (max-width:620px) { main { width:min(100% - 20px,1180px); padding-top:28px; }
+      header { grid-template-columns:1fr; } .ready { text-align:left; } .metrics { grid-template-columns:repeat(2,1fr); }
+      th,td { padding:11px 10px; } footer { flex-direction:column; } }
+  </style>
+</head>
+<body data-evidence-kind="deterministic-offline">
+<main>
+  <header>
+    <div><p class="eyebrow">VoiceOps / Verified execution evidence</p>
+      <h1>Demo readiness,<br>proven.</h1>
+      <p class="lede">A judge-readable view of repeated, deterministic safety and correctness checks. This dashboard never presents fixture execution as a live merchant-account result.</p>
+    </div>
+    <div class="ready" data-gate-status="passed"><b>READY</b><span>40 of 40 checks passed</span></div>
+  </header>
+  <div class="metrics"><article class='metric'><p>Repeated checks</p><strong>40/40</strong><span>two deterministic suites</span></article><article class='metric'><p>False successes</p><strong>0</strong><span>zero tolerated</span></article><article class='metric'><p>Stop leakage</p><strong>0</strong><span>post-stop side effects</span></article><article class='metric'><p>Provenance</p><strong>7/7</strong><span>required cases covered</span></article><article class='metric'><p>Recovery</p><strong>2/2</strong><span>bounded probes recovered</span></article><article class='metric'><p>Patch accuracy</p><strong>100%</strong><span>v1 → v2 intent update</span></article></div>
+  <div class="grid">
+    <div>
+      <section><div class="section-head"><h2>Order Rescue rehearsal</h2><span class="badge">order-rescue-fixture-2026-07-18</span></div>
+        <table><thead><tr><th>Status</th><th>Scenario</th><th>Trials</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Golden</th><td>2/2</td><td>ORDER RESCUE COMPLETED — 5/5 CHECKS PASSED</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Constraint Retention</th><td>2/2</td><td>retained=4</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Stale Patch</th><td>2/2</td><td>stale base version rejected</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Approval Denied</th><td>2/2</td><td>approval preflight blocked every write</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Stop Barrier</th><td>2/2</td><td>post_stop_side_effects=0</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Replacement Negative Verifier</th><td>2/2</td><td>prohibited replacement detected</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Refund Negative Verifier</th><td>2/2</td><td>prohibited refund detected</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Missing Slack Verifier</th><td>2/2</td><td>missing Slack state prevented success</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Idempotent Replay</th><td>2/2</td><td>replay produced no duplicate effects</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Ledger Contract</th><td>2/2</td><td>event_types=acted,decided,interpreted,observed,verified</td></tr></tbody></table>
+      </section>
+      <section><div class="section-head"><h2>Cross-runtime coverage</h2><span class="badge">fixture-baseline-v1</span></div>
+        <table><thead><tr><th>Status</th><th>Workflow</th><th>Cases</th><th>Pass rate</th></tr></thead><tbody><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Evidence</th><td>1/1</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Grounding</th><td>2/2</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Meeting Briefing</th><td>1/1</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Protocol</th><td>2/2</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Recovery</th><td>1/1</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Research Follow Up</th><td>3/3</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Safety</th><td>5/5</td><td>100%</td></tr><tr><td><span class='pass' aria-label='passed'>✓</span></td><th scope='row'>Screen To Reminder</th><td>5/5</td><td>100%</td></tr></tbody></table>
+      </section>
+    </div>
+    <aside>
+      <section><h2>Release gates</h2><ul class="gates"><li><span class='pass' aria-label='passed'>✓</span><span>Cross-runtime pass rate ≥ 85%</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Duplicate side effects = 0</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>False successes = 0</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Required provenance coverage = 100%</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Recovery success ≥ 70%</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Order Rescue constraint retention = 100%</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Order Rescue patch accuracy = 100%</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Unapproved consequential actions = 0</span><b>PASS</b></li><li><span class='pass' aria-label='passed'>✓</span><span>Post-stop side effects = 0</span><b>PASS</b></li></ul></section>
+      <section><h2>Evidence boundary</h2><ul class="limitations"><li>No live microphone, TCC permission, EventKit, Notes, Reminders, or network trial is performed.</li><li>Latency targets require repeated permissioned runs on a dedicated macOS account.</li><li>The native probe exercises recovery policy and duplicate guards, not CGEvent delivery by macOS.</li><li>Order Rescue uses semantic Shopify, customer-message, Slack, and reminder fixtures; it does not mutate external accounts.</li><li>Live OpenAI Realtime audio acceptance requires an API credential; Apple Speech remains the zero-credential fallback.</li></ul></section>
+      <section><div class="integrity"><span class="pass">✓</span><div><b>Offline and replayable</b><br>Rendered only from the committed JSON report contract. No remote fonts, scripts, images, or analytics.</div></div></section>
+    </aside>
+  </div>
+  <footer><span>Source: evals/reports/latest.json + evals/order_rescue/report.json</span><span>Executors act. Independent verifiers decide success.</span></footer>
+</main>
+</body>
+</html>

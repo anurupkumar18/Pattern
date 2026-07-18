@@ -11,5 +11,10 @@ if [[ $# -eq 0 ]]; then
 fi
 uv run python -m voiceops_agent.evals.order_rescue "$@"
 
+uv run python -m voiceops_agent.evaluation_dashboard \
+    --cross-report "$ROOT/evals/reports/latest.json" \
+    --order-report "$ROOT/evals/order_rescue/report.json" \
+    --output "$ROOT/evals/dashboard.html"
+
 cd "$ROOT"
 "$ROOT/scripts/replay_order_rescue_app.sh"

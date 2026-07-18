@@ -12,7 +12,7 @@ In under four minutes, prove all eligibility requirements and visibly map the pr
   history, lifetime value, inventory, policy, and Friday deadline without any
   external credentials or network requests.
 - Keep the exact initial request and correction below available only as presenter backup; speak naturally during the demo.
-- Open the evaluation dashboard on a secondary Space or tab.
+- Open `evals/dashboard.html` on a secondary Space or tab.
 - Verify microphone, Screen Recording, and Accessibility permissions. Calendar,
   Reminders, and Automation are not required for the fixture-backed hero path.
 - Run `scripts/rehearse_order_rescue.sh`; require 20/20 in both deterministic reports before presenting.

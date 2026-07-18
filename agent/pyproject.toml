@@ -11,6 +11,7 @@ dependencies = [
 voiceops-agent = "voiceops_agent.main:main"
 voiceops-export-schemas = "voiceops_agent.schemas:export_json_schemas_cli"
 voiceops-eval = "voiceops_agent.evaluation:main"
+voiceops-dashboard = "voiceops_agent.evaluation_dashboard:main"
 
 [dependency-groups]
 dev = [
