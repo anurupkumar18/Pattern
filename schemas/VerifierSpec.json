@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "enum": [
+        "structured",
+        "visual",
+        "content",
+        "composite"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "description"
+  ],
+  "title": "VerifierSpec",
+  "type": "object"
+}

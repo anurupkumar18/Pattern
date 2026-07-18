@@ -1,0 +1,40 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "transcript": {
+      "title": "Transcript",
+      "type": "string"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    },
+    "locale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Locale"
+    }
+  },
+  "required": [
+    "transcript"
+  ],
+  "title": "TranscriptPartial",
+  "type": "object"
+}

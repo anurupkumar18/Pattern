@@ -1,0 +1,108 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "role": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Role"
+    },
+    "label": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Label"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    },
+    "bounds": {
+      "maxItems": 4,
+      "minItems": 4,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Bounds",
+      "type": "array"
+    },
+    "source": {
+      "enum": [
+        "accessibility",
+        "ocr",
+        "vision",
+        "dom"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "actions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Actions",
+      "type": "array"
+    },
+    "app_bundle_id": {
+      "title": "App Bundle Id",
+      "type": "string"
+    },
+    "stable_attributes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Stable Attributes",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "bounds",
+    "source",
+    "confidence",
+    "app_bundle_id"
+  ],
+  "title": "UIElementCandidate",
+  "type": "object"
+}

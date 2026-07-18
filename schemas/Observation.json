@@ -1,0 +1,246 @@
+{
+  "$defs": {
+    "AppRef": {
+      "additionalProperties": false,
+      "properties": {
+        "bundle_id": {
+          "title": "Bundle Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "bundle_id",
+        "name"
+      ],
+      "title": "AppRef",
+      "type": "object"
+    },
+    "UIElementCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "bounds": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Bounds",
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "accessibility",
+            "ocr",
+            "vision",
+            "dom"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "app_bundle_id": {
+          "title": "App Bundle Id",
+          "type": "string"
+        },
+        "stable_attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Stable Attributes",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "bounds",
+        "source",
+        "confidence",
+        "app_bundle_id"
+      ],
+      "title": "UIElementCandidate",
+      "type": "object"
+    },
+    "WindowRef": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "bounds": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Bounds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "bounds"
+      ],
+      "title": "WindowRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "capture_id": {
+      "format": "uuid",
+      "title": "Capture Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "active_app": {
+      "$ref": "#/$defs/AppRef"
+    },
+    "window": {
+      "$ref": "#/$defs/WindowRef"
+    },
+    "focused_element_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Focused Element Id"
+    },
+    "pointer": {
+      "anyOf": [
+        {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pointer"
+    },
+    "elements": {
+      "items": {
+        "$ref": "#/$defs/UIElementCandidate"
+      },
+      "title": "Elements",
+      "type": "array"
+    },
+    "screenshot_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Screenshot Path"
+    }
+  },
+  "required": [
+    "capture_id",
+    "timestamp",
+    "active_app",
+    "window"
+  ],
+  "title": "Observation",
+  "type": "object"
+}

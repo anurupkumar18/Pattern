@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "VerificationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "predicate_id": {
+          "title": "Predicate Id",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "expected": {
+          "additionalProperties": true,
+          "title": "Expected",
+          "type": "object"
+        },
+        "observed": {
+          "additionalProperties": true,
+          "title": "Observed",
+          "type": "object"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "failure_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Failure Reason"
+        }
+      },
+      "required": [
+        "predicate_id",
+        "passed",
+        "method",
+        "confidence",
+        "expected",
+        "observed"
+      ],
+      "title": "VerificationResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "state": {
+      "enum": [
+        "succeeded",
+        "partial",
+        "failed",
+        "needs_user"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "verification": {
+      "items": {
+        "$ref": "#/$defs/VerificationResult"
+      },
+      "title": "Verification",
+      "type": "array"
+    }
+  },
+  "required": [
+    "state",
+    "summary"
+  ],
+  "title": "TaskCompleted",
+  "type": "object"
+}

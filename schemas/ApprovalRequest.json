@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "risk": {
+      "enum": [
+        "read",
+        "reversible_write",
+        "consequential",
+        "destructive"
+      ],
+      "title": "Risk",
+      "type": "string"
+    },
+    "data_preview": {
+      "additionalProperties": true,
+      "title": "Data Preview",
+      "type": "object"
+    }
+  },
+  "required": [
+    "step_id",
+    "description",
+    "risk"
+  ],
+  "title": "ApprovalRequest",
+  "type": "object"
+}

@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "ResolvedReference": {
+      "additionalProperties": false,
+      "properties": {
+        "phrase": {
+          "title": "Phrase",
+          "type": "string"
+        },
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "phrase",
+        "candidate_id",
+        "confidence"
+      ],
+      "title": "ResolvedReference",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "references": {
+      "items": {
+        "$ref": "#/$defs/ResolvedReference"
+      },
+      "title": "References",
+      "type": "array"
+    }
+  },
+  "required": [
+    "references"
+  ],
+  "title": "GroundingResult",
+  "type": "object"
+}

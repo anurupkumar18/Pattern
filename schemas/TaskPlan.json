@@ -1,0 +1,164 @@
+{
+  "$defs": {
+    "Predicate": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "expected": {
+          "additionalProperties": true,
+          "title": "Expected",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "expected"
+      ],
+      "title": "Predicate",
+      "type": "object"
+    },
+    "TaskStep": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "preconditions": {
+          "items": {
+            "$ref": "#/$defs/Predicate"
+          },
+          "title": "Preconditions",
+          "type": "array"
+        },
+        "postconditions": {
+          "items": {
+            "$ref": "#/$defs/Predicate"
+          },
+          "title": "Postconditions",
+          "type": "array"
+        },
+        "risk": {
+          "enum": [
+            "read",
+            "reversible_write",
+            "consequential",
+            "destructive"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "requires_confirmation": {
+          "title": "Requires Confirmation",
+          "type": "boolean"
+        },
+        "fallback_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fallback Tools",
+          "type": "array"
+        },
+        "max_attempts": {
+          "default": 2,
+          "minimum": 1,
+          "title": "Max Attempts",
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "default": 30,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "verifier": {
+          "$ref": "#/$defs/VerifierSpec"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "tool",
+        "arguments",
+        "postconditions",
+        "risk",
+        "requires_confirmation",
+        "verifier"
+      ],
+      "title": "TaskStep",
+      "type": "object"
+    },
+    "VerifierSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "structured",
+            "visual",
+            "content",
+            "composite"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "description"
+      ],
+      "title": "VerifierSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "goal": {
+      "title": "Goal",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/TaskStep"
+      },
+      "minItems": 1,
+      "title": "Steps",
+      "type": "array"
+    }
+  },
+  "required": [
+    "goal",
+    "summary",
+    "steps"
+  ],
+  "title": "TaskPlan",
+  "type": "object"
+}

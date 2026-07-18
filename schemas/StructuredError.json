@@ -1,0 +1,41 @@
+{
+  "$defs": {
+    "FailureCode": {
+      "enum": [
+        "TARGET_NOT_FOUND",
+        "TARGET_STALE",
+        "NO_STATE_CHANGE",
+        "PERMISSION_DENIED",
+        "APP_NOT_RUNNING",
+        "TIMEOUT",
+        "AMBIGUOUS_STATE",
+        "MODEL_INVALID_OUTPUT",
+        "CONSEQUENTIAL_STATE_UNCERTAIN",
+        "INVALID_MESSAGE"
+      ],
+      "title": "FailureCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/FailureCode"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "details": {
+      "additionalProperties": true,
+      "title": "Details",
+      "type": "object"
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "StructuredError",
+  "type": "object"
+}

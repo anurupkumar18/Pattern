@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "EventType": {
+      "enum": [
+        "voice.partial",
+        "voice.final",
+        "observation.ready",
+        "grounding.ready",
+        "plan.ready",
+        "approval.requested",
+        "action.started",
+        "action.finished",
+        "verification.finished",
+        "task.completed",
+        "task.failed",
+        "task.cancelled"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "VoiceOpsModel": {
+      "additionalProperties": false,
+      "description": "Strict base: unknown fields are protocol errors, not noise to ignore.",
+      "properties": {},
+      "title": "VoiceOpsModel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1.0",
+      "title": "Version",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "task_id": {
+      "format": "uuid",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "payload": {
+      "$ref": "#/$defs/VoiceOpsModel"
+    }
+  },
+  "required": [
+    "version",
+    "id",
+    "type",
+    "task_id",
+    "timestamp",
+    "payload"
+  ],
+  "title": "Envelope",
+  "type": "object"
+}

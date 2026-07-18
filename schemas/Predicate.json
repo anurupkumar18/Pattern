@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "expected": {
+      "additionalProperties": true,
+      "title": "Expected",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "description",
+    "expected"
+  ],
+  "title": "Predicate",
+  "type": "object"
+}

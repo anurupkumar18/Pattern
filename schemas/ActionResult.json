@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "FailureCode": {
+      "enum": [
+        "TARGET_NOT_FOUND",
+        "TARGET_STALE",
+        "NO_STATE_CHANGE",
+        "PERMISSION_DENIED",
+        "APP_NOT_RUNNING",
+        "TIMEOUT",
+        "AMBIGUOUS_STATE",
+        "MODEL_INVALID_OUTPUT",
+        "CONSEQUENTIAL_STATE_UNCERTAIN",
+        "INVALID_MESSAGE"
+      ],
+      "title": "FailureCode",
+      "type": "string"
+    },
+    "StructuredError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/FailureCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "StructuredError",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "executed",
+        "no_op",
+        "failed",
+        "uncertain"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "ended_at": {
+      "format": "date-time",
+      "title": "Ended At",
+      "type": "string"
+    },
+    "channel": {
+      "title": "Channel",
+      "type": "string"
+    },
+    "target_provenance": {
+      "additionalProperties": true,
+      "title": "Target Provenance",
+      "type": "object"
+    },
+    "raw_result": {
+      "additionalProperties": true,
+      "title": "Raw Result",
+      "type": "object"
+    },
+    "state_change_hint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "State Change Hint"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StructuredError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "step_id",
+    "status",
+    "started_at",
+    "ended_at",
+    "channel"
+  ],
+  "title": "ActionResult",
+  "type": "object"
+}
