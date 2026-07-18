@@ -58,7 +58,8 @@ public enum SessionStateMachine {
              (.verifying, .taskCompleted(let taskState, let summary)):
             return .result(.completed(state: taskState, summary: summary))
 
-        case (.planning, .taskFailed(let reason)),
+        case (.listening, .taskFailed(let reason)),
+             (.planning, .taskFailed(let reason)),
              (.acting, .taskFailed(let reason)),
              (.verifying, .taskFailed(let reason)):
             return .result(.failed(reason: reason))

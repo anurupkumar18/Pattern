@@ -82,6 +82,13 @@ public struct TranscriptSegment: Codable, Equatable, Sendable {
     public let endMs: Int
     public let confidence: Double
 
+    public init(text: String, startMs: Int, endMs: Int, confidence: Double) {
+        self.text = text
+        self.startMs = startMs
+        self.endMs = endMs
+        self.confidence = confidence
+    }
+
     enum CodingKeys: String, CodingKey {
         case text
         case startMs = "start_ms"

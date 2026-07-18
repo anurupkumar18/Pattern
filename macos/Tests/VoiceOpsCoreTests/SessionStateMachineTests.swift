@@ -88,8 +88,13 @@ final class SessionStateMachineTests: XCTestCase {
 
     // MARK: Failure
 
-    func testTaskFailedShowsFailureFromAnyActiveTaskState() {
-        for state: SessionState in [.planning(transcript: "t"), .acting(description: "d"), .verifying] {
+    func testTaskFailedShowsFailureFromAnyActiveState() {
+        // Includes .listening: capture failures (mic/speech permission denied,
+        // recognizer unavailable) must surface an actionable result, not vanish.
+        for state: SessionState in [
+            .listening(transcript: ""), .planning(transcript: "t"),
+            .acting(description: "d"), .verifying,
+        ] {
             XCTAssertEqual(
                 SessionStateMachine.reduce(state, .taskFailed(reason: "INVALID_MESSAGE")),
                 .result(.failed(reason: "INVALID_MESSAGE")),

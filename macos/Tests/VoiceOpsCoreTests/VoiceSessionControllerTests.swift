@@ -82,6 +82,21 @@ final class VoiceSessionControllerTests: XCTestCase {
         XCTAssertEqual(voiceRequest.transcript, "done early")
     }
 
+    func testAutoFinalWithoutEndFiresCallback() async throws {
+        // Recognizer can finalize on its own (long pause). The app needs a
+        // signal to leave the listening state without a hotkey tap.
+        let fake = FakeTranscriber()
+        let controller = VoiceSessionController(transcriber: fake, locale: "en-US")
+        var autoFinals: [String] = []
+        controller.onAutoFinal = { autoFinals.append($0) }
+        try await controller.begin()
+
+        await fake.emit(makeFinal("auto ended"))
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(autoFinals, ["auto ended"])
+        _ = try await controller.end()
+    }
+
     func testCancelDiscardsSessionAndEndThrows() async throws {
         let fake = FakeTranscriber()
         let controller = VoiceSessionController(transcriber: fake, locale: "en-US")

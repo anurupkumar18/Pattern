@@ -40,6 +40,9 @@ public final class VoiceSessionController {
     private let locale: String
 
     public var onPartial: ((String) -> Void)?
+    /// Fired when the provider finalizes on its own (e.g. a long pause) while
+    /// no end() call is waiting — the app uses this to leave listening state.
+    public var onAutoFinal: ((String) -> Void)?
 
     private var consumeTask: Task<Void, Never>?
     private var storedFinal: TranscriptUpdate?
@@ -60,13 +63,14 @@ public final class VoiceSessionController {
 
         let stream = try await transcriber.start()
         consumeTask = Task { [weak self] in
+            // Inherits the MainActor context, so handle/streamEnded never hop.
             do {
                 for try await update in stream {
-                    await self?.handle(update)
+                    self?.handle(update)
                 }
-                await self?.streamEnded(error: nil)
+                self?.streamEnded(error: nil)
             } catch {
-                await self?.streamEnded(error: error)
+                self?.streamEnded(error: error)
             }
         }
     }
@@ -81,6 +85,11 @@ public final class VoiceSessionController {
         }
 
         await transcriber.finish()
+        // The final may have arrived during the suspension above.
+        if let final = storedFinal {
+            finishSession()
+            return buildRequest(from: final)
+        }
         let final = try await withCheckedThrowingContinuation { continuation in
             pendingEnd = continuation
         }
@@ -106,6 +115,7 @@ public final class VoiceSessionController {
                 pendingEnd.resume(returning: update)
             } else {
                 storedFinal = update
+                onAutoFinal?(update.text)
             }
         } else {
             onPartial?(update.text)
@@ -115,7 +125,9 @@ public final class VoiceSessionController {
     private func streamEnded(error: Error?) {
         guard let pendingEnd else { return }
         self.pendingEnd = nil
-        if isCancelled {
+        if let final = storedFinal {
+            pendingEnd.resume(returning: final)
+        } else if isCancelled {
             pendingEnd.resume(throwing: VoiceSessionError.cancelled)
         } else {
             pendingEnd.resume(throwing: error ?? VoiceSessionError.noSpeech)
