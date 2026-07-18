@@ -160,3 +160,25 @@ blockers for `cursor/voice-command-center`.
 - Only remaining environment gap: pull a local Gemma model (approval-gated
   download), then `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","<model>"]'` to
   exercise the real-model router path.
+
+## 2026-07-18 (real-model tuning) - Untuned Gemma 4 baseline
+
+- Pulled and loaded `gemma4:latest` through Ollama 0.15. Basic stdin inference
+  succeeded with an exact `OK` response; the first cold inference took about
+  48 seconds.
+- Ran the unchanged real-model command:
+  `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","gemma4"]' npm run eval`.
+- Baseline accuracy: 0/28 overall; clear 0/15, fuzzy 0/5, noise 0/6,
+  destructive 0/2. Noise false-fire rate is reported as 0%, but that is not a
+  useful safety result because all 28 routes failed before producing a typed
+  command.
+- Failure split: 15 outputs failed strict JSON parsing and 13 routes exhausted
+  the transport's 30-second timeout. Route p50/p95 are unavailable because the
+  evaluator records latency only for completed typed outcomes.
+- A direct prompt probe showed that the semantic response was a valid command
+  object, but `ollama run` interleaved ANSI cursor-control sequences into
+  stdout while streaming JSON. The next isolated change is robust JSON-object
+  extraction after terminal-sequence removal, without weakening
+  `FleetCommandSchema` validation.
+- Baseline artifacts: `commandcenter/eval-report.json` and
+  `commandcenter/eval-report.md` (generated `2026-07-18T07:56:36.516Z`).
