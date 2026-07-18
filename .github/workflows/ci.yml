@@ -43,6 +43,11 @@ jobs:
           VOICEOPS_REPLAY_REPORT_OUT: artifacts/native-order-rescue/report.json
           VOICEOPS_REPLAY_SCREENSHOT_OUT: artifacts/native-order-rescue/companion.png
         run: scripts/replay_order_rescue_app.sh
+      - name: Package the runnable native app
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          macos/build/Build/Products/Debug/VoiceOps.app
+          artifacts/native-order-rescue/VoiceOps.zip
       - name: Upload native replay evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
