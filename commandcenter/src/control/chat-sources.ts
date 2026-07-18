@@ -49,7 +49,9 @@ const DEFAULT_CURSOR_POLL_MS = 30_000;
 const DEFAULT_FILE_POLL_MS = 10_000;
 const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1_000;
 /** A session file touched within this window counts as actively generating. */
-const DEFAULT_ACTIVE_MS = 2 * 60 * 1_000;
+const DEFAULT_ACTIVE_MS = 45_000;
+/** Newest entries kept per source so one busy harness cannot crowd out the rest. */
+const MAX_ENTRIES_PER_SOURCE = 10;
 
 /**
  * Adapts the existing Cursor provider to the shared multi-source shape without
@@ -311,8 +313,8 @@ export class ChatSourcesProvider {
   }
 
   private refresh(): void {
-    const chats = mergeChatEntries(
-      this.sources.flatMap((source) => source.current()),
+    const chats = capPerSource(
+      mergeChatEntries(this.sources.flatMap((source) => source.current())),
     );
     const serialized = JSON.stringify(chats);
     if (serialized === this.lastSerialized) return;
@@ -329,6 +331,19 @@ export function mergeChatEntries(entries: ChatEntry[]): ChatEntry[] {
       left.source.localeCompare(right.source) ||
       left.id.localeCompare(right.id),
   );
+}
+
+export function capPerSource(
+  sorted: ChatEntry[],
+  limit = MAX_ENTRIES_PER_SOURCE,
+): ChatEntry[] {
+  const seen = new Map<ChatSource, number>();
+  return sorted.filter((entry) => {
+    const count = seen.get(entry.source) ?? 0;
+    if (count >= limit) return false;
+    seen.set(entry.source, count + 1);
+    return true;
+  });
 }
 
 export function parseClaudeSession(

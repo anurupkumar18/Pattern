@@ -370,3 +370,27 @@ on/off button below the sidebar agent list.
   entries or widening the product contract was intentionally avoided.
   `/tmp/console-multisource.png` confirms the populated sidebar and source
   label rendering. No source was stubbed.
+
+## 2026-07-18 - Chat sources hardening and live proof
+
+- Tightened the file-session liveness window to 45 seconds (was 2 minutes) so
+  a Claude/Codex session only shows the braille working spinner while its
+  JSONL file is actively being appended.
+- Added a per-source cap (10 newest per source) in the merged broadcast so a
+  busy harness (24 Cursor chats today) cannot crowd Claude/Codex entries out
+  of the sidebar list.
+- Name extraction now skips harness-injected first messages (text starting
+  with "<", e.g. `<local-command-caveat>` / `<recommended_plugins>` blocks)
+  and falls back to the first human-typed message.
+- Added `CHATS_WINDOW_MS` env override on the server. Default stays 24h; the
+  demo server on :4180 runs with a 10-day window because the newest Claude
+  session on this machine is from 2026-07-10 and the newest Codex rollout from
+  2026-07-17, both outside the strict 24h window.
+- Live proof over ws://127.0.0.1:4180/ws: merged `cursor.chats` snapshot with
+  22 entries (10 cursor, 10 codex, 2 claude); headless Chrome DOM shows all
+  three source tokens rendering Herdr-style (`done · codex · 25h ago`);
+  screenshots at /tmp/console-allchats.png and /tmp/console-allchats-tall.png.
+- Checks: `npx tsc -p tsconfig.json`, `npx tsc -p console/tsconfig.json
+  --noEmit`, and `npm run test` (38 passed, 1 opt-in Herdr test skipped) all
+  clean, including new parser/merge/cap unit tests in
+  `test/chat-sources.test.ts`.
