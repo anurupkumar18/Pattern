@@ -67,7 +67,10 @@ public actor SidecarClient {
         }
         let sidecar = Process()
         sidecar.executableURL = URL(fileURLWithPath: uv)
-        sidecar.arguments = ["run", "--project", agentProjectURL.path, "voiceops-agent"]
+        sidecar.arguments = [
+            "run", "--project", agentProjectURL.path,
+            "python", "-m", "voiceops_agent.main",
+        ]
         sidecar.currentDirectoryURL = agentProjectURL
         sidecar.environment = Self.mergedEnvironment(additional: additionalEnvironment)
         let stdinPipe = Pipe()

@@ -60,7 +60,10 @@ print("→ voice.final  \(request.taskID.uuidString.lowercased())")
 
 let sidecar = Process()
 sidecar.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-sidecar.arguments = ["uv", "run", "--project", root.appendingPathComponent("agent").path, "voiceops-agent"]
+sidecar.arguments = [
+    "uv", "run", "--project", root.appendingPathComponent("agent").path,
+    "python", "-m", "voiceops_agent.main",
+]
 sidecar.currentDirectoryURL = root.appendingPathComponent("agent")
 let stdinPipe = Pipe()
 let stdoutPipe = Pipe()

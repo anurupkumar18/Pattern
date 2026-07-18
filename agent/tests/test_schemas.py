@@ -105,6 +105,10 @@ class TestTaskObjects:
         )
         assert step.requires_confirmation is True
 
+    def test_every_step_requires_at_least_one_verifiable_postcondition(self):
+        with pytest.raises(ValidationError):
+            TaskStep.model_validate(make_step(postconditions=[]))
+
     def test_plan_rejects_invalid_step(self):
         with pytest.raises(ValidationError):
             TaskPlan.model_validate(
@@ -114,6 +118,23 @@ class TestTaskObjects:
                     "steps": [make_step(risk="yolo")],
                 }
             )
+
+    def test_plan_rejects_duplicate_step_or_predicate_ids(self):
+        with pytest.raises(ValidationError, match="step IDs must be unique"):
+            TaskPlan.model_validate({
+                "goal": "Two actions",
+                "summary": "Duplicate steps",
+                "steps": [make_step(), make_step()],
+            })
+        with pytest.raises(ValidationError, match="predicate IDs must be unique"):
+            TaskPlan.model_validate({
+                "goal": "Two actions",
+                "summary": "Duplicate predicates",
+                "steps": [
+                    make_step(id="step-1"),
+                    make_step(id="step-2", tool="notes.create"),
+                ],
+            })
 
 
 class TestWireTimestamps:

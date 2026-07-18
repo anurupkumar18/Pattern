@@ -23,10 +23,13 @@ from voiceops_agent.schemas import (
     EventType,
     FailureCode,
     Observation,
+    Predicate,
     TaskCompleted,
     TaskFailure,
     TaskPlan,
+    TaskStep,
     VerificationResult,
+    VerifierSpec,
     UIElementCandidate,
     VoiceRequest,
     WindowRef,
@@ -279,6 +282,93 @@ class TestHandleLine:
         assert step.requires_confirmation is True
         assert len(step.arguments["recommendations"]) == 3
         assert len(step.arguments["followups"]) == 3
+
+    def test_unsupported_grounded_request_fails_closed_without_mock_success(self):
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+        observation = Observation.model_validate_json(SCREEN_FIXTURE_PATH.read_text())
+        voice = VoiceRequest(
+            transcript="Take care of this delayed high-value order.",
+            locale="en-US", confidence=1, segments=[],
+        )
+        runtime.handle_line(make_envelope(
+            EventType.OBSERVATION_READY, task_id, observation
+        ).to_ndjson())
+
+        events = runtime.handle_line(make_envelope(
+            EventType.VOICE_FINAL, task_id, voice
+        ).to_ndjson())
+
+        assert [event.type for event in events] == [
+            EventType.GROUNDING_READY, EventType.TASK_FAILED,
+        ]
+        assert events[-1].payload.error.code == FailureCode.TARGET_NOT_FOUND
+        assert "did not perform or verify" in events[-1].payload.error.message
+
+    def test_each_step_must_execute_before_its_predicate_can_verify(self):
+        runtime = SidecarRuntime()
+        task_id = uuid4()
+
+        def step(index: int) -> TaskStep:
+            predicate = Predicate(
+                id=f"pred-{index}",
+                description=f"Result {index} exists",
+                expected={"result": index},
+            )
+            return TaskStep(
+                id=f"step-{index}",
+                description=f"Perform action {index}",
+                tool=f"fixture.action_{index}",
+                arguments={},
+                postconditions=[predicate],
+                risk="reversible_write",
+                requires_confirmation=False,
+                verifier=VerifierSpec(kind="structured", description="Fixture fetch-back"),
+            )
+
+        first, second = step(1), step(2)
+        runtime._plans[task_id] = TaskPlan(
+            goal="Perform two independently verified actions",
+            summary="Two-step fixture",
+            steps=[first, second],
+        )
+        runtime._verifications[task_id] = {}
+        runtime.handle_line(make_envelope(
+            EventType.ACTION_FINISHED,
+            task_id,
+            ActionResult(
+                step_id=first.id, status="executed",
+                started_at=datetime.now(UTC), ended_at=datetime.now(UTC),
+                channel="fixture",
+            ),
+        ).to_ndjson())
+        first_verification = VerificationResult(
+            predicate_id=first.postconditions[0].id,
+            passed=True,
+            method="fixture_fetch_back",
+            confidence=1,
+            expected=first.postconditions[0].expected,
+            observed={"result": 1},
+        )
+        assert runtime.handle_line(make_envelope(
+            EventType.VERIFICATION_FINISHED, task_id, first_verification
+        ).to_ndjson()) == []
+
+        second_verification = VerificationResult(
+            predicate_id=second.postconditions[0].id,
+            passed=True,
+            method="fixture_fetch_back",
+            confidence=1,
+            expected=second.postconditions[0].expected,
+            observed={"result": 2},
+        )
+        events = runtime.handle_line(make_envelope(
+            EventType.VERIFICATION_FINISHED, task_id, second_verification
+        ).to_ndjson())
+
+        assert [event.type for event in events] == [EventType.TASK_FAILED]
+        assert events[0].payload.error.code == FailureCode.INVALID_MESSAGE
+        assert "before step 'step-2' executed" in events[0].payload.error.message
 
     def test_grounding_adapter_failure_becomes_typed_task_failure(self):
         class BrokenAdapter:

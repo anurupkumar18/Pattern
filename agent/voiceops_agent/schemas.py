@@ -154,7 +154,7 @@ class TaskStep(VoiceOpsModel):
     tool: str
     arguments: dict[str, Any]
     preconditions: list[Predicate] = Field(default_factory=list)
-    postconditions: list[Predicate]
+    postconditions: list[Predicate] = Field(min_length=1)
     risk: Risk
     requires_confirmation: bool
     fallback_tools: list[str] = Field(default_factory=list)
@@ -175,6 +175,18 @@ class TaskPlan(VoiceOpsModel):
     goal: str
     summary: str
     steps: list[TaskStep] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _identifiers_are_unique(self) -> "TaskPlan":
+        step_ids = [step.id for step in self.steps]
+        if len(step_ids) != len(set(step_ids)):
+            raise ValueError("task step IDs must be unique")
+        predicate_ids = [
+            predicate.id for step in self.steps for predicate in step.postconditions
+        ]
+        if len(predicate_ids) != len(set(predicate_ids)):
+            raise ValueError("postcondition predicate IDs must be unique across the plan")
+        return self
 
 
 # --- Action and verification ---

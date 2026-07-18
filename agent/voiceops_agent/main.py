@@ -106,7 +106,7 @@ class SidecarRuntime:
         self._grounding_adapter = grounding_adapter or build_grounding_adapter()
         self._research_adapter = research_adapter
         self._plans: dict[UUID, TaskPlan] = {}
-        self._actions: dict[UUID, ActionResult] = {}
+        self._actions: dict[UUID, dict[str, ActionResult]] = {}
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
 
     def handle_line(self, line: str) -> list[Envelope]:
@@ -219,11 +219,27 @@ class SidecarRuntime:
                     make_envelope(EventType.PLAN_READY, envelope.task_id, plan)
                 ]
 
+        if observation is not None:
+            failure = TaskFailure(
+                error=StructuredError(
+                    code=FailureCode.TARGET_NOT_FOUND,
+                    message=(
+                        "This visible workflow is not supported yet. VoiceOps did not "
+                        "perform or verify any action."
+                    ),
+                ),
+                summary="No supported workflow matched the grounded request",
+            )
+            return events + [
+                make_envelope(EventType.TASK_FAILED, envelope.task_id, failure)
+            ]
+
+        # Retained only for the voice-only Phase 0 protocol fixture. Every
+        # grounded app request above must route to a real workflow or fail
+        # closed; it may never inherit this schema-only success path.
         plan = build_mock_plan(envelope.payload)
         completion_summary = (
-            "Phase 2 mock exchange: screen references grounded and plan validated"
-            if observation is not None
-            else "Phase 0 mock exchange: request validated and mock plan produced"
+            "Phase 0 mock exchange: request validated and mock plan produced"
         )
         completed = TaskCompleted(
             state="succeeded",
@@ -273,30 +289,43 @@ class SidecarRuntime:
             return [make_envelope(
                 EventType.TASK_FAILED,
                 task_id,
-                TaskFailure(error=error, summary="The reminder was not created"),
+                TaskFailure(error=error, summary="The planned action did not complete"),
             )]
-        self._actions[task_id] = action
+        actions = self._actions.setdefault(task_id, {})
+        if action.step_id in actions:
+            return [self._protocol_failure(
+                task_id, f"duplicate action result for step {action.step_id!r}"
+            )]
+        actions[action.step_id] = action
         return []
 
     def _handle_verification_finished(
         self, task_id: UUID, verification: VerificationResult
     ) -> list[Envelope]:
         plan = self._plans.get(task_id)
-        if plan is None or task_id not in self._actions:
+        if plan is None:
             return [self._protocol_failure(
                 task_id,
                 "verification arrived before a pending action was executed",
             )]
         expected_predicates = {
-            predicate.id: predicate
+            predicate.id: (step, predicate)
             for step in plan.steps
             for predicate in step.postconditions
         }
-        predicate = expected_predicates.get(verification.predicate_id)
-        if predicate is None:
+        expected = expected_predicates.get(verification.predicate_id)
+        if expected is None:
             return [self._protocol_failure(
                 task_id,
                 f"verification referenced unknown predicate {verification.predicate_id!r}",
+            )]
+        owner_step, predicate = expected
+        action = self._actions.get(task_id, {}).get(owner_step.id)
+        if action is None or action.status != "executed":
+            return [self._protocol_failure(
+                task_id,
+                f"verification for {verification.predicate_id!r} arrived before "
+                f"step {owner_step.id!r} executed",
             )]
         if verification.expected != predicate.expected:
             return [self._protocol_failure(
@@ -314,18 +343,18 @@ class SidecarRuntime:
         if passed_count == len(ordered):
             state = "succeeded"
             summary = (
-                "Reminder created in EventKit, fetched back, matched, and shown "
-                f"in Reminders ({passed_count}/{len(ordered)} checks passed)"
+                "Task completed and independently verified "
+                f"({passed_count}/{len(ordered)} checks passed)"
             )
         elif passed_count:
             state = "partial"
             summary = (
-                "The reminder action completed, but verification was incomplete "
+                "The planned actions completed, but verification was incomplete "
                 f"({passed_count}/{len(ordered)} checks passed)"
             )
         else:
             state = "failed"
-            summary = "The reminder could not be verified after the action"
+            summary = "The planned actions could not be verified"
         completed = TaskCompleted(
             state=state,
             summary=summary,

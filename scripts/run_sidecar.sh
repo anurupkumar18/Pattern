@@ -3,4 +3,4 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT/agent"
-exec uv run voiceops-agent
+exec uv run python -m voiceops_agent.main
