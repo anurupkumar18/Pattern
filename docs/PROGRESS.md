@@ -602,3 +602,9 @@ on/off button below the sidebar agent list.
   read-only hint, and contains no send button.
 - Final verification: both TypeScript checks pass; Vitest passes 73 tests in 13
   files with 1 opt-in test skipped; `git diff --check` passes.
+
+## 2026-07-18 - Wave 1D browser STT client follow-up
+
+- Added the AudioWorklet plus `useLocalSTT` API: `status`, `interim`, `finals`, `amplitude`, `start`, `stop`, and `setHints`.
+- Harness `/stt-test.html` renders; shared-client WAV proof emitted `Move.` interim then `Move to evals.` final; TypeScript passes.
+- `base.en` plus hints stayed 2/3 exact at 910/1839 ms; `small.en` plus 700 ms VAD stayed 3/3 at 1493/2629 ms, so small remains the demo model.

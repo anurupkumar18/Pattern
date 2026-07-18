@@ -47,7 +47,7 @@ Recommended accuracy-first command for the Dictator demo:
 
 ```bash
 cd commandcenter/stt
-STT_THREADS=8 ./start.sh small.en
+STT_THREADS=8 STT_SILENCE_MS=700 ./start.sh small.en
 ```
 
 Lower-latency alternative:
@@ -75,7 +75,41 @@ Useful settings:
 | `STT_INTERIM_EVERY_MS` | `1600` | Later interim snapshot spacing |
 | `WHISPER_MODEL` | `models/ggml-base.en.bin` | Explicit model path |
 
-## Console integration contract
+## Console integration
+
+The browser client is implemented in
+`commandcenter/console/src/stt/useLocalSTT.ts`. It exposes
+`{ status, interim, finals, amplitude, start, stop, setHints }`, reconnects
+with bounded exponential backoff, and uses the AudioWorklet in
+`pcm-worklet.ts` to resample microphone input into 20 ms PCM16/16 kHz frames.
+
+After the integrator's current `App.tsx` work lands, the final hookup is
+exactly these three line replacements/additions:
+
+```ts
+import { useLocalSTT } from "./stt/useLocalSTT.js"; // replace useSpeechRecognition import
+const speech = useLocalSTT(onFinalSpeech); // replace the old hook call
+useEffect(() => speech.setHints(rows.map((row) => row.spokenName)), [rows, speech.setHints]); // after rows
+```
+
+Compatibility aliases (`supported`, `listening`, and `error`) preserve the
+existing `speech.*` call sites, so no CommandBar, MainPane, Sidebar, or
+protocol prop needs to change. `speech.amplitude` is ready for a later mic
+visual hookup but is not required for functional integration.
+
+Standalone verification:
+
+```bash
+cd commandcenter
+npx vite --config console/vite.config.ts --host 127.0.0.1 --port 4181
+open http://127.0.0.1:4181/stt-test.html
+```
+
+The harness includes start/stop, live interim text, final history, an
+amplitude bar, editable hints, and a WAV picker that exercises the same
+`LocalSTTSession` transport used by the hook.
+
+### Wire protocol
 
 The console should use an `AudioWorklet`, not `MediaRecorder`. It must
 resample the microphone to 16 kHz and send raw signed 16-bit little-endian
@@ -179,3 +213,22 @@ Known gap: the bridge repeatedly transcribes in-memory utterance snapshots
 rather than preserving decoder state between chunks. This is deliberately
 small and reliable for the hackathon, but a native streaming decoder would
 be the next latency optimization.
+
+## Follow-up command benchmark
+
+Expanded hints (`evals`, `smoke-shell`, `Noah`, `design agent`, `move`,
+`next`, `send`, `stop`) did not repair `base.en`: it still transcribed
+`evals` as `Evels`. The loaded-machine mean improved to 910 ms first interim
+and 1839 ms final latency, but exactness remained 2/3.
+
+`small.en` with the same hints, eight threads, and a 700 ms VAD window stayed
+3/3 exact while improving to 1493 ms mean first interim and 2629 ms mean
+final latency. This is the retained demo configuration:
+
+```bash
+STT_THREADS=8 STT_SILENCE_MS=700 ./start.sh small.en
+```
+
+The 700 ms gate removed roughly two seconds from the earlier loaded-machine
+small-model final mean without changing command accuracy. The live bridge on
+port 4191 is running with this configuration.
