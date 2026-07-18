@@ -21,3 +21,21 @@ blockers for `cursor/voice-command-center`.
 - Proof: `npm test` passes 5 tests in 2 files; `npm run build` and
   `npm run schema` pass.
 - Open questions: none.
+
+## 2026-07-18 - Phase 2: Control plane
+
+- Added the `FleetControl` interface and a mutable, async `MockHerdr` with
+  focus, send, spawn, interrupt, snapshot, and subscription behavior.
+- Added a real newline-delimited Unix socket transport and `HerdrAdapter`
+  against documented Herdr methods. Consulted Herdr's Socket API, Session
+  State, Concepts, and generated API schema from `ogulcancelik/herdr`.
+- Real code: Unix socket request/subscription transport, session snapshot
+  mapping, and all control calls. Mock-backed: automated adapter tests and the
+  default runtime.
+- Real-Herdr smoke test is guarded by `RUN_HERDR_INTEGRATION=1` and
+  `HERDR_SOCKET_PATH`; it was not run because no local Herdr socket was
+  configured. This is an integration delta, not a compile/test blocker.
+- Proof: `npm test` passes 9 tests in 3 files with 1 real-Herdr smoke test
+  skipped; `npm run build` passes.
+- Open questions: verify the configured socket path and installed agent kinds
+  on the demo machine.

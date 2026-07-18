@@ -26,4 +26,19 @@ command verbs, executor results, verifier verdicts, and command outcomes.
 The utterance matrix in `fixtures/utterances.json` contains clear, fuzzy,
 ambient-noise, and destructive cases.
 
+## Fleet control
+
+`MockHerdr` is the default, fully in-memory control plane. `HerdrAdapter` uses
+the documented raw Herdr socket methods (`session.snapshot`, `agent.focus`,
+`agent.send`, `workspace.create`, `agent.start`, `pane.send_keys`, and
+`events.subscribe`) through a newline-delimited Unix socket transport.
+
+Real Herdr smoke tests are opt-in:
+
+```bash
+RUN_HERDR_INTEGRATION=1 \
+HERDR_SOCKET_PATH=/path/to/herdr.sock \
+npm test -- herdr.integration.test.ts
+```
+
 The full runtime and demo commands are added as each build phase lands.
