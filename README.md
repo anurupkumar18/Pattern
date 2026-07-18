@@ -8,7 +8,7 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
-Phase 2 — screen context and grounding is in progress. The app now captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, sends a typed task-scoped observation to the sidecar, resolves high-confidence screen references with provenance, and shows grounding chips before the mock plan. Golden Mail/deadline grounding is deterministic and offline-safe; a live VLM provider and its Keychain credential UI remain pending.
+Phase 2 — screen context and grounding is complete. The app captures the active window on demand with ScreenCaptureKit, collects and prunes the visible Accessibility tree, sends a typed task-scoped observation to the sidecar, and shows grounded-reference chips with native provenance before planning. OpenAI vision grounding uses strict structured output and validates every model-selected candidate locally. Golden Mail/deadline grounding remains deterministic and offline-safe, and automatically takes over if no credential is configured or the live provider is unavailable.
 
 Phase 1’s voice shell remains intact: global hotkey (⌃⌥V), streaming system speech capture, floating companion with deterministic session states, stop/Escape cancellation, and spoken progress. See `docs/` for the full spec:
 
@@ -47,6 +47,16 @@ scripts/run_app.sh            # builds with the CLI toolchain and launches — n
 1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
 2. Press **⌃⌥V** again (or pause) to finish. VoiceOps captures the active window, shows any grounded reference chips, and then walks through planning → acting → result with spoken progress.
 3. **Stop** (or Escape while the companion has focus) cancels capture and any running task.
+
+### Optional live vision grounding
+
+VoiceOps works without a network credential using its deterministic grounder. To enable the OpenAI Responses API vision adapter:
+
+1. Create an API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+2. Open the VoiceOps menu-bar item and choose **Vision Settings…**.
+3. Paste the key, keep the default `gpt-5.6-terra` model (or enter another image-capable model), and select **Save**.
+
+The secret is stored in the macOS login Keychain, never in UserDefaults or the repository. It is passed only in the environment of the per-task local sidecar. Live grounding sends the task-scoped active-window image and pruned Accessibility candidates to OpenAI; the capture is deleted when the task reaches a terminal state. Provider failures are visible in the companion and fall back to deterministic grounding.
 
 ## Layout
 

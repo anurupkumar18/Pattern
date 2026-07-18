@@ -46,10 +46,26 @@
       },
       "title": "References",
       "type": "array"
+    },
+    "adapter": {
+      "enum": [
+        "openai",
+        "deterministic"
+      ],
+      "title": "Adapter",
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
     }
   },
   "required": [
-    "references"
+    "references",
+    "adapter"
   ],
   "title": "GroundingResult",
   "type": "object"

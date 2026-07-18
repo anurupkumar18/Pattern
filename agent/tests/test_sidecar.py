@@ -12,7 +12,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from voiceops_agent.main import SidecarRuntime, handle_line
+from voiceops_agent.grounding import (
+    DeterministicMultimodalGroundingAdapter,
+    FallbackGroundingAdapter,
+)
+from voiceops_agent.main import SidecarRuntime, build_grounding_adapter, handle_line
 from voiceops_agent.schemas import (
     AppRef,
     EventType,
@@ -41,6 +45,24 @@ def fixture_line() -> str:
 
 
 class TestHandleLine:
+    def test_grounding_provider_defaults_to_offline_adapter(self, monkeypatch):
+        monkeypatch.delenv("VOICEOPS_OPENAI_API_KEY", raising=False)
+
+        assert isinstance(
+            build_grounding_adapter(), DeterministicMultimodalGroundingAdapter
+        )
+
+    def test_grounding_provider_uses_live_adapter_with_blank_model_default(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("VOICEOPS_OPENAI_API_KEY", "test-key")
+        monkeypatch.setenv("VOICEOPS_VLM_MODEL", "  ")
+
+        adapter = build_grounding_adapter()
+
+        assert isinstance(adapter, FallbackGroundingAdapter)
+        assert adapter._primary._model == "gpt-5.6-terra"
+
     def test_voice_final_yields_plan_then_completion(self):
         events = handle_line(fixture_line())
         assert [e.type for e in events] == [EventType.PLAN_READY, EventType.TASK_COMPLETED]

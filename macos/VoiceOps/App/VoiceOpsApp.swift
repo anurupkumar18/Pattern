@@ -13,9 +13,17 @@ struct VoiceOpsApp: App {
                 Button("Stop") { coordinator.stop() }
             }
             Divider()
+            SettingsLink {
+                Label("Vision Settings…", systemImage: "eye.circle")
+            }
+            Divider()
             Button("Quit VoiceOps") { NSApplication.shared.terminate(nil) }
         } label: {
             Image(systemName: "waveform.circle.fill")
+        }
+
+        Settings {
+            VLMSettingsView()
         }
     }
 }

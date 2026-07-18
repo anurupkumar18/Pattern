@@ -12,12 +12,17 @@ public enum SidecarError: Error, Equatable {
 /// interrupts any mock task).
 public actor SidecarClient {
     private let agentProjectURL: URL
+    private let additionalEnvironment: [String: String]
     private var process: Process?
     private var stdinHandle: FileHandle?
     private var pump: NDJSONPump?
 
-    public init(agentProjectURL: URL) {
+    public init(
+        agentProjectURL: URL,
+        additionalEnvironment: [String: String] = [:]
+    ) {
         self.agentProjectURL = agentProjectURL
+        self.additionalEnvironment = additionalEnvironment
     }
 
     public var isRunning: Bool { process?.isRunning ?? false }
@@ -46,6 +51,13 @@ public actor SidecarClient {
         return nil
     }
 
+    public static nonisolated func mergedEnvironment(
+        additional: [String: String],
+        base: [String: String] = ProcessInfo.processInfo.environment
+    ) -> [String: String] {
+        base.merging(additional) { _, additionalValue in additionalValue }
+    }
+
     public func start() throws -> AsyncThrowingStream<Envelope, Error> {
         guard process == nil else { throw SidecarError.alreadyStarted }
 
@@ -56,6 +68,7 @@ public actor SidecarClient {
         let sidecar = Process()
         sidecar.executableURL = URL(fileURLWithPath: uv)
         sidecar.arguments = ["run", "--project", agentProjectURL.path, "voiceops-agent"]
+        sidecar.environment = Self.mergedEnvironment(additional: additionalEnvironment)
         let stdinPipe = Pipe()
         let stdoutPipe = Pipe()
         sidecar.standardInput = stdinPipe

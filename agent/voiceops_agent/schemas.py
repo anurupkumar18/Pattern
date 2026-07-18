@@ -130,6 +130,8 @@ class ResolvedReference(VoiceOpsModel):
 
 class GroundingResult(VoiceOpsModel):
     references: list[ResolvedReference]
+    adapter: Literal["openai", "deterministic"]
+    warnings: list[str] = Field(default_factory=list)
 
 
 # --- Task objects ---

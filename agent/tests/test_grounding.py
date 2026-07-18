@@ -1,6 +1,15 @@
+import json
 from pathlib import Path
 
-from voiceops_agent.grounding import DeterministicMultimodalGroundingAdapter, GroundingInput
+import pytest
+
+from voiceops_agent.grounding import (
+    DeterministicMultimodalGroundingAdapter,
+    FallbackGroundingAdapter,
+    GroundingInput,
+    GroundingProviderError,
+    OpenAIMultimodalGroundingAdapter,
+)
 from voiceops_agent.schemas import Observation, VoiceRequest
 
 
@@ -63,3 +72,93 @@ def test_adapter_input_carries_screenshot_and_structured_context():
 
     assert grounding_input.screenshot_path == "file:///tmp/voiceops-fixture.png"
     assert len(grounding_input.candidates) == 2
+
+
+def test_openai_adapter_sends_pixels_and_candidates_and_rebuilds_provenance(tmp_path):
+    screenshot = tmp_path / "active-window.png"
+    screenshot.write_bytes(b"test-png-bytes")
+    observation = mail_observation().model_copy(
+        update={"screenshot_path": screenshot.as_uri()}
+    )
+    captured: dict = {}
+
+    def transport(payload: dict) -> dict:
+        captured.update(payload)
+        return {
+            "output": [{
+                "type": "message",
+                "content": [{
+                    "type": "output_text",
+                    "text": json.dumps({
+                        "references": [{
+                            "phrase": "that deadline",
+                            "candidate_id": "deadline-date",
+                            "resolved_text": "July 31, 2026",
+                            "confidence": 0.94,
+                        }]
+                    }),
+                }],
+            }]
+        }
+
+    result = OpenAIMultimodalGroundingAdapter(
+        api_key="test-key", model="gpt-5.6-terra", transport=transport
+    ).resolve(GroundingInput(
+        request=request("Remind me two days before that deadline"),
+        observation=observation,
+    ))
+
+    assert captured["model"] == "gpt-5.6-terra"
+    content = captured["input"][0]["content"]
+    assert content[1]["type"] == "input_image"
+    assert content[1]["image_url"].startswith("data:image/png;base64,")
+    assert "deadline-date" in content[0]["text"]
+    assert captured["text"]["format"]["type"] == "json_schema"
+    assert captured["text"]["format"]["strict"] is True
+    assert result.adapter == "openai"
+    assert result.references[0].provenance["candidate_id"] == "deadline-date"
+    assert result.references[0].provenance["source"] == "accessibility"
+
+
+def test_openai_adapter_rejects_model_invented_candidate(tmp_path):
+    screenshot = tmp_path / "active-window.png"
+    screenshot.write_bytes(b"test-png-bytes")
+    observation = mail_observation().model_copy(
+        update={"screenshot_path": screenshot.as_uri()}
+    )
+
+    adapter = OpenAIMultimodalGroundingAdapter(
+        api_key="test-key",
+        transport=lambda _: {
+            "output": [{"type": "message", "content": [{
+                "type": "output_text",
+                "text": json.dumps({"references": [{
+                    "phrase": "this email",
+                    "candidate_id": "invented-id",
+                    "resolved_text": "fake",
+                    "confidence": 1,
+                }]}),
+            }]}]
+        },
+    )
+
+    with pytest.raises(GroundingProviderError, match="unknown candidate"):
+        adapter.resolve(GroundingInput(
+            request=request("Using this email"), observation=observation
+        ))
+
+
+def test_fallback_adapter_surfaces_provider_failure_without_crashing():
+    class BrokenPrimary:
+        def resolve(self, grounding_input):
+            raise GroundingProviderError("network unavailable")
+
+    result = FallbackGroundingAdapter(
+        primary=BrokenPrimary(), fallback=DeterministicMultimodalGroundingAdapter()
+    ).resolve(GroundingInput(
+        request=request("Using this email"), observation=mail_observation()
+    ))
+
+    assert result.adapter == "deterministic"
+    assert result.references[0].phrase == "this email"
+    assert result.warnings == ["Live VLM grounding unavailable; deterministic fallback used."]

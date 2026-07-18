@@ -5,6 +5,9 @@
 *.key
 **/apikeys*
 **/credentials*
+# Native credential-management source is code, never a credential value.
+!macos/VoiceOps/Credentials/
+!macos/VoiceOps/Credentials/*.swift
 
 # Python
 __pycache__/

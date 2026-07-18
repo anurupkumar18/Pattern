@@ -63,6 +63,19 @@ final class SidecarClientTests: XCTestCase {
             SidecarClient.resolveUVExecutable(candidates: [], environmentPATH: "/nope"))
     }
 
+    func testAdditionalEnvironmentOverridesOnlyNamedChildValues() {
+        let merged = SidecarClient.mergedEnvironment(
+            additional: [
+                "VOICEOPS_OPENAI_API_KEY": "test-key",
+                "VOICEOPS_VLM_MODEL": "gpt-5.6-terra",
+            ],
+            base: ["PATH": "/usr/bin", "VOICEOPS_VLM_MODEL": "old-model"])
+
+        XCTAssertEqual(merged["PATH"], "/usr/bin")
+        XCTAssertEqual(merged["VOICEOPS_OPENAI_API_KEY"], "test-key")
+        XCTAssertEqual(merged["VOICEOPS_VLM_MODEL"], "gpt-5.6-terra")
+    }
+
     func testVoiceFinalYieldsPlanThenCompletion() async throws {
         try requireUV()
         let client = makeClient()

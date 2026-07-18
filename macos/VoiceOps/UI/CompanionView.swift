@@ -92,6 +92,7 @@ struct CompanionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 transcriptView(transcript)
                 groundingChips(chips)
+                groundingMethod
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text("Interpreting your request")
@@ -103,6 +104,7 @@ struct CompanionView: View {
         case .acting(let description, let chips):
             VStack(alignment: .leading, spacing: 8) {
                 groundingChips(chips)
+                groundingMethod
                 Text(description).font(.callout)
             }
 
@@ -131,6 +133,7 @@ struct CompanionView: View {
         case .completed(_, let summary):
             VStack(alignment: .leading, spacing: 8) {
                 groundingChips(coordinator.groundingChips)
+                groundingMethod
                 Text(summary).font(.callout)
             }
         case .failed(let reason):
@@ -146,6 +149,22 @@ struct CompanionView: View {
             Text("Cancelled. Nothing else will run.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var groundingMethod: some View {
+        if let adapter = coordinator.groundingAdapter {
+            Label(
+                adapter == .openai ? "OpenAI vision grounding" : "Deterministic grounding",
+                systemImage: adapter == .openai ? "eye.fill" : "text.magnifyingglass")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        ForEach(Array(coordinator.groundingWarnings.enumerated()), id: \.offset) { _, warning in
+            Label(warning, systemImage: "exclamationmark.triangle")
+                .font(.caption2)
+                .foregroundStyle(.orange)
         }
     }
 

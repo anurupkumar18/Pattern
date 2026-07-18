@@ -9,13 +9,16 @@ build_mock_plan in later phases; the wire contract stays stable.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from uuid import UUID, uuid4
 
 from .grounding import (
     DeterministicMultimodalGroundingAdapter,
+    FallbackGroundingAdapter,
     GroundingInput,
     MultimodalGroundingAdapter,
+    OpenAIMultimodalGroundingAdapter,
 )
 
 from .schemas import (
@@ -90,9 +93,7 @@ class SidecarRuntime:
         grounding_adapter: MultimodalGroundingAdapter | None = None,
     ) -> None:
         self._observations: dict[UUID, Observation] = {}
-        self._grounding_adapter = (
-            grounding_adapter or DeterministicMultimodalGroundingAdapter()
-        )
+        self._grounding_adapter = grounding_adapter or build_grounding_adapter()
 
     def handle_line(self, line: str) -> list[Envelope]:
         try:
@@ -160,6 +161,18 @@ class SidecarRuntime:
 def handle_line(line: str) -> list[Envelope]:
     """Stateless compatibility helper used by Phase 0 contract tests."""
     return SidecarRuntime().handle_line(line)
+
+
+def build_grounding_adapter() -> MultimodalGroundingAdapter:
+    fallback = DeterministicMultimodalGroundingAdapter()
+    api_key = os.environ.get("VOICEOPS_OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return fallback
+    model = os.environ.get("VOICEOPS_VLM_MODEL", "").strip() or "gpt-5.6-terra"
+    return FallbackGroundingAdapter(
+        primary=OpenAIMultimodalGroundingAdapter(api_key=api_key, model=model),
+        fallback=fallback,
+    )
 
 
 def main() -> None:

@@ -232,10 +232,22 @@ public struct ResolvedReference: Codable, Equatable, Sendable {
 
 public struct GroundingResult: Codable, Equatable, Sendable {
     public let references: [ResolvedReference]
+    public let adapter: GroundingAdapterKind
+    public let warnings: [String]
 
-    public init(references: [ResolvedReference]) {
+    public init(
+        references: [ResolvedReference],
+        adapter: GroundingAdapterKind,
+        warnings: [String] = []
+    ) {
         self.references = references
+        self.adapter = adapter
+        self.warnings = warnings
     }
+}
+
+public enum GroundingAdapterKind: String, Codable, Equatable, Sendable {
+    case openai, deterministic
 }
 
 /// Judge-facing compact form of one grounded reference. The candidate source

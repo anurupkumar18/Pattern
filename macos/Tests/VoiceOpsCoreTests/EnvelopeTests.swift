@@ -120,10 +120,14 @@ final class EnvelopeTests: XCTestCase {
         XCTAssertEqual(
             try Envelope.decode(from: observationEnvelope.encodeWire()), observationEnvelope)
 
-        let result = GroundingResult(references: [ResolvedReference(
-            phrase: "that deadline", candidateID: "deadline",
-            resolvedText: "July 31, 2026", confidence: 0.99,
-            provenance: ["capture_id": .string(observation.captureID.uuidString.lowercased())])])
+        let result = GroundingResult(
+            references: [ResolvedReference(
+                phrase: "that deadline", candidateID: "deadline",
+                resolvedText: "July 31, 2026", confidence: 0.99,
+                provenance: [
+                    "capture_id": .string(observation.captureID.uuidString.lowercased())
+                ])],
+            adapter: .deterministic)
         let groundingEnvelope = Envelope(
             type: .groundingReady, taskID: taskID, payload: .groundingReady(result))
         XCTAssertEqual(

@@ -71,19 +71,37 @@ logic stays in the Python runtime designated by ARD §2. Sending the normalized
 observation over the existing NDJSON protocol preserves provenance and avoids a
 third runtime or a second transport.
 
-## ADR-012: Deterministic grounding fallback before provider selection
+## ADR-012: Deterministic grounding as the offline-safe fallback
 
 **Date:** 2026-07-18 · **Phase:** 2
 
-**Decision:** Phase 2's default adapter is an offline-safe, deliberately narrow
-semantic grounder for high-confidence MVP references. It receives the same
-screenshot path and accessibility candidates as a future VLM adapter, resolves
-the golden Mail/deadline cases with candidate-level provenance, and returns no
-reference when evidence is insufficient. A live multimodal provider and
-Keychain credential UI remain pending and are not simulated with a network
-stub or source-controlled key.
+**Decision:** Phase 2 includes an offline-safe, deliberately narrow semantic
+grounder for high-confidence MVP references. It receives the same screenshot
+path and accessibility candidates as the live VLM adapter, resolves the golden
+Mail/deadline cases with candidate-level provenance, and returns no reference
+when evidence is insufficient. It is selected when no provider credential is
+configured and is the automatic fallback when a live provider response is
+unavailable or fails contract validation.
 
 **Reason:** The architecture explicitly requires provider adapters and Keychain
-credentials but does not select a vendor. Deterministic fixtures keep CI stable
-and false grounding visible while the provider choice is still open. This is a
-recorded Phase 2 residual, not a claim that model-backed grounding exists.
+credentials while deterministic fixtures keep CI stable. Keeping the fallback
+as a first-class adapter preserves offline operation and makes provider failure
+visible without turning a network outage into a failed task.
+
+## ADR-013: OpenAI Responses API vision with Keychain-backed credentials
+
+**Date:** 2026-07-18 · **Phase:** 2
+
+**Decision:** The live grounding provider is an OpenAI Responses API adapter
+using image input and strict JSON Schema output. The app stores the user-supplied
+API key as a generic password in the macOS login Keychain and stores only the
+non-secret model name in UserDefaults. At task start, the Swift shell reads the
+credential and passes it only to the spawned sidecar process. The model can
+select a supplied candidate ID and read visible text, but its output is rejected
+if the phrase is absent from the spoken request or the candidate ID was not in
+the native observation. Provenance is always rebuilt locally.
+
+**Reason:** The adapter boundary keeps the provider replaceable, while strict
+output validation prevents the model from inventing native identities or audit
+evidence. A settings UI gives the user direct control over the credential and
+model without putting secrets in source, the app bundle, defaults, or logs.

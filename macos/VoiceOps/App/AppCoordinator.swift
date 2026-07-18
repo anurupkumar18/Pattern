@@ -10,6 +10,8 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var state: SessionState = .idle
     @Published private(set) var permissionSettingsURL: URL?
     @Published private(set) var groundingChips: [GroundingChip] = []
+    @Published private(set) var groundingAdapter: GroundingAdapterKind?
+    @Published private(set) var groundingWarnings: [String] = []
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
@@ -66,6 +68,8 @@ final class AppCoordinator: ObservableObject {
         case .listening:
             permissionSettingsURL = nil
             groundingChips = []
+            groundingAdapter = nil
+            groundingWarnings = []
             cleanupScreenContext()
             panel?.show()
             narrator.say("Listening")
@@ -179,7 +183,9 @@ final class AppCoordinator: ObservableObject {
     private func startSidecarExchange(
         _ request: VoiceRequest, context: CollectedScreenContext
     ) {
-        let client = SidecarClient(agentProjectURL: Self.agentProjectURL)
+        let client = SidecarClient(
+            agentProjectURL: Self.agentProjectURL,
+            additionalEnvironment: sidecarVLMEnvironment())
         sidecarClient = client
         let taskID = UUID()
 
@@ -203,6 +209,8 @@ final class AppCoordinator: ObservableObject {
                                 candidates: context.observation.elements)
                         }
                         self?.groundingChips = chips
+                        self?.groundingAdapter = grounding.adapter
+                        self?.groundingWarnings = grounding.warnings
                         self?.dispatch(.groundingReady(chips))
                     case .planReady(let plan):
                         self?.dispatch(.planReady(summary: plan.summary))
@@ -243,5 +251,24 @@ final class AppCoordinator: ObservableObject {
             await screenContextCollector.cleanup(
                 captureID: context.observation.captureID)
         }
+    }
+
+    private func sidecarVLMEnvironment() -> [String: String] {
+        let apiKey: String?
+        do {
+            apiKey = try VLMCredentialStore().load()
+        } catch {
+            return [:]
+        }
+        guard let apiKey else {
+            return [:]
+        }
+        let model = UserDefaults.standard.string(
+            forKey: VLMConfiguration.modelDefaultsKey)
+            ?? VLMConfiguration.defaultModel
+        return [
+            "VOICEOPS_OPENAI_API_KEY": apiKey,
+            "VOICEOPS_VLM_MODEL": model,
+        ]
     }
 }
