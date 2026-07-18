@@ -8,7 +8,7 @@ VoiceOps is a voice-first macOS action agent: press a hotkey, speak a goal, and 
 
 ## Status
 
-The current hero slice is **VoiceOps: Order Rescue**. With Order #1842 and Maya Chen visible, VoiceOps compiles the spoken request into a persistent version-one task, accepts the demo correction through the same hotkey and task ID, shows the exact v1→v2 patch, executes the approved fixture-backed Shopify/customer/Slack/reminder actions, streams an Observed/Interpreted/Decided/Acted/Verified ledger, and reports success only after five positive and two negative refetch checks. `scripts/rehearse_order_rescue.sh` is the one-command gate for the entire repository plus the 20-run Order Rescue safety suite.
+The current hero slice is **VoiceOps: Order Rescue**. With Order #1842 and Maya Chen visible, VoiceOps compiles the spoken request into a persistent version-one task, accepts the demo correction through the same hotkey and task ID, shows the exact v1→v2 patch, executes the approved fixture-backed Shopify/customer/Slack/reminder actions, streams an Observed/Interpreted/Decided/Acted/Verified ledger, and reports success only after five positive and two negative refetch checks. `scripts/rehearse_order_rescue.sh` is the one-command gate for the entire repository, both 20-run safety suites, and a signed native-app replay receipt.
 
 Voice capture now prefers OpenAI's transcription-specific Realtime path (`gpt-realtime-whisper`, 24 kHz mono PCM, balanced streaming delay) when the Keychain credential is configured. Apple Speech is a zero-setup fallback and can take over mid-command without discarding the transcript prefix. The companion always identifies the active provider/model and whether failover occurred. Synthesized narration is suppressed while the microphone is open. The flagship live vision default is `gpt-5.6-sol`; deterministic grounding remains offline-safe.
 
@@ -50,6 +50,7 @@ cd macos && swift test        # Swift tests
 cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 scripts/run_evals.sh          # all checks + 20-case JSON/Markdown report
 scripts/rehearse_order_rescue.sh  # full gate + Order Rescue safety rehearsal
+scripts/replay_order_rescue_app.sh # signed native app → sidecar → receipt E2E
 ```
 
 ### Run the app

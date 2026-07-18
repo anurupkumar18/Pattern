@@ -16,6 +16,7 @@ In under four minutes, prove all eligibility requirements and visibly map the pr
 - Verify microphone, Screen Recording, and Accessibility permissions. Calendar,
   Reminders, and Automation are not required for the fixture-backed hero path.
 - Run `scripts/rehearse_order_rescue.sh`; require 20/20 in both deterministic reports before presenting.
+- Run `scripts/replay_order_rescue_app.sh`; require `NATIVE ORDER RESCUE REPLAY VERIFIED`.
 - Confirm the companion's voice badge says either `OpenAI Realtime · gpt-realtime-whisper` or clearly labeled `Apple Speech · FALLBACK`.
 - Keep the network backup hotspot available.
 
@@ -115,6 +116,9 @@ Deterministic Order Rescue compilation remains available without a model call. D
 
 ### Full hero failure
 
+Choose **Replay Tested Order Rescue** from the menu-bar app, then show the
+clearly labeled **REPLAY** badge and resulting trace. This drives the real native
+UI and sidecar with canonical transcripts but does not claim microphone input.
 Run the deterministic Order Rescue rehearsal and show its newly generated trace,
 clearly labeled as test evidence rather than a live external-account completion.
 The same versioned task, patch, ledger, stop barrier, and verifier contract remain

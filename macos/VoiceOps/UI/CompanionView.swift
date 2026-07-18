@@ -35,7 +35,7 @@ struct CompanionView: View {
                 .font(.caption2.monospaced())
                 .foregroundStyle(.secondary)
             Spacer()
-            Text(coordinator.voiceFallbackActive ? "FALLBACK" : "LIVE")
+            Text(coordinator.voiceStatus)
                 .font(.caption2.monospaced().weight(.bold))
         }
         .padding(.horizontal, 8)

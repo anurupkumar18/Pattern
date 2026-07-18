@@ -13,6 +13,13 @@ struct VoiceOpsApp: App {
                 Button("Stop") { coordinator.stop() }
             }
             Divider()
+            Button {
+                coordinator.replayOrderRescueDemo()
+            } label: {
+                Label("Replay Tested Order Rescue", systemImage: "play.rectangle")
+            }
+            .disabled(coordinator.state != .idle)
+            Divider()
             SettingsLink {
                 Label("Voice & Intelligence Settings…", systemImage: "waveform.and.magnifyingglass")
             }

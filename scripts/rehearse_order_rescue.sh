@@ -10,3 +10,6 @@ if [[ $# -eq 0 ]]; then
     set -- --runs 20
 fi
 uv run python -m voiceops_agent.evals.order_rescue "$@"
+
+cd "$ROOT"
+"$ROOT/scripts/replay_order_rescue_app.sh"

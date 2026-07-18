@@ -20,6 +20,7 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var voiceProvider = "Apple Speech"
     @Published private(set) var voiceModel = "On-device/system fallback"
     @Published private(set) var voiceFallbackActive = false
+    @Published private(set) var voiceStatus = "LIVE"
 
     private let narrator = Narrator()
     private var hotKey: HotKeyManager?
@@ -29,6 +30,7 @@ final class AppCoordinator: ObservableObject {
     private var sidecarClient: SidecarClient?
     private var sidecarTask: Task<Void, Never>?
     private var contextTask: Task<Void, Never>?
+    private var replayTask: Task<Void, Never>?
     private var approvalContinuation: CheckedContinuation<Bool, Never>?
     private let screenContextCollector: any ScreenContextCollecting = NativeScreenContextCollector()
     private let reminderWorkflow = EventKitReminderWorkflow()
@@ -39,6 +41,8 @@ final class AppCoordinator: ObservableObject {
     private var cachedActions: [String: ActionResult] = [:]
     private var activeTaskID: UUID?
     private var microphonePermissionGranted = false
+    private var isReplayingOrderRescue = false
+    private var replayReportURL: URL?
 
     /// Dev builds run the sidecar straight from the repo checkout; packaged
     /// builds set VOICEOPS_AGENT_DIR (packaging arrives in a later phase).
@@ -55,9 +59,18 @@ final class AppCoordinator: ObservableObject {
     }()
 
     init() {
+        replayReportURL = ProcessInfo.processInfo.arguments
+            .first(where: { $0.hasPrefix("--replay-report=") })
+            .map { URL(fileURLWithPath: String($0.dropFirst("--replay-report=".count))) }
         hotKey = HotKeyManager { [weak self] in self?.dispatch(.hotkeyTapped) }
         panicStop = PanicStopMonitor { [weak self] in self?.stop() }
         panel = CompanionPanelController(coordinator: self)
+        if ProcessInfo.processInfo.arguments.contains("--replay-order-rescue") {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(350))
+                self?.replayOrderRescueDemo()
+            }
+        }
     }
 
     func toggle() { dispatch(.hotkeyTapped) }
@@ -80,6 +93,34 @@ final class AppCoordinator: ObservableObject {
         dispatch(.approvalDenied)
     }
     func dismiss() { dispatch(.dismissResult) }
+    func replayOrderRescueDemo() {
+        guard state == .idle else { return }
+        isReplayingOrderRescue = true
+        voiceProvider = "Deterministic Replay"
+        voiceModel = "Canonical Order Rescue transcripts"
+        voiceFallbackActive = true
+        voiceStatus = "REPLAY"
+
+        dispatch(.hotkeyTapped)
+        dispatch(.partialTranscript(OrderRescueDemo.initialRequest))
+        dispatch(.hotkeyTapped)
+
+        do {
+            let context = try loadOrderRescueReplayContext()
+            activeScreenContext = context
+            startSidecarExchange(
+                VoiceRequest(
+                    transcript: OrderRescueDemo.initialRequest,
+                    locale: "en-US",
+                    confidence: 1,
+                    segments: []),
+                context: context)
+        } catch {
+            dispatch(.taskFailed(reason:
+                "The tested Order Rescue replay could not load: "
+                    + error.localizedDescription))
+        }
+    }
     func openPermissionSettings() {
         guard let permissionSettingsURL else { return }
         NSWorkspace.shared.open(permissionSettingsURL)
@@ -120,45 +161,50 @@ final class AppCoordinator: ObservableObject {
             panel?.show()
             // Never play synthesized speech while the microphone is open; it
             // contaminates recognition and makes interruption behavior flaky.
-            startCapture()
+            if !isReplayingOrderRescue { startCapture() }
 
         case .grounding:
             recordTrace(.grounding, "Collecting task-scoped screen context")
             if case .listening = previous {
-                narrator.say("Got it")
-                finishCaptureAndCollectContext()
+                narrate("Got it")
+                if !isReplayingOrderRescue { finishCaptureAndCollectContext() }
             }
 
         case .planning:
             recordTrace(.planning, "Grounded context sent to the typed planner")
-            narrator.say("I found the visible context")
+            narrate("I found the visible context")
 
         case .readyForCorrection(_, let version, _):
             recordTrace(.planning, "Version \(version) is ready for a voice correction")
-            narrator.say("Plan ready")
+            narrate("Plan ready")
 
         case .correctionListening:
             guard case .readyForCorrection = previous else { return }
             recordTrace(.listening, "Voice correction capture started on the active task")
-            startCapture()
+            if !isReplayingOrderRescue { startCapture() }
 
         case .awaitingApproval:
             recordTrace(.approval, "Waiting for explicit schedule approval")
-            narrator.say("Approval needed")
+            narrate("Approval needed")
 
         case .acting:
             recordTrace(.action, "Approved plan entered native execution")
             if case .correctionListening = previous {
-                finishCorrectionCapture()
+                if isReplayingOrderRescue {
+                    sendOrderRescueReplayCorrection()
+                } else {
+                    finishCorrectionCapture()
+                }
             } else {
-                narrator.say("Working on it")
+                narrate("Working on it")
             }
 
         case .verifying:
             recordTrace(.verification, "Independent fetch-back verification started")
-            narrator.say("Verifying")
+            narrate("Verifying")
 
         case .result(let result):
+            let shouldExitAfterReplay = isReplayingOrderRescue && replayReportURL != nil
             switch result {
             case .completed(let taskState, _):
                 recordTrace(.outcome, "Task finished: \(taskState.rawValue)")
@@ -170,19 +216,26 @@ final class AppCoordinator: ObservableObject {
             switch result {
             case .completed(let state, _):
                 switch state {
-                case .succeeded: narrator.say("Done")
-                case .partial: narrator.say("Partially completed")
-                case .failed: narrator.say("Verification failed")
-                case .needsUser: narrator.say("I need one detail")
+                case .succeeded: narrate("Done")
+                case .partial: narrate("Partially completed")
+                case .failed: narrate("Verification failed")
+                case .needsUser: narrate("I need one detail")
                 }
-            case .failed: narrator.say("That didn't work")
-            case .cancelled: narrator.say("Stopped")
+            case .failed: narrate("That didn't work")
+            case .cancelled: narrate("Stopped")
             }
             cancelCapture()
             contextTask?.cancel()
             contextTask = nil
+            writeOrderRescueReplayReport(result)
             cancelSidecar()
             cleanupScreenContext()
+            if shouldExitAfterReplay {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(100))
+                    NSApplication.shared.terminate(nil)
+                }
+            }
         }
     }
 
@@ -226,6 +279,7 @@ final class AppCoordinator: ObservableObject {
                             voiceProvider = "Apple Speech"
                             voiceModel = "System recognizer · automatic fallback"
                             voiceFallbackActive = true
+                            voiceStatus = "FALLBACK"
                             recordTrace(
                                 .recovery,
                                 "Voice provider failed over without restarting the task: "
@@ -244,6 +298,7 @@ final class AppCoordinator: ObservableObject {
                 voiceProvider = "OpenAI Realtime"
                 voiceModel = "gpt-realtime-whisper · medium delay"
                 voiceFallbackActive = false
+                voiceStatus = "LIVE"
                 do {
                     try await controller.begin()
                     recordTrace(.listening, "OpenAI Realtime transcription connected")
@@ -270,6 +325,7 @@ final class AppCoordinator: ObservableObject {
             voiceProvider = "Apple Speech"
             voiceModel = "System recognizer · automatic fallback"
             voiceFallbackActive = loadOpenAIApiKey() != nil
+            voiceStatus = voiceFallbackActive ? "FALLBACK" : "LIVE"
             do {
                 try await controller.begin()
                 recordTrace(
@@ -453,6 +509,9 @@ final class AppCoordinator: ObservableObject {
                             "Compiled persistent Order Rescue task version \(task.version)")
                         self?.dispatch(.taskSpecReady(
                             version: task.version, objective: task.objective))
+                        if task.version == 1, self?.isReplayingOrderRescue == true {
+                            self?.scheduleOrderRescueReplayCorrection()
+                        }
                     case .planPatchApplied(let patch):
                         self?.appliedPlanPatch = patch
                         self?.recordTrace(
@@ -608,6 +667,8 @@ final class AppCoordinator: ObservableObject {
 
     private func cancelSidecar() {
         resolveApproval(false)
+        replayTask?.cancel()
+        replayTask = nil
         sidecarTask?.cancel()
         sidecarTask = nil
         let client = sidecarClient
@@ -618,6 +679,7 @@ final class AppCoordinator: ObservableObject {
             cachedActions = cachedActions.filter { !$0.key.hasPrefix(prefix) }
         }
         activeTaskID = nil
+        isReplayingOrderRescue = false
         Task { await client?.cancel() }
     }
 
@@ -637,6 +699,112 @@ final class AppCoordinator: ObservableObject {
         var trace = taskTrace
         trace.record(stage, message)
         taskTrace = trace
+    }
+
+    private func narrate(_ message: String) {
+        if !isReplayingOrderRescue { narrator.say(message) }
+    }
+
+    private func scheduleOrderRescueReplayCorrection() {
+        guard replayTask == nil else { return }
+        replayTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled, let self,
+                  case .readyForCorrection = state,
+                  isReplayingOrderRescue
+            else { return }
+            dispatch(.hotkeyTapped)
+            dispatch(.partialTranscript(OrderRescueDemo.correction))
+            dispatch(.hotkeyTapped)
+        }
+    }
+
+    private func sendOrderRescueReplayCorrection() {
+        guard let client = sidecarClient, let taskID = activeTaskID else {
+            dispatch(.taskFailed(reason: "The replay lost its active task before correction."))
+            return
+        }
+        replayTask = Task { [weak self] in
+            do {
+                try await client.send(Envelope(
+                    type: .voiceCorrection,
+                    taskID: taskID,
+                    payload: .voiceCorrection(VoiceRequest(
+                        transcript: OrderRescueDemo.correction,
+                        locale: "en-US",
+                        confidence: 1,
+                        segments: []))))
+            } catch {
+                if !Task.isCancelled {
+                    self?.dispatch(.taskFailed(reason:
+                        "The replay correction failed: " + error.localizedDescription))
+                }
+            }
+        }
+    }
+
+    private func loadOrderRescueReplayContext() throws -> CollectedScreenContext {
+        let fixtureURL = Self.agentProjectURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("fixtures/screen/order_1842_observation.json")
+        let observation = try JSONDecoder().decode(
+            Observation.self, from: Data(contentsOf: fixtureURL))
+        return CollectedScreenContext(
+            observation: observation,
+            screenshotFileURL: fixtureURL)
+    }
+
+    private func writeOrderRescueReplayReport(_ result: SessionResult) {
+        guard isReplayingOrderRescue, let replayReportURL else { return }
+        let terminalState: String
+        let summary: String
+        switch result {
+        case .completed(let state, let resultSummary):
+            terminalState = state.rawValue
+            summary = resultSummary
+        case .failed(let reason):
+            terminalState = "failed"
+            summary = reason
+        case .cancelled:
+            terminalState = "cancelled"
+            summary = "Replay cancelled"
+        }
+        let report: [String: Any] = [
+            "mode": "deterministic_replay",
+            "terminal_state": terminalState,
+            "summary": summary,
+            "task_id": activeTaskID.map { $0.uuidString as Any } ?? NSNull(),
+            "task_version": activeTaskSpec.map { $0.version as Any } ?? NSNull(),
+            "patch": [
+                "base_version": appliedPlanPatch.map { $0.baseVersion as Any } ?? NSNull(),
+                "new_version": appliedPlanPatch.map { $0.newVersion as Any } ?? NSNull(),
+                "added": appliedPlanPatch?.added ?? [],
+                "removed": appliedPlanPatch?.removed ?? [],
+                "preserved_count": appliedPlanPatch?.preserved.count ?? 0,
+            ],
+            "ledger": executionLedger.map {
+                [
+                    "sequence": $0.sequence,
+                    "event_type": $0.eventType.rawValue,
+                    "what": $0.what,
+                    "source": $0.source,
+                ] as [String: Any]
+            },
+            "verification": verificationResults.map {
+                [
+                    "predicate_id": $0.predicateId,
+                    "passed": $0.passed,
+                ] as [String: Any]
+            },
+        ]
+        do {
+            let data = try JSONSerialization.data(
+                withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: replayReportURL, options: .atomic)
+        } catch {
+            // The UI result remains authoritative; a CLI-only receipt failure
+            // must not mutate the already verified task outcome.
+        }
     }
 
     private func isTaskActive(_ state: SessionState) -> Bool {
