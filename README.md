@@ -36,7 +36,11 @@ cd macos && swift run voiceops-mock-client   # end-to-end mock exchange
 
 ### Run the app
 
-Open `macos/VoiceOps.xcodeproj` in Xcode and Run (or `xcodebuild -project macos/VoiceOps.xcodeproj -scheme VoiceOps build` and launch the built `VoiceOps.app`). On first use, grant the Microphone and Speech Recognition prompts. Then:
+```sh
+scripts/run_app.sh            # builds with the CLI toolchain and launches — no Xcode IDE needed
+```
+
+(Opening `macos/VoiceOps.xcodeproj` in Xcode works too, but is optional.) On first use, grant the Microphone and Speech Recognition prompts. Then:
 
 1. Press **⌃⌥V** anywhere and speak a goal — the floating companion shows the live transcript.
 2. Press **⌃⌥V** again (or pause) to finish. The request goes to the Python sidecar; the companion walks through planning → acting → result with spoken progress.

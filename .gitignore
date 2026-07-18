@@ -16,6 +16,7 @@ __pycache__/
 
 # Swift / Xcode
 .build/
+build/
 DerivedData/
 *.xcuserstate
 xcuserdata/
