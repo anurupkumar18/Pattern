@@ -13,15 +13,32 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ -d "$APP" ]]; then xattr -cr "$APP"; fi
-xcodebuild -quiet -project "$ROOT/macos/VoiceOps.xcodeproj" -scheme VoiceOps \
-  -configuration Debug -derivedDataPath "$DERIVED" \
-  CODE_SIGNING_ALLOWED=NO build
+strip_app_metadata() {
+  xattr -cr "$APP"
+  xattr -d com.apple.FinderInfo "$APP" 2>/dev/null || true
+  xattr -d com.apple.ResourceFork "$APP" 2>/dev/null || true
+  xattr -d 'com.apple.fileprovider.fpfs#P' "$APP" 2>/dev/null || true
+}
+
+if [[ "${VOICEOPS_SKIP_BUILD:-0}" != "1" ]]; then
+  if [[ -d "$APP" ]]; then strip_app_metadata; fi
+  xcodebuild -quiet -project "$ROOT/macos/VoiceOps.xcodeproj" -scheme VoiceOps \
+    -configuration Debug -derivedDataPath "$DERIVED" \
+    CODE_SIGNING_ALLOWED=NO build
+fi
+test -x "$APP/Contents/MacOS/VoiceOps"
 
 # Cloud-backed workspaces can attach Finder metadata after a prior build.
 # Clear only the generated app bundle before the final ad-hoc signature.
-xattr -cr "$APP"
-codesign --force --deep --sign - "$APP"
+SIGNED=false
+for _ in {1..5}; do
+  strip_app_metadata
+  if codesign --force --deep --sign - "$APP"; then
+    SIGNED=true
+    break
+  fi
+done
+test "$SIGNED" = true
 
 "$APP/Contents/MacOS/VoiceOps" \
   --replay-order-rescue --replay-report="$REPORT" &

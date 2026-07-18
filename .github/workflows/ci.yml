@@ -28,9 +28,15 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --project agent
       - run: swift build --package-path macos
       - run: swift test --package-path macos
-      - run: xcodebuild -project macos/VoiceOps.xcodeproj -scheme VoiceOps build CODE_SIGNING_ALLOWED=NO
+      - run: xcodebuild -project macos/VoiceOps.xcodeproj -scheme VoiceOps -configuration Debug -derivedDataPath macos/build CODE_SIGNING_ALLOWED=NO build
+      - name: Run the signed native Order Rescue replay
+        run: VOICEOPS_SKIP_BUILD=1 scripts/replay_order_rescue_app.sh
 
   e2e:
     name: Swift-Python mock exchange
