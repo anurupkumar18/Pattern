@@ -163,6 +163,7 @@ class ConversationToolRouter:
                 "objective": spec.objective,
                 "action_count": len(spec.actions),
                 "constraints": sorted(spec.constraints),
+                "compiler": spec.provenance.get("compiler", ["deterministic"])[0],
                 "speech_summary": self._speech_summary(spec),
             }),
         ]
@@ -187,6 +188,7 @@ class ConversationToolRouter:
                 "removed": applied.removed,
                 "replaced": applied.replaced,
                 "preserved_count": len(applied.preserved),
+                "compiler": getattr(self._compiler, "last_outcome", "deterministic"),
                 "speech_summary": (
                     f"Plan updated to version {applied.new_version}: "
                     f"{len(applied.added)} added, {len(applied.removed)} removed, "

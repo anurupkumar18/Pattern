@@ -16,6 +16,11 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from .conversation import ConversationToolRouter
+from .llm_compiler import (
+    DeterministicOrderRescueCompiler,
+    FallbackOrderRescueCompiler,
+    LiveOrderRescueCompiler,
+)
 from .grounding import (
     DeterministicMultimodalGroundingAdapter,
     FallbackGroundingAdapter,
@@ -126,7 +131,10 @@ class SidecarRuntime:
         self._verifications: dict[UUID, dict[str, VerificationResult]] = {}
         self._order_rescue_fixture = order_rescue_fixture or load_order_rescue_fixture()
         self._order_rescue_tasks: dict[UUID, VersionedTaskSpec] = {}
-        self._conversation = ConversationToolRouter(fixture=self._order_rescue_fixture)
+        self._conversation = ConversationToolRouter(
+            fixture=self._order_rescue_fixture,
+            compiler=build_order_rescue_compiler(),
+        )
 
     def handle_line(self, line: str) -> list[Envelope]:
         try:
@@ -594,6 +602,18 @@ def load_order_rescue_fixture(path: Path | None = None) -> OrderRescueFixture:
         / "golden_order_1842.json"
     )
     return OrderRescueFixture.model_validate_json(fixture_path.read_text())
+
+
+def build_order_rescue_compiler():
+    """Live LLM compile with deterministic fallback when a credential exists."""
+    api_key = os.environ.get("VOICEOPS_OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return DeterministicOrderRescueCompiler()
+    model = os.environ.get("VOICEOPS_LLM_MODEL", "").strip() or "gpt-5.6-sol"
+    return FallbackOrderRescueCompiler(
+        primary=LiveOrderRescueCompiler(api_key=api_key, model=model),
+        fallback=DeterministicOrderRescueCompiler(),
+    )
 
 
 def build_grounding_adapter() -> MultimodalGroundingAdapter:
