@@ -169,11 +169,15 @@ function resolveTarget(
   const namedMatches = snapshot.agents
     .map((agent) => ({
       agent,
-      aliases: [
-        normalize(agent.name),
-        normalize(agent.name).replace(/\s+agent$/, ""),
-        normalize(agent.id),
-      ],
+      // Spoken language never contains hyphens/underscores, so an agent
+      // named "smoke-shell" must match the utterance "smoke shell".
+      aliases: dedupe(
+        [
+          normalize(agent.name),
+          normalize(agent.name).replace(/\s+agent$/, ""),
+          normalize(agent.id),
+        ].flatMap((alias) => [alias, alias.replace(/[-_]+/g, " ")]),
+      ),
     }))
     .filter(({ aliases }) =>
       aliases.some(
@@ -251,4 +255,8 @@ function titleCase(value: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function dedupe(values: string[]): string[] {
+  return [...new Set(values)];
 }

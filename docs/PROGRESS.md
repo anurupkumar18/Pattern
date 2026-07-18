@@ -145,3 +145,18 @@ blockers for `cursor/voice-command-center`.
   serving, but no model pulled yet (download needs approval). Once a Gemma
   model is present: `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","<model>"]'
   npm run eval` exercises the real-model path via the exec transport.
+## 2026-07-18 (overnight follow-up 2) - Live end-to-end loop SUCCEEDED
+
+- Fixed the deterministic router's reference resolution to match spoken
+  aliases against hyphen/underscore agent names ("smoke shell" now resolves
+  agent "smoke-shell").
+- Ran the full console path against the real Herdr server
+  (`HERDR_MODE=real ... npm run dev`, WebSocket utterance
+  "switch to the smoke shell"): routed 9.5ms, acted 111ms, verified 110ms,
+  final state SUCCEEDED with predicate "focused agent is w2:p2" passing.
+- Live artifacts: the herdr session has a `smoke` workspace (w2) with a
+  `smoke-shell` agent created by `scripts/smoke-herdr.ts`; the console server
+  is running at http://127.0.0.1:4180 against real Herdr.
+- Only remaining environment gap: pull a local Gemma model (approval-gated
+  download), then `GEMMA_COMMAND=ollama GEMMA_ARGS='["run","<model>"]'` to
+  exercise the real-model router path.
