@@ -38,6 +38,7 @@
     "operations_messages": [],
     "reminders": [],
     "refund_issued": false,
-    "replacement_order_id": null
+    "replacement_order_id": null,
+    "applied_action_ids": []
   }
 }

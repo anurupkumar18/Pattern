@@ -1,0 +1,175 @@
+{
+  "run_id": "order-rescue-fixture-2026-07-18",
+  "fixture": "golden_order_1842.json",
+  "cases": 20,
+  "passed": 20,
+  "failed": 0,
+  "task_completion_rate": 1.0,
+  "false_successes": 0,
+  "constraint_retention_rate": 1.0,
+  "patch_accuracy": 1.0,
+  "unapproved_consequential_actions": 0,
+  "post_stop_side_effects": 0,
+  "results": [
+    {
+      "case": "golden",
+      "passed": true,
+      "evidence": "ORDER RESCUE COMPLETED \u2014 5/5 CHECKS PASSED",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "constraint_retention",
+      "passed": true,
+      "evidence": "retained=4",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "stale_patch",
+      "passed": true,
+      "evidence": "stale base version rejected",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "approval_denied",
+      "passed": true,
+      "evidence": "approval preflight blocked every write",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "stop_barrier",
+      "passed": true,
+      "evidence": "post_stop_side_effects=0",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "replacement_negative_verifier",
+      "passed": true,
+      "evidence": "prohibited replacement detected",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "refund_negative_verifier",
+      "passed": true,
+      "evidence": "prohibited refund detected",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "missing_slack_verifier",
+      "passed": true,
+      "evidence": "missing Slack state prevented success",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "idempotent_replay",
+      "passed": true,
+      "evidence": "replay produced no duplicate effects",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "ledger_contract",
+      "passed": true,
+      "evidence": "event_types=acted,interpreted,observed,verified",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "golden",
+      "passed": true,
+      "evidence": "ORDER RESCUE COMPLETED \u2014 5/5 CHECKS PASSED",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "constraint_retention",
+      "passed": true,
+      "evidence": "retained=4",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "stale_patch",
+      "passed": true,
+      "evidence": "stale base version rejected",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "approval_denied",
+      "passed": true,
+      "evidence": "approval preflight blocked every write",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "stop_barrier",
+      "passed": true,
+      "evidence": "post_stop_side_effects=0",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "replacement_negative_verifier",
+      "passed": true,
+      "evidence": "prohibited replacement detected",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "refund_negative_verifier",
+      "passed": true,
+      "evidence": "prohibited refund detected",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "missing_slack_verifier",
+      "passed": true,
+      "evidence": "missing Slack state prevented success",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "idempotent_replay",
+      "passed": true,
+      "evidence": "replay produced no duplicate effects",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    },
+    {
+      "case": "ledger_contract",
+      "passed": true,
+      "evidence": "event_types=acted,interpreted,observed,verified",
+      "false_success": false,
+      "unapproved_consequential_actions": 0,
+      "post_stop_side_effects": 0
+    }
+  ]
+}

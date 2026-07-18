@@ -1,0 +1,88 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sequence": {
+      "minimum": 1,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "event_type": {
+      "enum": [
+        "observed",
+        "interpreted",
+        "decided",
+        "acted",
+        "verified"
+      ],
+      "title": "Event Type",
+      "type": "string"
+    },
+    "where": {
+      "minLength": 1,
+      "title": "Where",
+      "type": "string"
+    },
+    "what": {
+      "minLength": 1,
+      "title": "What",
+      "type": "string"
+    },
+    "found": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Found"
+    },
+    "source": {
+      "minLength": 1,
+      "title": "Source",
+      "type": "string"
+    },
+    "why_it_matters": {
+      "minLength": 1,
+      "title": "Why It Matters",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "next": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next"
+    }
+  },
+  "required": [
+    "sequence",
+    "timestamp",
+    "event_type",
+    "where",
+    "what",
+    "source",
+    "why_it_matters",
+    "confidence"
+  ],
+  "title": "ExecutionLedgerEvent",
+  "type": "object"
+}

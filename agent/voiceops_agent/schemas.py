@@ -46,6 +46,7 @@ Risk = Literal["read", "reversible_write", "consequential", "destructive"]
 CandidateSource = Literal["accessibility", "ocr", "vision", "dom"]
 TaskState = Literal["succeeded", "partial", "failed", "needs_user"]
 PatchOperationKind = Literal["add", "remove", "replace"]
+LedgerEventKind = Literal["observed", "interpreted", "decided", "acted", "verified"]
 
 
 class FailureCode(StrEnum):
@@ -278,6 +279,19 @@ class VersionedTaskSpec(VoiceOpsModel):
         return self
 
 
+class ExecutionLedgerEvent(VoiceOpsModel):
+    sequence: int = Field(ge=1)
+    timestamp: datetime
+    event_type: LedgerEventKind
+    where: str = Field(min_length=1)
+    what: str = Field(min_length=1)
+    found: str | None = None
+    source: str = Field(min_length=1)
+    why_it_matters: str = Field(min_length=1)
+    confidence: float = Field(ge=0.0, le=1.0)
+    next: str | None = None
+
+
 # --- Action and verification ---
 
 
@@ -437,6 +451,7 @@ _EXPORTED_MODELS: tuple[type[VoiceOpsModel], ...] = (
     PlanPatch,
     PlanPatchOperation,
     AppliedPlanPatch,
+    ExecutionLedgerEvent,
     Predicate,
     VerifierSpec,
     ApprovalRequest,

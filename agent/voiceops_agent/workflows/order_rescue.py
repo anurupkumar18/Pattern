@@ -67,6 +67,7 @@ class OrderRescueState(VoiceOpsModel):
     reminders: list[str] = Field(default_factory=list)
     refund_issued: bool = False
     replacement_order_id: str | None = None
+    applied_action_ids: list[str] = Field(default_factory=list)
 
 
 class OrderRescueFixture(VoiceOpsModel):
